@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
 import { computeListContacts } from "@/lib/mailing-lists";
 import { CONTACT_STATUS_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -33,14 +34,14 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   sheet.getRow(1).font = { bold: true };
   for (const c of contacts) {
     sheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
       type: CONTACT_TYPE_LABELS[c.type],
       tier: CONTACT_TIER_LABELS[c.tier],
       status: CONTACT_STATUS_LABELS[c.status],
-      owner: c.owner?.name ?? "",
-      email: c.email ?? "",
-      tags: (c.tags ?? []).join(", "),
+      owner: safeCell(c.owner?.name ?? ""),
+      email: safeCell(c.email ?? ""),
+      tags: safeCell((c.tags ?? []).join(", ")),
     });
   }
 

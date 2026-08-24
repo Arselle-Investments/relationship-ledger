@@ -9,6 +9,7 @@ import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { eventOverlapsWindow } from "@/lib/events";
 import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
   try {
@@ -54,17 +55,17 @@ export async function GET(req: NextRequest) {
   requiredSheet.getRow(1).font = { bold: true };
   for (const c of requiredCadence) {
     requiredSheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
-      owner: c.owner?.name ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
+      owner: safeCell(c.owner?.name ?? ""),
       issue: `${c.daysOverdue + c.cadence}d overdue on cadence`,
     });
   }
   for (const c of requiredSeq) {
     requiredSheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
-      owner: c.owner?.name ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
+      owner: safeCell(c.owner?.name ?? ""),
       issue: `Sequence step "${c.step.title}" due ${c.step.dueDate}`,
     });
   }
@@ -79,17 +80,17 @@ export async function GET(req: NextRequest) {
   recommendedSheet.getRow(1).font = { bold: true };
   for (const r of recommendedSeq) {
     recommendedSheet.addRow({
-      name: r.name,
-      org: r.org ?? "",
-      owner: r.owner?.name ?? "",
+      name: safeCell(r.name),
+      org: safeCell(r.org ?? ""),
+      owner: safeCell(r.owner?.name ?? ""),
       detail: `${r.step.title} due ${r.step.dueDate}`,
     });
   }
   for (const c of recommendedCadence) {
     recommendedSheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
-      owner: c.owner?.name ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
+      owner: safeCell(c.owner?.name ?? ""),
       detail: `Cadence follow-up due by ${bounds.end}`,
     });
   }
@@ -105,8 +106,8 @@ export async function GET(req: NextRequest) {
   milestonesSheet.getRow(1).font = { bold: true };
   for (const t of milestones) {
     milestonesSheet.addRow({
-      title: t.title,
-      owner: t.owner?.name ?? "",
+      title: safeCell(t.title),
+      owner: safeCell(t.owner?.name ?? ""),
       due: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],
@@ -124,10 +125,10 @@ export async function GET(req: NextRequest) {
   eventsSheet.getRow(1).font = { bold: true };
   for (const ev of conferences) {
     eventsSheet.addRow({
-      name: ev.name,
+      name: safeCell(ev.name),
       start: ev.startDate.toISOString().slice(0, 10),
       end: ev.endDate.toISOString().slice(0, 10),
-      location: ev.location ?? "",
+      location: safeCell(ev.location ?? ""),
       type: EVENT_TYPE_LABELS[ev.type],
     });
   }

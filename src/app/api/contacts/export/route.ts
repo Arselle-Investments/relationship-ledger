@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
 import { buildContactWhere } from "@/lib/contact-query";
 import { CONTACT_STATUS_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
   try {
@@ -45,21 +46,21 @@ export async function GET(req: NextRequest) {
 
   for (const c of contacts) {
     sheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
       type: CONTACT_TYPE_LABELS[c.type],
       tier: CONTACT_TIER_LABELS[c.tier],
       status: CONTACT_STATUS_LABELS[c.status],
-      owner: c.owner?.name ?? "",
-      warmPath: c.warmPath?.name ?? "",
-      email: c.email ?? "",
-      phone: c.phone ?? "",
-      city: c.city ?? "",
+      owner: safeCell(c.owner?.name ?? ""),
+      warmPath: safeCell(c.warmPath?.name ?? ""),
+      email: safeCell(c.email ?? ""),
+      phone: safeCell(c.phone ?? ""),
+      city: safeCell(c.city ?? ""),
       lastContact: c.lastContact ? c.lastContact.toISOString().slice(0, 10) : "",
       cadenceOverrideDays: c.cadenceOverrideDays ?? "",
-      priorityQuarter: c.priorityQuarter ?? "",
-      tags: (c.tags ?? []).join(", "),
-      notes: c.notes ?? "",
+      priorityQuarter: safeCell(c.priorityQuarter ?? ""),
+      tags: safeCell((c.tags ?? []).join(", ")),
+      notes: safeCell(c.notes ?? ""),
     });
   }
 

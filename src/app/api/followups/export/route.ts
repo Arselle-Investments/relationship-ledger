@@ -6,6 +6,7 @@ import { getOverdueContacts, getStaleContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts } from "@/lib/sequences";
 import { getSettings } from "@/lib/settings";
 import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET() {
   try {
@@ -37,10 +38,10 @@ export async function GET() {
   overdueSheet.getRow(1).font = { bold: true };
   for (const c of overdue) {
     overdueSheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
       status: CONTACT_STATUS_LABELS[c.status],
-      owner: c.owner?.name ?? "",
+      owner: safeCell(c.owner?.name ?? ""),
       daysOverdue: c.daysOverdue,
       cadence: c.cadence,
     });
@@ -55,7 +56,7 @@ export async function GET() {
   ];
   seqSheet.getRow(1).font = { bold: true };
   for (const c of overdueSequences) {
-    seqSheet.addRow({ name: c.name, org: c.org ?? "", step: c.step.title, due: c.step.dueDate });
+    seqSheet.addRow({ name: safeCell(c.name), org: safeCell(c.org ?? ""), step: safeCell(c.step.title), due: c.step.dueDate });
   }
 
   const staleSheet = workbook.addWorksheet("Data hygiene flags");
@@ -68,9 +69,9 @@ export async function GET() {
   staleSheet.getRow(1).font = { bold: true };
   for (const c of stale) {
     staleSheet.addRow({
-      name: c.name,
-      org: c.org ?? "",
-      owner: c.owner?.name ?? "",
+      name: safeCell(c.name),
+      org: safeCell(c.org ?? ""),
+      owner: safeCell(c.owner?.name ?? ""),
       reasons: c.staleReasons.join(", "),
     });
   }

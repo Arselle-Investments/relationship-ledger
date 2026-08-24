@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
 import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/lib/task-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
   try {
@@ -35,13 +36,13 @@ export async function GET(req: NextRequest) {
   sheet.getRow(1).font = { bold: true };
   for (const t of tasks) {
     sheet.addRow({
-      title: t.title,
-      contact: t.contact?.name ?? "",
-      owner: t.owner?.name ?? "",
+      title: safeCell(t.title),
+      contact: safeCell(t.contact?.name ?? ""),
+      owner: safeCell(t.owner?.name ?? ""),
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],
-      notes: t.notes ?? "",
+      notes: safeCell(t.notes ?? ""),
     });
   }
 

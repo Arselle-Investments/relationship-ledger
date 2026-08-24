@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
 import { quarterBounds, eventInQuarter } from "@/lib/events";
 import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
   try {
@@ -38,14 +39,14 @@ export async function GET(req: NextRequest) {
   sheet.getRow(1).font = { bold: true };
   for (const ev of events) {
     sheet.addRow({
-      name: ev.name,
+      name: safeCell(ev.name),
       startDate: ev.startDate.toISOString().slice(0, 10),
       endDate: ev.endDate.toISOString().slice(0, 10),
-      location: ev.location ?? "",
+      location: safeCell(ev.location ?? ""),
       type: EVENT_TYPE_LABELS[ev.type],
-      attendees: ev.attendeeIds.map((id) => teamById.get(id) ?? "").join(", "),
-      goals: ev.goals ?? "",
-      notes: ev.notes ?? "",
+      attendees: safeCell(ev.attendeeIds.map((id) => teamById.get(id) ?? "").join(", ")),
+      goals: safeCell(ev.goals ?? ""),
+      notes: safeCell(ev.notes ?? ""),
     });
   }
 

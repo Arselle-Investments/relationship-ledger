@@ -42,7 +42,7 @@ export default async function LoginPage({
             Sign in with Microsoft
           </button>
         </form>
-        {process.env.NODE_ENV !== "production" && (
+        {process.env.NODE_ENV !== "production" && process.env.ALLOW_DEV_LOGIN === "true" && (
           <DevLoginButtons callbackUrl={callbackUrl || "/contacts"} />
         )}
       </div>
