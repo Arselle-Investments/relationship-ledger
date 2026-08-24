@@ -14,7 +14,9 @@ export const config = {
   // Each alternative is anchored to a path-segment boundary (/ or end-of-string) so a
   // future route merely starting with one of these strings (e.g. /login-history) doesn't
   // silently inherit the exclusion.
-  matcher: ["/((?!login(?:/|$)|api/auth(?:/|$)|api/dev-login(?:/|$)|_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$).*)"],
+  matcher: [
+    "/((?!login(?:/|$)|api/auth(?:/|$)|api/dev-login(?:/|$)|api/integrations(?:/|$)|_next/static(?:/|$)|_next/image(?:/|$)|favicon\\.ico$).*)",
+  ],
   // Session lookups go through Prisma/Postgres, which needs the Node.js runtime (not Edge).
   runtime: "nodejs",
 };

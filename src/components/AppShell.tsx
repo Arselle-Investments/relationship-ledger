@@ -4,6 +4,7 @@ import { Role } from "@prisma/client";
 
 const TABS: { href: string; label: string; enabled: boolean }[] = [
   { href: "/contacts", label: "Contacts", enabled: true },
+  { href: "/inbox", label: "Inbox", enabled: true },
   { href: "/followups", label: "Needs follow-up", enabled: true },
   { href: "/lists", label: "Mailing lists", enabled: true },
   { href: "/tasks", label: "Tasks", enabled: true },
@@ -17,10 +18,12 @@ export function AppShell({
   activeHref,
   user,
   children,
+  inboxCount,
 }: {
   activeHref: string;
   user: { name?: string | null; email?: string | null; role: Role };
   children: React.ReactNode;
+  inboxCount?: number;
 }) {
   const canEdit = user.role === Role.ADMIN || user.role === Role.EDITOR;
 
@@ -69,6 +72,7 @@ export function AppShell({
               className={`tab-btn ${activeHref === tab.href ? "active" : ""}`}
             >
               {tab.label}
+              {tab.href === "/inbox" && !!inboxCount && <span className="n">{inboxCount}</span>}
             </Link>
           ) : (
             <span key={tab.href} className="tab-btn disabled" title="Coming in a later phase">

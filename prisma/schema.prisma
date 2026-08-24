@@ -121,11 +121,41 @@ model Contact {
   updatedAt          DateTime      @updatedAt
 
   tasks Task[]
+  correspondence Correspondence[]
 
   @@index([status])
   @@index([type])
   @@index([tier])
   @@index([ownerId])
+}
+
+enum CorrespondenceStatus {
+  MATCHED // linked to an existing contact
+  SUGGESTED // sender didn't match any contact; AI-extracted fields await review
+  IGNORED // a human dismissed the suggestion
+}
+
+// A single inbound message fed from the Fundraising Teams channel (or any
+// future source). Ingested raw, then AI-extracted fields are used to either
+// match an existing contact or propose creating a new one — nothing about a
+// contact's own record changes just from ingestion.
+model Correspondence {
+  id            String               @id @default(cuid())
+  source        String               @default("teams_channel")
+  externalId    String?              @unique // dedupe key from the source system (e.g. Teams message id)
+  subject       String?
+  bodyText      String
+  receivedAt    DateTime
+  contactId     String?
+  contact       Contact?             @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  extractedName String?
+  extractedEmail String?
+  extractedOrg  String?
+  status        CorrespondenceStatus @default(SUGGESTED)
+  createdAt     DateTime             @default(now())
+
+  @@index([contactId])
+  @@index([status])
 }
 
 enum MailingListMode {
