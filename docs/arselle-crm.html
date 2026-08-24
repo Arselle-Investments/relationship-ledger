@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Arselle Relationship Ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --ink:#1E2E36;
+  --ink-soft:#4C6169;
+  --paper:#F5F7F7;
+  --paper-raised:#FFFFFF;
+  --line:#DCE3E2;
+  --brass:#46626C;
+  --brass-dark:#2F4750;
+  --slate:#5B7D82;
+  --forest:#7C9992;
+  --rust:#A85A40;
+  --rust-bg:#F1E2DB;
+  --forest-bg:#E4EDEA;
+  --brass-bg:#E6ECEB;
+  --slate-bg:#E7EEEE;
+  --shadow: 0 1px 2px rgba(30,46,54,0.06), 0 4px 16px rgba(30,46,54,0.06);
+  --radius: 10px;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:'Work Sans',sans-serif;font-size:14px;-webkit-font-smoothing:antialiased;}
+#app{max-width:1400px;margin:0 auto;padding:0 24px 80px;}
+h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:600;margin:0;color:var(--ink);}
+.mono{font-family:'Work Sans',sans-serif;letter-spacing:0.06em;text-transform:uppercase;font-weight:600;}
+.eyebrow{font-family:'Work Sans',sans-serif;font-weight:600;font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;color:var(--brass-dark);}
+
+/* Topbar */
+#topbar{padding:28px 0 18px;border-bottom:1px solid var(--line);display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;}
+#brand-block{display:flex;align-items:baseline;gap:14px;}
+#brand-mark{width:36px;height:36px;border-radius:8px;background:var(--ink);display:flex;align-items:center;justify-content:center;flex:none;}
+#brand-mark svg{width:20px;height:20px;}
+#brand-block h1{font-size:23px;}
+#brand-block .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+#identity-bar{display:flex;align-items:center;gap:10px;}
+#identity-bar select{font-family:'Work Sans',sans-serif;font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);}
+.mode-pill{display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;border-radius:20px;border:1px solid var(--line);background:var(--paper-raised);font-size:12.5px;cursor:pointer;user-select:none;}
+.mode-pill .dot{width:9px;height:9px;border-radius:50%;background:var(--line);transition:background .15s;}
+.mode-pill.on .dot{background:var(--forest);}
+.mode-pill.on{border-color:var(--forest);color:var(--forest);}
+.mode-pill.off{color:var(--ink-soft);}
+
+/* Tabs */
+#tabs{display:flex;gap:2px;margin-top:22px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.tab-btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:11px 16px;cursor:pointer;position:relative;top:1px;border-bottom:2px solid transparent;}
+.tab-btn .n{font-family:'Work Sans',sans-serif;font-size:10px;color:var(--brass-dark);margin-left:5px;}
+.tab-btn.active{color:var(--ink);border-bottom-color:var(--brass);}
+.tab-btn:hover{color:var(--ink);}
+
+.view{padding-top:22px;display:none;}
+.view.active{display:block;}
+
+/* Toolbar */
+.toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
+.toolbar input[type=text], .toolbar select{font-family:'Work Sans',sans-serif;font-size:13px;padding:8px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);}
+.toolbar input[type=text]{min-width:220px;}
+.spacer{flex:1;}
+.btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);cursor:pointer;white-space:nowrap;}
+.btn:hover{border-color:var(--ink-soft);}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--paper);}
+.btn.primary:hover{background:var(--ink-soft);}
+.btn.brass{background:var(--brass);border-color:var(--brass);color:#fff;}
+.btn.brass:hover{background:var(--brass-dark);}
+.btn.ghost{background:none;}
+.btn.small{padding:5px 10px;font-size:12px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-danger{color:var(--rust);}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+table thead th{text-align:left;font-family:'Work Sans',sans-serif;font-size:10.5px;letter-spacing:0.06em;text-transform:uppercase;color:var(--ink-soft);background:#E7ECEB;padding:10px 12px;border-bottom:1px solid var(--line);white-space:nowrap;}
+table tbody td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle;font-size:13px;}
+table tbody tr:last-child td{border-bottom:none;}
+table tbody tr:hover{background:#F3F6F5;}
+table tbody tr{cursor:pointer;}
+.tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--slate-bg);color:var(--slate);margin:1px 3px 1px 0;}
+.tag.brass{background:var(--brass-bg);color:var(--brass-dark);}
+.tag.forest{background:var(--forest-bg);color:var(--forest);}
+.tag.rust{background:var(--rust-bg);color:var(--rust);}
+.name-cell{font-weight:600;}
+.muted{color:var(--ink-soft);}
+.overdue-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--rust);}
+.overdue-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--rust);}
+
+/* Empty state */
+.empty{padding:50px 20px;text-align:center;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--radius);background:var(--paper-raised);}
+.empty h3{color:var(--ink-soft);font-size:16px;margin-bottom:6px;}
+
+/* Cards / grids */
+.card{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:20px;}
+.stat-card{padding:16px 18px;background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);}
+.stat-card .num{font-family:'Poppins',sans-serif;font-size:28px;font-weight:600;line-height:1;}
+.stat-card .label{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+.stat-card.alert .num{color:var(--rust);}
+
+/* Task board */
+#task-board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.board-col{background:#E7ECEB;border-radius:var(--radius);padding:12px;min-height:120px;}
+.board-col h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;font-family:'Work Sans',sans-serif;color:var(--ink-soft);margin-bottom:10px;font-weight:600;}
+.task-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:9px;box-shadow:var(--shadow);cursor:grab;transition:opacity .15s, transform .15s;}
+.task-card:active{cursor:grabbing;}
+.task-card.dragging{opacity:0.4;}
+.board-col{transition:background .12s, box-shadow .12s;}
+.board-col.drag-over{background:var(--brass-bg);box-shadow:inset 0 0 0 2px var(--brass);border-radius:10px;}
+.task-card .t{font-weight:600;font-size:13px;margin-bottom:5px;}
+.task-card .meta{font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;align-items:center;}
+.task-card.overdue{border-left:3px solid var(--rust);}
+.pri-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
+.pri-High{background:var(--rust);}
+.pri-Medium{background:var(--brass);}
+.pri-Low{background:var(--slate);}
+
+/* Events */
+#events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.event-card{padding:16px;background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;}
+.event-card .dates{font-family:'Work Sans',sans-serif;font-size:11px;color:var(--brass-dark);letter-spacing:.03em;}
+.event-card h3{font-size:16px;margin:6px 0 4px;}
+.event-card .loc{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
+
+/* Events calendar */
+.view-toggle{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
+.view-toggle button{font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:600;padding:7px 13px;border:none;background:var(--paper-raised);color:var(--ink-soft);cursor:pointer;}
+.view-toggle button.active{background:var(--ink);color:var(--paper);}
+.cal-nav{display:flex;align-items:center;gap:10px;}
+.cal-nav button{font-family:'Work Sans',sans-serif;font-size:14px;padding:6px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);cursor:pointer;color:var(--ink);}
+.cal-nav button:hover{border-color:var(--ink-soft);}
+.cal-label{font-family:'Poppins',sans-serif;font-size:16px;font-weight:600;min-width:150px;text-align:center;}
+#cal-grid.quarter{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+#cal-grid.year{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+.cal-month{background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);}
+.cal-month h4{font-family:'Work Sans',sans-serif;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:9px;font-weight:600;}
+.cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:3px;}
+.cal-weekdays div{font-size:9.5px;text-align:center;color:var(--ink-soft);font-family:'Work Sans',sans-serif;}
+.cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;font-size:10.5px;border-radius:5px;padding-top:3px;position:relative;cursor:default;color:var(--ink-soft);}
+.cal-day.pad{visibility:hidden;}
+.cal-day.has-event{background:var(--brass-bg);color:var(--ink);cursor:pointer;font-weight:600;}
+.cal-day.has-event:hover{background:var(--brass);color:#fff;}
+.cal-day.today{box-shadow:inset 0 0 0 1.5px var(--slate);}
+.cal-day .dots{display:flex;gap:2px;margin-top:2px;}
+.cal-day .dots span{width:4px;height:4px;border-radius:50%;background:var(--brass-dark);}
+.cal-day.has-event:hover .dots span{background:#fff;}
+
+/* Priorities grid */
+#pri-grid-wrap{overflow-x:auto;}
+#pri-grid{display:grid;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--paper-raised);min-width:760px;}
+.pri-header-row, .pri-row{display:grid;grid-template-columns:160px repeat(4,1fr);}
+.pri-header-row > div{font-family:'Work Sans',sans-serif;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);background:#E7ECEB;padding:10px 12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);}
+.pri-row > div{border-bottom:1px solid var(--line);border-right:1px solid var(--line);padding:10px;min-height:64px;}
+.pri-row .row-label{background:#F3F6F5;font-weight:600;font-size:12.5px;display:flex;align-items:center;font-family:'Work Sans',sans-serif;letter-spacing:.02em;color:var(--ink-soft);}
+.pri-cell{cursor:pointer;transition:background .1s;}
+.pri-cell:hover{background:var(--brass-bg) !important;}
+.pri-count{font-family:'Poppins',sans-serif;font-size:20px;font-weight:600;}
+.pri-cell .clabel{font-size:10.5px;color:var(--ink-soft);margin-top:2px;}
+
+/* Modal */
+.overlay{position:fixed;inset:0;background:rgba(28,35,51,0.42);display:none;align-items:flex-start;justify-content:center;z-index:50;padding:40px 20px;overflow-y:auto;}
+.overlay.open{display:flex;}
+.modal{background:var(--paper-raised);border-radius:14px;width:100%;max-width:560px;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.modal-head h2{font-size:18px;}
+.modal-body{padding:20px 22px;max-height:65vh;overflow-y:auto;}
+.modal-foot{padding:16px 22px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:5px;}
+.field input, .field select, .field textarea{width:100%;font-family:'Work Sans',sans-serif;font-size:13.5px;padding:9px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);}
+.field textarea{min-height:70px;resize:vertical;font-family:'Work Sans',sans-serif;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.close-x{background:none;border:none;font-size:20px;color:var(--ink-soft);cursor:pointer;line-height:1;padding:2px 6px;}
+.close-x:hover{color:var(--ink);}
+.helptext{font-size:11.5px;color:var(--ink-soft);margin-top:4px;}
+
+/* Detail panel */
+#detail-panel .kv{display:grid;grid-template-columns:110px 1fr;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-size:13px;}
+#detail-panel .kv:last-child{border-bottom:none;}
+#detail-panel .kv .k{color:var(--ink-soft);font-size:11.5px;text-transform:uppercase;letter-spacing:.04em;font-family:'Work Sans',sans-serif;}
+.activity-log{margin-top:14px;border-top:1px solid var(--line);padding-top:12px;}
+.activity-item{font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.activity-item .when{color:var(--brass-dark);font-family:'Work Sans',sans-serif;font-size:10.5px;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:var(--shadow);z-index:100;opacity:0;pointer-events:none;transition:opacity .2s, transform .2s;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+.locked-msg{font-size:12px;color:var(--ink-soft);padding:8px 12px;background:var(--brass-bg);border-radius:7px;margin-bottom:14px;display:none;}
+.locked-msg.show{display:block;}
+.checkbox-list{max-height:200px;overflow-y:auto;border:1px solid var(--line);border-radius:7px;padding:8px;}
+.checkbox-list label{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:400;text-transform:none;letter-spacing:0;padding:5px 4px;}
+.checkbox-list label:hover{background:#F0F4F3;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:var(--line);border-radius:6px;}
+@media(max-width:720px){
+  .field-row{grid-template-columns:1fr;}
+  #task-board{grid-template-columns:1fr;}
+  .pri-header-row, .pri-row{grid-template-columns:110px repeat(4,minmax(120px,1fr));}
+  #cal-grid.quarter, #cal-grid.year{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="topbar">
+    <div id="brand-block">
+      <div id="brand-mark"><svg viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2L23 22H5L14 2Z" stroke="#F5F7F7" stroke-width="2.6" stroke-linejoin="round"/><path d="M26 10L35 28H17L26 10Z" fill="#F5F7F7"/></svg></div>
+      <div>
+        <h1>Arselle Relationship Ledger</h1>
+        <div class="sub">Contacts &middot; mailing lists &middot; outreach &middot; tasks &middot; events &middot; priorities</div>
+      </div>
+    </div>
+    <div id="identity-bar">
+      <select id="who-select"></select>
+      <div class="mode-pill off" id="mode-toggle"><span class="dot"></span><span id="mode-label">View mode</span></div>
+    </div>
+  </div>
+
+  <div id="tabs">
+    <button class="tab-btn active" data-view="contacts">Contacts <span class="n" id="tab-n-contacts"></span></button>
+    <button class="tab-btn" data-view="followups">Needs follow-up <span class="n" id="tab-n-followups"></span></button>
+    <button class="tab-btn" data-view="lists">Mailing lists <span class="n" id="tab-n-lists"></span></button>
+    <button class="tab-btn" data-view="tasks">Tasks <span class="n" id="tab-n-tasks"></span></button>
+    <button class="tab-btn" data-view="events">Conferences &amp; events <span class="n" id="tab-n-events"></span></button>
+    <button class="tab-btn" data-view="priorities">Priorities</button>
+    <button class="tab-btn" data-view="lookahead">Look ahead</button>
+    <button class="tab-btn" data-view="settings">Settings</button>
+  </div>
+
+  <div class="locked-msg" id="locked-msg">You're in view mode. Switch to edit mode above to add or change records. Everyone can browse; only whoever is in edit mode can modify data, so changes stay intentional.</div>
+
+  <!-- CONTACTS -->
+  <div class="view active" id="view-contacts">
+    <div class="toolbar">
+      <input type="text" id="contact-search" placeholder="Search name, org, tag...">
+      <select id="contact-filter-type"><option value="">All types</option></select>
+      <select id="contact-filter-tier"><option value="">All tiers</option></select>
+      <select id="contact-filter-owner"><option value="">All owners</option></select>
+      <div class="spacer"></div>
+      <button class="btn" id="contacts-export">Export to Excel</button>
+      <button class="btn" id="contact-import-btn">Import</button>
+      <button class="btn primary" id="contact-add-btn">Add contact</button>
+    </div>
+    <div id="contacts-table-wrap"></div>
+  </div>
+
+  <!-- FOLLOW UPS -->
+  <div class="view" id="view-followups">
+    <div class="stat-row" id="followup-stats"></div>
+    <div class="toolbar">
+      <div class="eyebrow" style="font-size:11.5px;">Sorted by most overdue first &middot; default cadence and per-contact overrides both apply</div>
+      <div class="spacer"></div>
+      <button class="btn" id="followups-export">Export to Excel</button>
+    </div>
+    <div id="followups-table-wrap"></div>
+  </div>
+
+  <!-- LISTS -->
+  <div class="view" id="view-lists">
+    <div class="toolbar">
+      <div class="spacer"></div>
+      <button class="btn primary" id="list-add-btn">Create list</button>
+    </div>
+    <div id="lists-wrap"></div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="view" id="view-tasks">
+    <div class="toolbar">
+      <select id="task-filter-owner"><option value="">All owners</option></select>
+      <div class="spacer"></div>
+      <button class="btn" id="tasks-export">Export to Excel</button>
+      <button class="btn primary" id="task-add-btn">Add task</button>
+    </div>
+    <div id="task-board"></div>
+  </div>
+
+  <!-- EVENTS -->
+  <div class="view" id="view-events">
+    <div class="toolbar">
+      <div class="view-toggle" id="events-view-toggle">
+        <button data-mode="cards" class="active">Cards</button>
+        <button data-mode="calendar">Calendar</button>
+      </div>
+      <div class="view-toggle" id="events-filter-toggle">
+        <button data-filter="all" class="active">All events</button>
+        <button data-filter="quarter">This quarter</button>
+      </div>
+      <div id="cal-controls" style="display:none;align-items:center;gap:10px;">
+        <div class="view-toggle" id="cal-span-toggle">
+          <button data-span="quarter" class="active">Quarter</button>
+          <button data-span="year">Year</button>
+        </div>
+        <div class="cal-nav">
+          <button id="cal-prev">&#8249;</button>
+          <div class="cal-label" id="cal-label"></div>
+          <button id="cal-next">&#8250;</button>
+        </div>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" id="events-export">Export to Excel</button>
+      <button class="btn" id="event-import-btn">Import</button>
+      <button class="btn primary" id="event-add-btn">Add event</button>
+    </div>
+    <div id="events-grid"></div>
+    <div id="cal-grid" class="quarter" style="display:none;"></div>
+  </div>
+
+  <!-- PRIORITIES -->
+  <div class="view" id="view-priorities">
+    <div class="toolbar">
+      <div class="eyebrow" style="font-size:11.5px;">Click a cell to see which contacts sit in that tier and quarter</div>
+    </div>
+    <div id="pri-grid-wrap"></div>
+  </div>
+
+  <!-- LOOK AHEAD -->
+  <div class="view" id="view-lookahead">
+    <div class="toolbar">
+      <div class="view-toggle" id="lookahead-window-toggle">
+        <button data-days="14" class="active">Next 2 weeks</button>
+        <button data-days="30">Next 30 days</button>
+      </div>
+      <div class="spacer"></div>
+      <button class="btn" id="lookahead-export">Export to Excel</button>
+    </div>
+    <div id="lookahead-wrap"></div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="view" id="view-settings">
+    <div class="card" style="padding:22px;max-width:640px;">
+      <h3 style="margin-bottom:14px;">Follow-up cadence default</h3>
+      <div class="field">
+        <label>Nudge if no reply after (days)</label>
+        <input type="number" id="setting-cadence" min="1" style="max-width:140px;">
+        <div class="helptext">Applies to every contact unless a per-contact override is set on that contact's record. Change it here to shift the default for the whole team.</div>
+      </div>
+      <div class="field">
+        <label>Flag as stale after (days), for data hygiene</label>
+        <input type="number" id="setting-staledays" min="1" style="max-width:140px;">
+        <div class="helptext">Contacts with no activity in this many days (or missing organization/owner) show up under Needs Follow-up &rarr; Data hygiene flags.</div>
+      </div>
+      <button class="btn primary" id="save-settings-btn">Save settings</button>
+      <h3 style="margin:26px 0 14px;">Team &amp; data</h3>
+      <div class="helptext" style="margin-bottom:14px;">Team member list used across owner fields. Comma separated.</div>
+      <div class="field">
+        <label>Team members</label>
+        <input type="text" id="setting-team">
+      </div>
+      <button class="btn primary" id="save-team-btn">Save team list</button>
+      <h3 style="margin:26px 0 10px;">Outreach sequence templates</h3>
+      <div class="helptext" style="margin-bottom:12px;">Reusable multi-step follow-up plans (e.g. intro email &rarr; wait &rarr; call &rarr; wait &rarr; email) that can be started on any contact from their detail view.</div>
+      <div id="sequence-templates-wrap" style="margin-bottom:14px;"></div>
+      <button class="btn" id="add-sequence-template-btn">Add sequence template</button>
+      <h3 style="margin:26px 0 10px;">Sample data</h3>
+      <div class="helptext" style="margin-bottom:12px;">This ledger loads with a handful of placeholder records so the layout makes sense on first open. Clear them once real contacts are in.</div>
+      <button class="btn-danger btn" id="clear-sample-btn">Clear sample data</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="overlay" id="modal-overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ---------------------------------------------------------------
+   Arselle Relationship Ledger
+   Single-file interactive CRM artifact.
+   Data persists via window.storage (shared = true, whole team sees it).
+--------------------------------------------------------------- */
+
+const CONTACT_TYPES = ["LP / Institutional","Family Office","Placement Agent","Broker / Advisor","Sponsor / Co-GP","Consultant","Other"];
+const TIERS = ["Tier 1","Tier 2","Tier 3"];
+const STATUSES = ["Not started","Outreach sent","Awaiting reply","Responded","Meeting scheduled","Diligence","Committed","Passed"];
+const ACTIVE_OUTREACH_STATUSES = ["Outreach sent","Awaiting reply"];
+const TASK_STATUSES = ["Open","In progress","Done"];
+const TASK_PRIORITIES = ["High","Medium","Low"];
+const EVENT_TYPES = ["Conference","Networking","Roadshow","Other"];
+const SEQUENCE_STEP_TYPES = ["Email","Call","LinkedIn","Other"];
+const DEFAULT_TEAM = ["Ariela","Bianca Tomkoria","Gwyneth Leung","Mark Julius Mangao","Kev Zoryan","Aaron Greeno"];
+const CONFERENCE_TRACKER_ROWS = [{"START DATE": "2026-01-21", "END DATE": "2026-01-23", "EVENT NAME": "IMN: 22nd Annual Winter Real Estate Private Funds Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Montage Laguna Beach\n30801 Coast Hwy, Laguna Beach, CA 92651", "LINK": "IMN: 22nd Annual Winter Real Estate Private Funds Forum", "EVENT TIME DURATION": "21st at 7:50am - 23rd at 11:30am PT"}, {"START DATE": "2026-01-22", "END DATE": "2026-01-23", "EVENT NAME": "IMN: Short Term Rental (STR) Forum \u2013 Winter", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "JW Marriott Miami Turnberry\n19999 W Country Club Dr, Aventura, FL 33180", "LINK": "IMN: Short Term Rental (STR) Forum \u2013 Winter", "EVENT TIME DURATION": "22nd at 8:30am - 23rd at 12:10pm ET"}, {"START DATE": "2026-02-02", "END DATE": "2026-02-03", "EVENT NAME": "IMN: Land & Homebuilding Capital Markets West", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "TBA Las Vegas, NV", "LINK": "IMN: Land & Homebuilding Capital Markets West", "EVENT TIME DURATION": "2nd at 7:50am - 3rd at 12:15pm PT"}, {"START DATE": "2026-02-11", "END DATE": "2026-02-11", "EVENT NAME": "12th Annual Private Wealth Dallas Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "", "LINK": "12th Annual Private Wealth Dallas Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-02-12", "END DATE": "2026-02-13", "EVENT NAME": "IMN: Beneficial Owners Securities Finance", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "TBA Scottsdale, AZ", "LINK": "IMN: Beneficial Owners Securities Finance", "EVENT TIME DURATION": "12th at 8am - 13th at 12:40pm MT"}, {"START DATE": "2026-03-05", "END DATE": "2026-03-05", "EVENT NAME": "11th Annual Private Wealth New England Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "", "LINK": "11th Annual Private Wealth New England Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-03-08", "END DATE": "2026-03-11", "EVENT NAME": "          With Intelligence | 19th Annual Women\u2019s Private Equity Summit (Phoenix)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Arizona Biltmore, LXR Hotels & Resorts\n2400 E Missouri Ave, Phoenix, AZ 85016", "LINK": "With Intelligence | 19th Annual Women\u2019s Private Equity Summit (Phoenix)", "EVENT TIME DURATION": "8th at 4:30pm - 11th at 3:45pm PT"}, {"START DATE": "2026-03-15", "END DATE": "2026-03-16", "EVENT NAME": "IMN: Build-to-Rent (BTR) Spring", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Grand Hyatt Nashville\n1000 Broadway, Nashville, TN 37203", "LINK": "IMN: Build-to-Rent (BTR) Spring", "EVENT TIME DURATION": "15th at 7:15am - 16th at 12:35pm CT"}, {"START DATE": "2026-03-19", "END DATE": "2026-03-19", "EVENT NAME": "7th Annual Private Wealth DC Metro Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "", "LINK": "7th Annual Private Wealth DC Metro Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-03-23", "END DATE": "2026-03-24", "EVENT NAME": "IMN: Florida Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "TBA Coral Gables, FL", "LINK": "IMN: Florida Middle-Market Multifamily", "EVENT TIME DURATION": "23rd at 8am - 24th at 12:05pm ET"}, {"START DATE": "2026-03-23", "END DATE": "2026-03-25", "EVENT NAME": "ALTSLA 2026 (Los Angeles)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "InterContinental Los Angeles Downtown by IHG\n900 Wilshire Blvd, Los Angeles, CA 90017", "LINK": "ALTSLA 2026 (Los Angeles)", "EVENT TIME DURATION": "23rd at 9am - 25th at 5pm PT"}, {"START DATE": "2026-03-26", "END DATE": "2026-03-26", "EVENT NAME": "11th Annual Private Wealth Southeast Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "", "LINK": "11th Annual Private Wealth Southeast Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-03-27", "END DATE": "2026-03-27", "EVENT NAME": "Zell Lurie | Ross ETA Conference (Ann Arbor)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Ross School of Business\n701 Tappan Ave, Ann Arbor, MI 48109", "LINK": "Zell Lurie | Ross ETA Conference (Ann Arbor)", "EVENT TIME DURATION": "27th at 8am - 6pm ET"}, {"START DATE": "2026-04-07", "END DATE": "2026-04-08", "EVENT NAME": "IMN: HEI & Home Equity Capital Markets", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "TBA Nashville, TN", "LINK": "IMN: HEI & Home Equity Capital Markets", "EVENT TIME DURATION": "7th at 7am - 8th at 12pm CT"}, {"START DATE": "2026-04-09", "END DATE": "2026-04-10", "EVENT NAME": "IMN: Residential Ground-Up Construction Spring Conference", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Hyatt Regency Houston/Galleria\n2626 Sage Rd, Houston, TX 77056", "LINK": "IMN: Residential Ground-Up Construction Spring Conference", "EVENT TIME DURATION": "Unavailable"}, {"START DATE": "2026-04-22", "END DATE": "2026-04-22", "EVENT NAME": "10th Annual Private Wealth Tri-State Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "10th Annual Private Wealth Tri-State Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-04-23", "END DATE": "2026-04-24", "EVENT NAME": "Zell Lurie | Spring Members' Meeting 2026 (Philadelphia)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Wharton School, University of Pennsylvania\n3733 Spruce St, Philadelphia, PA 19104", "LINK": "Zell Lurie | Spring Members' Meeting 2026 (Philadelphia)", "EVENT TIME DURATION": "Unavailable"}, {"START DATE": "2026-04-29", "END DATE": "2026-04-29", "EVENT NAME": "11th Annual Private Wealth Florida Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "11th Annual Private Wealth Florida Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-04-29", "END DATE": "2026-04-30", "EVENT NAME": "IMN: Mortgage Servicing Rights (MSR) Spring Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "JW Marriott Dallas Arts District\n800 N Harwood St, Dallas, TX 75201", "LINK": "IMN: Mortgage Servicing Rights (MSR) Spring Forum", "EVENT TIME DURATION": "29th at 7am - 30th at 12:15pm CT"}, {"START DATE": "2026-04-27", "END DATE": "2026-04-28", "EVENT NAME": "IMN: Texas Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "TBA Dallas, TX", "LINK": "IMN: Texas Middle-Market Multifamily", "EVENT TIME DURATION": "27th at 8am - 28th at 12:15pm CT"}, {"START DATE": "2026-05-05", "END DATE": "2026-05-07", "EVENT NAME": "      ULI Spring Meeting 2026 (Nashville)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Music City Center\n201 Rep. John Lewis Way S, Nashville, TN 37203", "LINK": "ULI Spring Meeting 2026 (Nashville)", "EVENT TIME DURATION": "Unavailable"}, {"START DATE": "2026-05-11", "END DATE": "2026-05-13", "EVENT NAME": "Enterprise RIA: Private Wealth US Spring Retreat", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Park Hyatt Aviara", "LINK": "Enterprise RIA: Private Wealth US Spring Retreat", "EVENT TIME DURATION": ""}, {"START DATE": "2026-05-12", "END DATE": "2026-05-12", "EVENT NAME": "IMN: Attainable & Workforce Housing", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 East 37th Street, New York, NY 10016", "LINK": "Attainable & Workforce Housing", "EVENT TIME DURATION": "12th at 8am ET - 6:30pm ET"}, {"START DATE": "2026-05-12", "END DATE": "2026-05-13", "EVENT NAME": "IMN: Real Estate CFO & COO Forum (West)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Pendry Newport Beach\n690 Newport Center Dr, Newport Beach, CA 92660", "LINK": "Real Estate CFO & COO Forum (West)", "EVENT TIME DURATION": "12th at 8am PT - 13th at 12pm PT"}, {"START DATE": "2026-05-18", "END DATE": "2026-05-18", "EVENT NAME": "ICSC: Global Awards Ceremony", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Wynn Las Vegas\n3131 Las Vegas Blvd S, Las Vegas, NV 89109", "LINK": "ISCS: Global Awards Ceremony", "EVENT TIME DURATION": "18th at 6:30 - 8:15 pm PT"}, {"START DATE": "2026-05-18", "END DATE": "2026-05-18", "EVENT NAME": "Chicago Private Markets Meeting", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Union League Club of Chicago\n65 W Jackson Blvd, Chicago, IL 60604", "LINK": "Chicago Private Markets Meeting", "EVENT TIME DURATION": "Not Found"}, {"START DATE": "2026-05-18", "END DATE": "2026-05-18", "EVENT NAME": "ICSC: Excellence in Community Advancement Awards Reception", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Wynn Las Vegas\n3131 Las Vegas Blvd S, Las Vegas, NV 89109", "LINK": "Excellence in Community Advancement Awards Reception", "EVENT TIME DURATION": "18th at 6:00 - 8:00 pm PT"}, {"START DATE": "2026-05-19", "END DATE": "2026-05-19", "EVENT NAME": " ICSC Advancing Retail in Communities Breakfast", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Las Vegas Convention Center\n3150 Paradise Rd, Las Vegas, NV 89109", "LINK": "ICSC Advancing Retail in Communities Breakfast", "EVENT TIME DURATION": "19th at 7:00 - 8:30 am PT"}, {"START DATE": "2026-05-19", "END DATE": "2026-05-19", "EVENT NAME": "ICSC LAS VEGAS Diversity Reception", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Wynn Las Vegas: Margaux Ballroom\n3131 Las Vegas Blvd S, Las Vegas, NV 89109", "LINK": "ICSC LAS VEGAS Diversity Reception", "EVENT TIME DURATION": "19th at 5:30 - 7:30 pm PT"}, {"START DATE": "2026-05-19", "END DATE": "2026-05-19", "EVENT NAME": "ICSC Next Generation Reception", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Wynn Las Vegas\n3131 Las Vegas Blvd S, Las Vegas, NV 89109", "LINK": "ICSC Next Generation Reception", "EVENT TIME DURATION": "19th at 5:00 - 6:30 pm PT"}, {"START DATE": "2026-05-18", "END DATE": "2026-05-20", "EVENT NAME": "ICSC LAS VEGAS (ICSC+PROPTECH)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Las Vegas Convention Center\n3150 Paradise Rd, Las Vegas, NV 89109", "LINK": "ICSC LAS VEGAS", "EVENT TIME DURATION": "18th at 9am PT - 20th at 12pm PT"}, {"START DATE": "2026-05-18", "END DATE": "2026-05-20", "EVENT NAME": "IMN: Single Family Rental (SFR) East", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Loews Miami Beach, Miami, FL\n1601 Collins Ave, Miami Beach, FL 33139", "LINK": "Single Family Rental (SFR) East", "EVENT TIME DURATION": "18th at 7:30m ET - 20th at 12:30pm ET"}, {"START DATE": "2026-05-28", "END DATE": "2026-05-29", "EVENT NAME": "IMN: Southeast Middle-Market Multifamily Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Westin Buckhead Atlanta\n3391 Peachtree Rd NEAtlanta, GA 30326", "LINK": "Southeast Middle-Market Multifamily Forum", "EVENT TIME DURATION": "28th at 8am ET - 29th at 12:35pm ET"}, {"START DATE": "2026-06-01", "END DATE": "2026-06-02", "EVENT NAME": "IMN: Land & Homebuilding Capital Markets East", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Charleston Marriott\n170 Lockwood Dr, Charleston, SC 29403", "LINK": "Land & Homebuilding Capital Markets East", "EVENT TIME DURATION": "1st at 7:50am ET - 2nd at 12:35pm ET"}, {"START DATE": "2026-06-02", "END DATE": "2026-06-02", "EVENT NAME": "10th Annual Private Wealth NorCal Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "10th Annual Private Wealth NorCal Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-06-02", "END DATE": "2026-06-03", "EVENT NAME": "2026 PREA Institute", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "University of California, Berkeley\n110 Sproul Hall, Berkeley, CA 94720", "LINK": "2026 PREA Institute", "EVENT TIME DURATION": "2nd at 7:40am - 3rd at 12pm PT"}, {"START DATE": "2026-06-03", "END DATE": "2026-06-03", "EVENT NAME": "IMN: Residential Mortgage Securitization Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 E 37th St, New York, NY 10016", "LINK": "Residential Mortgage Securitization Forum", "EVENT TIME DURATION": "3rd at 7:45am ET - 6pm ET"}, {"START DATE": "2026-06-09", "END DATE": "2026-06-09", "EVENT NAME": "IMN: Real Estate Mezzanine Financing & High-Yield Debt", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 E 37th St, New York, NY 10016", "LINK": "Real Estate Mezzanine Financing & High-Yield Debt", "EVENT TIME DURATION": "9th at 8am ET - 6:15pm ET"}, {"START DATE": "2026-06-10", "END DATE": "2026-06-10", "EVENT NAME": "ICSC LOCAL SOUTHERN CALIFORNIA", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Hyatt Regency Huntington Beach Resort and Spa\n21500 Pacific Coast Hwy, Huntington Beach, CA 92648", "LINK": "ICSC LOCAL SOUTHERN CALIFORNIA", "EVENT TIME DURATION": "10th at 3pm PT - 6:30pm PT"}, {"START DATE": "2026-06-10", "END DATE": "2026-06-10", "EVENT NAME": "IMN: Litigation Finance", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 E 37th St, New York, NY 10016", "LINK": "Litigation Finance", "EVENT TIME DURATION": "10th at 8am ET - 6pm ET"}, {"START DATE": "2026-06-11", "END DATE": "2026-06-11", "EVENT NAME": "10th Annual Private Wealth Pac Northwest Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "10th Annual Private Wealth Pac Northwest Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-06-11", "END DATE": "2026-06-11", "EVENT NAME": " Fisher | AI in Real Estate Panel (Fisher Center / BREAD) (SF)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "First Market Tower\n525 Market St, San Francisco, CA 94105", "LINK": "Fisher | AI in Real Estate Panel (Fisher Center / BREAD) - June 11, 2026", "EVENT TIME DURATION": "11th at 4:30pm - 6:30pm PT"}, {"START DATE": "2026-06-14", "END DATE": "2026-06-14", "EVENT NAME": "Policy Advisory Board Summer Roundtable", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Omni San Francisco Hotel\n500 California St, San Francisco, CA 94104", "LINK": "Invitation and event details will be available on June", "EVENT TIME DURATION": "14th at 8am-11am PT"}, {"START DATE": "2026-06-16", "END DATE": "2026-06-16", "EVENT NAME": "ICSC LOCAL ORLANDO", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Maggiano's Little Italy \u2013 Pointe Orlando\n9101 International Dr #2400, Orlando, FL 32819", "LINK": "ICSC LOCAL ORLANDO", "EVENT TIME DURATION": "16th at 4pm ET - 7pm ET"}, {"START DATE": "2026-06-15", "END DATE": "2026-06-16", "EVENT NAME": "IMN: Non-QM & Non-Agency Mortgage Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "Non-QM & Non-Agency Mortgage Forum", "EVENT TIME DURATION": "15th at 7am PT - 16th at 12:35pm PT"}, {"START DATE": "2026-06-15", "END DATE": "2026-06-16", "EVENT NAME": "IMN: Real Estate Family Office & Private Wealth Forum", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "Real Estate Family Office & Private Wealth Forum", "EVENT TIME DURATION": "15th at 8am PT - 16th at 12:45pm PT"}, {"START DATE": "2026-06-17", "END DATE": "2026-06-17", "EVENT NAME": "Bisnow | Orange County Multifamily & Affordable Housing Conference (Anaheim)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Hilton Anaheim\n777 West Convention Way, Anaheim CA 92802", "LINK": "Bisnow | Orange County Multifamily & Affordable Housing Conference", "EVENT TIME DURATION": "17th at 8am - 12:30pm PT"}, {"START DATE": "2026-06-18", "END DATE": "2026-06-18", "EVENT NAME": "ICSC LOCAL HOUSTON", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Highline Park\n600 N Shepherd Dr Suite 499, Houston, TX 77007", "LINK": "ICSC LOCAL HOUSTON", "EVENT TIME DURATION": "18th at 4pm CT - 7pm CT "}, {"START DATE": "2026-06-18", "END DATE": "2026-06-18", "EVENT NAME": "ICSC LOCAL ILLINOIS", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Village Links of Glen Ellyn\n485 Winchell Way, Glen Ellyn, IL 60137", "LINK": "ICSC LOCAL ILLINOIS", "EVENT TIME DURATION": "18th at 10:30am CT - 6pm CT"}, {"START DATE": "2026-06-20", "END DATE": "2026-06-21", "EVENT NAME": "Fisher | 2026 Summer Real Estate Research Symposium (Denver)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Hyatt Regency Denver at Colorado Convention Center\n650 15th St, Denver, CO 80202", "LINK": "Fisher | 2026 Summer Real Estate Research Symposium (Denver)", "EVENT TIME DURATION": "20th at 6pm - 21st at 4:10pm MT"}, {"START DATE": "2026-06-23", "END DATE": "2026-06-23", "EVENT NAME": "PREA Rising Leaders Summer Social (NYC)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Lever Club\n390 Park Avenue New York, New York 10022", "LINK": "PREA Rising Leaders Summer Social \u2013 NYC!", "EVENT TIME DURATION": "23rd at 5:30pm - 7:30pm ET"}, {"START DATE": "2026-06-23", "END DATE": "2026-06-23", "EVENT NAME": "Bisnow | Puget Sound Multifamily Summit (Seattle)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Embassy Suites Pioneer Square\n255 South King Street, Seattle, WA 98104", "LINK": "Bisnow | Puget Sound Multifamily Summit (Seattle)", "EVENT TIME DURATION": "23rd at 8am - 12:00pm PT"}, {"START DATE": "2026-06-24", "END DATE": "2026-06-24", "EVENT NAME": "Bisnow | New York Healthcare Real Estate Conference", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "1334 York Avenue\nNew York, NY 10021 - Floor #: 7", "LINK": "Bisnow | New York Healthcare Real Estate Conference", "EVENT TIME DURATION": "24th at 8am - 12:30pm ET"}, {"START DATE": "2026-06-24", "END DATE": "2026-06-24", "EVENT NAME": "Bisnow | Chicago Healthcare Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Fulton\n919 W Fulton St, Chicago, IL 60607", "LINK": "Bisnow | Chicago Healthcare Summit", "EVENT TIME DURATION": "24th at 8am - 1pm CT"}, {"START DATE": "2026-06-24", "END DATE": "2026-06-24", "EVENT NAME": "Webinar - State of the Market: Affordable and Workforce Housing", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Webinar", "LINK": "Webinar - State of the Market: Affordable and Workforce Housing", "EVENT TIME DURATION": "Not Found"}, {"START DATE": "2026-06-23", "END DATE": "2026-06-24", "EVENT NAME": "IMN: Short Term Rental (STR) Forum - Summer", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Omni La Costa Resort & Spa\n2100 Costa Del Mar Road, Carlsbad, CA 92009", "LINK": "Short Term Rental (STR) Forum - Summer", "EVENT TIME DURATION": "23rd at 8am PT - 24th at 12pm PT"}, {"START DATE": "2026-06-24", "END DATE": "2026-06-25", "EVENT NAME": "Kayo 2026 Women's Real Estate Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "InterContinental Washington D.C. - the Wharf by IHG\n801 Wharf St SW, Washington, DC 20024", "LINK": "Kayo 2026 Women's Real Estate Summit", "EVENT TIME DURATION": "24th at 7:30am - 25th at 2pm ET"}, {"START DATE": "2026-06-25", "END DATE": "2026-06-25", "EVENT NAME": "Bisnow | Orlando State of the Market ", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Westgate Resort\n7025 Westgate Lakes Blvd, Orlando, FL 32819", "LINK": "Bisnow | Orlando State of the Market ", "EVENT TIME DURATION": "25th at 8am - 12pm ET"}, {"START DATE": "2026-06-24", "END DATE": "2026-06-26", "EVENT NAME": "IMN: Real Estate Private Funds Summer", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Newport Harbor Island Resort\n1 Goat Island Rd, Newport, RI 02840", "LINK": "Real Estate Private Funds Summer", "EVENT TIME DURATION": "24th at 1pm ET - 26th at 12:35pm ET"}, {"START DATE": "2026-06-30", "END DATE": "2026-06-30", "EVENT NAME": "Bisnow | Denver Industrial Outlook", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Four Seasons Hotel Denver\n1111 14th Street, Denver, CO 80202", "LINK": "Bisnow | Denver Industrial Outlook", "EVENT TIME DURATION": "30th at 8am - 12:30pm MT"}, {"START DATE": "2026-07-13", "END DATE": "2026-07-14", "EVENT NAME": "ICSC@NEW ENGLAND", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Omni Boston Hotel at the Seaport\n450 Summer St, Boston, MA 02210", "LINK": "ICSC@NEW ENGLAND", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-07-14", "END DATE": "2026-07-14", "EVENT NAME": "ICSC RETAIL FORWARD NASHVILLE", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Omni Nashville Hotel\n250 Rep. John Lewis Way S, Nashville, TN 37203", "LINK": "ICSC RETAIL FORWARD NASHVILLE", "EVENT TIME DURATION": "14th at 1:30pm CT - 5:30pm CT"}, {"START DATE": "2026-07-14", "END DATE": "2026-07-14", "EVENT NAME": "PREA Rising Leaders Summer Social (LA)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "SIXTY Beverly Hills\n9360 Wilshire Blvd, Beverly Hills, CA 90212", "LINK": "PREA Rising Leaders Summer Social \u2013 LA", "EVENT TIME DURATION": "14th at 5:30pm - 7:30pm PT"}, {"START DATE": "2026-07-14", "END DATE": "2026-07-14", "EVENT NAME": "Bisnow | Lehigh Valley State of the Market (Breinigsville)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "400 Boulder Drive\nSuite 100, Breinigsville, PA 18031", "LINK": "Bisnow | Lehigh Valley State of the Market (Breinigsville)", "EVENT TIME DURATION": "14th at 8am - 11:35am ET"}, {"START DATE": "2026-07-14", "END DATE": "2026-07-15", "EVENT NAME": "IMN: Bank Special Assets West", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "Bank Special Assets West", "EVENT TIME DURATION": "14th at 8:30am PT - 15th at 12:10pm PT"}, {"START DATE": "2026-07-14", "END DATE": "2026-07-15", "EVENT NAME": "IMN: ESG & Decarbonizing Real Estate Summer", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "ESG & Decarbonizing Real Estate Summer", "EVENT TIME DURATION": "14th at 8:00am PT - 15th at 12:15pm PT"}, {"START DATE": "2026-07-15", "END DATE": "2026-07-15", "EVENT NAME": "IMN: Distressed CRE West", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "Distressed CRE West", "EVENT TIME DURATION": "15th at 8:15am PT - 6:15pm PT"}, {"START DATE": "2026-07-21", "END DATE": "2026-07-21", "EVENT NAME": "Bisnow | Nashville Industrial, Logistics and Manufacturing Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Westin Nashville\n807 Clark Place, Nashville, TN 37203", "LINK": "Bisnow | Nashville Industrial, Logistics and Manufacturing Summit", "EVENT TIME DURATION": "21st at 8am - 11:30am CT"}, {"START DATE": "2026-07-22", "END DATE": "2026-07-22", "EVENT NAME": "Bisnow | Houston Retail & Mixed Use Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Westin Houston, Memorial City\n945 Gessner Road, Houston, TX 77024", "LINK": "Bisnow | Houston Retail & Mixed Use Summit", "EVENT TIME DURATION": "22nd at 8am - 11:15am CT"}, {"START DATE": "2026-07-22", "END DATE": "2026-07-22", "EVENT NAME": "ICSC RETAIL FORWARD COLORADO", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Ritz-Carlton, Denver\n1881 Curtis Street, Denver, CO 80202", "LINK": "ICSC RETAIL FORWARD COLORADO", "EVENT TIME DURATION": "22nd at 1:30pm MT - 5:30pm MT"}, {"START DATE": "2026-07-23", "END DATE": "2026-07-23", "EVENT NAME": "Bisnow | New Jersey Healthcare & Campus Development Conference (Piscataway)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Embassy Suites by Hilton\n121 Centennial Avenue, Piscataway, NJ 08854", "LINK": "Bisnow | New Jersey Healthcare & Campus Development Conference (Piscataway)", "EVENT TIME DURATION": "23rd at 8am - 11:15am ET"}, {"START DATE": "2026-07-28", "END DATE": "2026-07-28", "EVENT NAME": "8th Annual Private Wealth Great Plains Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "8th Annual Private Wealth Great Plains Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-07-28", "END DATE": "2026-07-28", "EVENT NAME": "Bisnow | Boca Raton State of the Market", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Embassy Suites\n661 NW 53rd Street, Boca Raton, FL 33487", "LINK": "Bisnow | Boca Raton State of the Market", "EVENT TIME DURATION": "28th at 8am - 11:15am ET"}, {"START DATE": "2026-07-29", "END DATE": "2026-07-29", "EVENT NAME": "Bisnow | Chicago Senior Housing Conference", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Warwick Allerton Chicago\n701 N Michigan Avenue, Chicago, IL 60611", "LINK": "Bisnow | Chicago Senior Housing Conference", "EVENT TIME DURATION": "29th at 8am - 11:30am CT"}, {"START DATE": "2026-07-30", "END DATE": "2026-07-30", "EVENT NAME": "Bisnow | Philadelphia Women Leading Real Estate", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Ballroom at the Ben\n834 Chestnut St, Philadelphia, PA 19107", "LINK": "Bisnow | Philadelphia Women Leading Real Estate", "EVENT TIME DURATION": "30th at 8am - 11am ET"}, {"START DATE": "2026-07-30", "END DATE": "2026-07-30", "EVENT NAME": "ICSC RETAIL FORWARD DETROIT", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Westin Book Cadillac Detroit\n1114 Washington Blvd, Detroit, MI 48226", "LINK": "ICSC RETAIL FORWARD DETROIT", "EVENT TIME DURATION": "3Oth at 1:30pm ET - 5:30pm ET"}, {"START DATE": "2026-08-03", "END DATE": "2026-08-04", "EVENT NAME": "Women In Private Wealth Retreat", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Four Seasons Hotel Nashville\n100 Demonbreun St, Nashville, TN 37201", "LINK": "Registration is only available upon invitation", "EVENT TIME DURATION": "3rd at 2pm - 4th at 6pm CT"}, {"START DATE": "2026-08-04", "END DATE": "2026-08-04", "EVENT NAME": "Bisnow | Southern California Industrial, Logistics & Manufacturing Conference (OC)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Irvine Marriott\n18000 Von Karman Avenue\nIrvine, CA 92612", "LINK": "Bisnow | Southern California Industrial, Logistics & Manufacturing Conference (OC)", "EVENT TIME DURATION": "4th at 8am - 12:30pm PT"}, {"START DATE": "2026-08-05", "END DATE": "2026-08-05", "EVENT NAME": "Bisnow | DFW Women Leading Real Estate Awards", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Fairmont Dallas\n1717 North Akard Street, Dallas, TX 75201", "LINK": "Bisnow | DFW Women Leading Real Estate Awards", "EVENT TIME DURATION": "5th at 9am - 12pm CT"}, {"START DATE": "2026-08-05", "END DATE": "2026-08-05", "EVENT NAME": " Bisnow | San Diego Multifamily & Affordable Housing Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Hilton San Diego Bayfront\nOne Park Blvd, San Diego, CA 92101", "LINK": "Bisnow | San Diego Multifamily & Affordable Housing Summit", "EVENT TIME DURATION": "5th at 8am - 1pm PT"}, {"START DATE": "2026-08-06", "END DATE": "2026-08-06", "EVENT NAME": "Bisnow | National Industrial Outdoor Storage Conference (Jersey)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "Liberty House\n76 Audrey Zapp Dr, Jersey City, NJ 07305", "LINK": "Bisnow | National Industrial Outdoor Storage Conference (Jersey)", "EVENT TIME DURATION": "6th at 8:30am - 12pm ET"}, {"START DATE": "2026-08-12", "END DATE": "2026-08-12", "EVENT NAME": "Bisnow | Atlanta Mixed-Use Summit", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "1200 White Street\n1200 White Street SW, Atlanta, GA 30310", "LINK": "Bisnow | Atlanta Mixed-Use Summit", "EVENT TIME DURATION": "12th at 8am - 12pm ET"}, {"START DATE": "2026-08-12", "END DATE": "2026-08-12", "EVENT NAME": "Bisnow | Long Island Real Estate Conference (Garden City)", "COSTS": "", "REGISTRATION": "Passed", "REGISTRATION DEADLINE": "Passed", "EVENT LOCATION/ADDRESS": "The Garden City Hotel\n45 7th St, Garden City, NY 11530", "LINK": "Bisnow | Long Island Real Estate Conference (Garden City)", "EVENT TIME DURATION": "12th at 8am - 11:45am ET"}, {"START DATE": "2026-08-13", "END DATE": "2026-08-13", "EVENT NAME": "10th Annual Private Wealth Midwest Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "10th Annual Private Wealth Midwest Forum", "LINK": "", "EVENT TIME DURATION": ""}, {"START DATE": "2026-08-18", "END DATE": "2026-08-18", "EVENT NAME": "Bisnow | Phoenix Retail & Mixed-Use Summit (Scottsdale)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Hilton Scottsdale Resort & Villas\n6333 N. Scottsdale Rd, Scottsdale, AZ 85250", "LINK": "Bisnow | Phoenix Retail & Mixed-Use Summit (Scottsdale)", "EVENT TIME DURATION": "18th at 8am - 11:45am MT"}, {"START DATE": "2026-08-19", "END DATE": "2026-08-19", "EVENT NAME": "Bisnow | Columbus State of The Market", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "The Westin Great Southern Columbus\n310 S High St, Columbus, OH 43215", "LINK": "Bisnow | Columbus State of The Market", "EVENT TIME DURATION": "19th at 8am - 11:30am ET"}, {"START DATE": "2026-08-20", "END DATE": "2026-08-20", "EVENT NAME": "Bisnow | Kansas City State of the Market", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Zhou B Art Center KC\n1801 E 18th Street, Kansas City, MO 64108", "LINK": "Bisnow | Kansas City State of the Market", "EVENT TIME DURATION": "20th at 8am - 11:30am CT"}, {"START DATE": "2026-08-24", "END DATE": "2026-08-25", "EVENT NAME": "IMN: SFR/BTR Property Management & Operations", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Austin Marriott Downtown\n304 E Cesar Chavez St, Austin, TX 78701", "LINK": "SFR/BTR Property Management & Operations", "EVENT TIME DURATION": "24th at 7:30am CT - 25th at 12:30pm CT"}, {"START DATE": "2026-08-25", "END DATE": "2026-08-25", "EVENT NAME": "    Bisnow | Space Coast State of the Market (Melbourne)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Crowne Plaza Melbourne\n2605 N Hwy A1A, Melbourne, FL 32903", "LINK": "Bisnow | Space Coast State of the Market (Melbourne)", "EVENT TIME DURATION": "25th at 8am - 11:15am ET"}, {"START DATE": "2026-08-26", "END DATE": "2026-08-26", "EVENT NAME": "Bisnow | Multifamily Annual Conference Midwest", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Radisson Blu Aqua Hotel\n221 N Columbus Drive, Chicago, IL 60601", "LINK": "Bisnow | Multifamily Annual Conference Midwest", "EVENT TIME DURATION": "26th at 7:45am - 4:30pm CT"}, {"START DATE": "2026-08-26", "END DATE": "2026-08-26", "EVENT NAME": "Bisnow | Triangle Industrial & Manufacturing Conference", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Sheraton Imperial Hotel Raleigh-Durham Airport at Research Triangle Park\n4700 Emperor Blvd, Durham, NC 27703", "LINK": "Bisnow | Triangle Industrial & Manufacturing Conference", "EVENT TIME DURATION": "26th at 8am - 11:00am ET"}, {"START DATE": "2026-08-26", "END DATE": "2026-08-26", "EVENT NAME": "Bisnow | Northern California Industrial & Manufacturing Conference (DT SF)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Until the day of the event,\npending ticket availability", "EVENT LOCATION/ADDRESS": "Hyatt Centric Fishermans Wharf\n555 North Point St, San Francisco, CA 94133", "LINK": "Bisnow | Northern California Industrial & Manufacturing Conference (DT SF)", "EVENT TIME DURATION": "26th at 8am - 12:15pm PT"}, {"START DATE": "2026-08-26", "END DATE": "2026-08-27", "EVENT NAME": "IMN: Pacific Northwest Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Hyatt Regency Seattle\n808 Howell St, Seattle, WA 98101", "LINK": "Pacific Northwest Middle-Market Multifamily", "EVENT TIME DURATION": "26th at 8am PT - 27th at 12:30pm PT"}, {"START DATE": "2026-08-27", "END DATE": "2026-08-27", "EVENT NAME": "ICSC RETAIL FORWARD SEATTLE", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Hyatt Regency Lake Washington at Seattle's Southport\n1053 Lake Washington Blvd N, Renton, WA 98056", "LINK": "ICSC RETAIL FORWARD SEATTLE", "EVENT TIME DURATION": "27th at 1:30pm PT - 5:30pm PT"}, {"START DATE": "2026-08-30", "END DATE": "2026-09-01", "EVENT NAME": "ICSC@FLORIDA", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Orange County Convention Center\n9800 International Dr, Orlando, FL 32819", "LINK": "ICSC@FLORIDA", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-09-01", "END DATE": "2026-09-02", "EVENT NAME": "McGuireWoods Emerging Manager Conference", "COSTS": "Limited Partners (LPs) - free\nSelected Emerging Managers (GPs) - around $895", "REGISTRATION": "Rolling application review\n(takes about 3\u20134 weeks for a response)", "REGISTRATION DEADLINE": "Rolling application review\n(takes about 3\u20134 weeks for a response)", "EVENT LOCATION/ADDRESS": "The Ritz-Carlton, Dallas\n2121 McKinney Ave, Dallas, TX 75201", "LINK": "McGuireWoods Emerging Manager Conference", "EVENT TIME DURATION": "1st at 7:30am - 2nd at 5pm CT"}, {"START DATE": "2026-09-09", "END DATE": "2026-09-09", "EVENT NAME": "Private Wealth Houston Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "", "LINK": "Private Wealth Houston Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-09-09", "END DATE": "2026-09-10", "EVENT NAME": "IMN: Bank Special Assets MidWest (Chicago)", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "InterContinental Chicago Magnificent Mile by IHG\n505 N Michigan Ave, Chicago, IL 60611", "LINK": "Bank Special Assets MidWest (Chicago)", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-09-14", "END DATE": "2026-09-15", "EVENT NAME": "IMN: HELOCs and Second Liens", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "JW Marriott Austin\n110 E 2nd St, Austin, TX 78701", "LINK": "HELOCs and Second Liens", "EVENT TIME DURATION": "14th at 7:30am CT - 15th at 12:45pm CT"}, {"START DATE": "2026-09-14", "END DATE": "2026-09-16", "EVENT NAME": "ICSC@WESTERN", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "San Diego Convention Center\n111 Harbor Dr, San Diego, CA 92101", "LINK": "ICSC@WESTERN", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-09-14", "END DATE": "2026-09-17", "EVENT NAME": "Future Proof Festival 2026", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Huntington Beach Boardwalk, Huntington Beach, CA\n 2000 Main St, Huntington Beach, CA 92648", "LINK": "Future Proof Festival 2026", "EVENT TIME DURATION": "14th at 12pm ET - 17th at 5pm ET"}, {"START DATE": "2026-09-15", "END DATE": "2026-09-15", "EVENT NAME": "McGuireWoods Emerging Manager (Los Angeles)", "COSTS": "Complimentary but strictly capped by capacity", "REGISTRATION": "Not been publicly disclosed", "REGISTRATION DEADLINE": "Not been publicly disclosed", "EVENT LOCATION/ADDRESS": "Not been publicly disclosed", "LINK": "McGuireWoods Emerging Manager (Los Angeles)", "EVENT TIME DURATION": "Not available"}, {"START DATE": "2026-09-15", "END DATE": "2026-09-16", "EVENT NAME": "IMN: Accessory Dwelling Units (ADUs)", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Rancho Bernardo Inn\n17550 Bernardo Oaks Dr, San Diego, CA 92128", "LINK": "Accessory Dwelling Units (ADUs)", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-09-15", "END DATE": "2026-09-16", "EVENT NAME": "IMN: Southern California Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Rancho Bernardo Inn\n17550 Bernardo Oaks Dr, San Diego, CA 92128", "LINK": "Southern California Middle-Market Multifamily", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-09-17", "END DATE": "2026-09-17", "EVENT NAME": "5th Annual Private Wealth Carolinas Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "", "LINK": "5th Annual Private Wealth Carolinas Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-09-17", "END DATE": "2026-09-17", "EVENT NAME": "PREA Near You (Boston)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Closes once the venue reaches its maximum capacity", "EVENT LOCATION/ADDRESS": "Omni Boston Seaport\n450 Summer St, Boston, MA 02210", "LINK": "PREA Near You - Boston", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-10-07", "END DATE": "2026-10-09", "EVENT NAME": "PREA 36th Annual Institutional Investor Conference (Washington)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Closes once the venue reaches its maximum capacity", "EVENT LOCATION/ADDRESS": "The Westin Washington DC Downtown\n999 9th St NW, Washington, DC 20001", "LINK": "36th Annual Institutional Investor Conference (Washington)", "EVENT TIME DURATION": "7th at 10am - 9th at 12pm ET"}, {"START DATE": "2026-10-07", "END DATE": "2026-10-09", "EVENT NAME": "Enterprise RIA: Private Wealth US Fall Retreat", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Four Seasons Disney, Orlando, FL", "LINK": "Enterprise RIA: Private Wealth US Fall Retreat", "EVENT TIME DURATION": ""}, {"START DATE": "2026-10-08", "END DATE": "2026-10-08", "EVENT NAME": "ICSC@MIDWEST", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Morgan MFG\n401 N Morgan St, Suite #100, Chicago, Illinois, 60642", "LINK": "ICSC@MIDWEST", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-10-13", "END DATE": "2026-10-14", "EVENT NAME": "IMN: Carolinas Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Omni Charlotte Hotel\n132 E Trade St, Charlotte, NC 28202", "LINK": "Carolinas Middle-Market Multifamily", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-10-14", "END DATE": "2026-10-14", "EVENT NAME": "IMN: Distressed CRE East (NYC)", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 E 37th St, New York, NY 10016", "LINK": "Distressed CRE East (NYC)", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-10-15", "END DATE": "2026-10-15", "EVENT NAME": "11th Annual Private Wealth Mid-Atlantic Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "", "LINK": "11th Annual Private Wealth Mid-Atlantic Forum", "EVENT TIME DURATION": ""}, {"START DATE": "2026-10-20", "END DATE": "2026-10-21", "EVENT NAME": "ICSC@SOUTHEAST", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Georgia World Congress Center\n285 Andrew Young International Blvd NW, Atlanta, GA 30313", "LINK": "ICSC@SOUTHEAST", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-10-21", "END DATE": "2026-10-23", "EVENT NAME": "ICSC+U.S. LAW", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "JW Marriott Orlando, Grande Lakes\n4040 Central Florida Pkwy, Orlando, FL 32837", "LINK": "ICSC+U.S. LAW", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-10-23", "END DATE": "2026-10-23", "EVENT NAME": "Zell Lurie | Fall Members' Meeting 2026 (Philadelphia)", "COSTS": "", "REGISTRATION": "Not yet available", "REGISTRATION DEADLINE": "Not yet available", "EVENT LOCATION/ADDRESS": "The Wharton School, University of Pennsylvania\n3733 Spruce St, Philadelphia, PA 19104", "LINK": "Zell Lurie | Fall Members' Meeting 2026 (Philadelphia)", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-10-26", "END DATE": "2026-10-27", "EVENT NAME": "Alts 50: Real Assets (NY)", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Not announced yet", "EVENT LOCATION/ADDRESS": "TBA", "LINK": "Alts 50: Real Assets (NY)", "EVENT TIME DURATION": "26th at 12:15pm - 27th at 10:30pm ET"}, {"START DATE": "2026-10-26", "END DATE": "2026-10-27", "EVENT NAME": "IMN: Mortgage AI Forum", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Waldorf Astoria Monarch Beach\n1 Monarch Beach Resort N, Dana Point, CA 92629", "LINK": "Mortgage AI Forum", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-10-26", "END DATE": "2026-10-27", "EVENT NAME": "IMN: Real Estate Family Office & Private Wealth Management Forum (East) ", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Loews Coral Gables Hotel\n2950 Coconut Grove Dr, Coral Gables, FL 33134", "LINK": "Real Estate Family Office & Private Wealth Management Forum (East) ", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-10-26", "END DATE": "2026-10-28", "EVENT NAME": "2026 ULI Fall Meeting Miami", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Not announced yet", "EVENT LOCATION/ADDRESS": "Miami Beach Convention Center\n1901 Convention Ctr Dr, Miami Beach, FL 33139", "LINK": "2026 ULI Fall Meeting Miami", "EVENT TIME DURATION": "26th at 8:30am - 28th at 3:30pm ET"}, {"START DATE": "2026-10-27", "END DATE": "2026-10-29", "EVENT NAME": "GCM SEM Consortium", "COSTS": "", "REGISTRATION": "Open", "REGISTRATION DEADLINE": "Not announced yet", "EVENT LOCATION/ADDRESS": "New York Hilton Midtown\n1335 6th Avenue, New York, NY 10019", "LINK": "GCM SEM Consortium", "EVENT TIME DURATION": "27th at 3pm - 29th at 3pm ET"}, {"START DATE": "2026-11-02", "END DATE": "2026-11-03", "EVENT NAME": "IMN: Mortgage Servicing Rights NYC", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "New York Hilton Midtown\n1335 6th Ave, New York, NY 10019", "LINK": "Mortgage Servicing Rights NYC", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-11-03", "END DATE": "2026-11-03", "EVENT NAME": "IMN: CRE CLOs", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "The Union League Club of New York\n38 E 37th St, New York, NY 10016", "LINK": "CRE CLOs", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-11-09", "END DATE": "2026-11-09", "EVENT NAME": "IMN: Extended Stay Hotels", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "JW Marriott Dallas Arts District\n800 N Harwood St, Dallas, TX 75201", "LINK": "Extended Stay Hotels", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-11-17", "END DATE": "2026-11-18", "EVENT NAME": "iREOC 2026 - Annual Membership Meeting (Austin, TX)", "COSTS": "", "REGISTRATION": "Not publicly available", "REGISTRATION DEADLINE": "Not publicly available", "EVENT LOCATION/ADDRESS": "Hotel ZaZa Austin Downtown;\n400 Lavaca St, Austin, TX 78701, United States", "LINK": "ICSC+CENTERBUILD", "EVENT TIME DURATION": "17th at 3pm - 18th at 6:30pm CT"}, {"START DATE": "2026-12-01", "END DATE": "2026-12-02", "EVENT NAME": "IMN: Bank Special Assets Dallas", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Marriott Dallas Uptown\n3033 Fairmount St, Dallas, TX 75201", "LINK": "Bank Special Assets Dallas", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-12-01", "END DATE": "2026-12-04", "EVENT NAME": "ICSC+CENTERBUILD", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "JW Marriott Phoenix Desert Ridge Resort & Spa\n5350 E Marriott Dr, Phoenix, AZ 85054", "LINK": "ICSC+CENTERBUILD", "EVENT TIME DURATION": "Not yet available"}, {"START DATE": "2026-12-04", "END DATE": "2026-12-04", "EVENT NAME": "IMN: Arizona Middle-Market Multifamily", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Fairmont Scottsdale Princess\n7575 E Princess Dr, Scottsdale, AZ 85255", "LINK": "Arizona Middle-Market Multifamily", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-12-06", "END DATE": "2026-12-06", "EVENT NAME": "IMN: SFR Industry Awards", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Marriott Dallas Uptown\n3033 Fairmount St, Dallas, TX 75201", "LINK": "SFR Industry Awards", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-12-07", "END DATE": "2026-12-09", "EVENT NAME": "IMN: Single Family Rental (SFR) West", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Fairmont Scottsdale Princess\n7575 E Princess Dr, Scottsdale, AZ 85255", "LINK": "Single Family Rental (SFR) West", "EVENT TIME DURATION": "2026 Agenda is not available yet"}, {"START DATE": "2026-12-09", "END DATE": "2026-12-10", "EVENT NAME": "ICSC NEW YORK", "COSTS": "", "REGISTRATION": "", "REGISTRATION DEADLINE": "", "EVENT LOCATION/ADDRESS": "Jacob K. Javits Convention Center New York\n429 11th Ave, New York, NY 10001", "LINK": "ICSC NEW YORK", "EVENT TIME DURATION": "9th at 7am ET - 10th at 3pm ET"}, {"START DATE": "2027-01-20", "END DATE": "2027-01-22", "EVENT NAME": "IMN's Winter Real Estate Private Funds by Informa", "EVENT LOCATION/ADDRESS": "Montage Laguna Beach\n30801 Coast Hwy, Laguna Beach, CA 92651", "LINK": "IMN's Winter Real Estate Private Funds by Informa", "EVENT TIME DURATION": "Agenda not yet available", "Registration Open": "TBA", "Registration Deadline": "TBA"}, {"START DATE": "2027-03-22", "END DATE": "2027-03-24", "EVENT NAME": "ALTSLA 2027 (Los Angeles)", "EVENT LOCATION/ADDRESS": "InterContinental Los Angeles Downtown by IHG\n900 Wilshire Blvd, Los Angeles, CA 90017", "LINK": "ALTSLA 2027 (Los Angeles)", "EVENT TIME DURATION": "22nd-24th", "Registration Open": "Open", "Registration Deadline": "Pending"}, {"START DATE": "2027-04-06", "END DATE": "2027-04-07", "EVENT NAME": "The 5th Annual McGuireWoods Emerging Manager Conference \u2013 Buyouts", "EVENT LOCATION/ADDRESS": "TBA", "LINK": "The 5th Annual McGuireWoods Emerging Manager Conference \u2013 Buyouts", "EVENT TIME DURATION": "Agenda not yet available", "Registration Open": "TBA", "Registration Deadline": "TBA"}];
+
+let state = {
+  contacts: [],
+  lists: [],
+  tasks: [],
+  events: [],
+  sequenceTemplates: [],
+  settings: { defaultCadenceDays: 14, staleDays: 45, team: DEFAULT_TEAM.slice() },
+  currentUser: DEFAULT_TEAM[0],
+  editMode: false,
+  activeView: "contacts",
+  filters: { contactSearch:"", contactType:"", contactTier:"", contactOwner:"", taskOwner:"" },
+  eventsView: "cards",
+  eventsFilter: "all",
+  calSpan: "quarter",
+  calAnchor: new Date(),
+  lookaheadWindow: 14
+};
+
+function uid(prefix){ return prefix + "_" + Math.random().toString(36).slice(2,9) + Date.now().toString(36).slice(-4); }
+function todayISO(){ return new Date().toISOString().slice(0,10); }
+function fmtDate(d){ if(!d) return "\u2014"; const dt = new Date(d+"T00:00:00"); if(isNaN(dt)) return d; return dt.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}); }
+function daysBetween(a,b){ const A=new Date(a+"T00:00:00"), B=new Date(b+"T00:00:00"); return Math.round((B-A)/86400000); }
+function currentQuarterKey(offset){
+  const now = new Date();
+  let q = Math.floor(now.getMonth()/3) + 1 + (offset||0);
+  let y = now.getFullYear();
+  while(q>4){ q-=4; y+=1; }
+  while(q<1){ q+=4; y-=1; }
+  return y+"-Q"+q;
+}
+function nextNQuarters(n){ const arr=[]; for(let i=0;i<n;i++) arr.push(currentQuarterKey(i)); return arr; }
+function quarterBounds(offset){
+  const now = new Date();
+  let q = Math.floor(now.getMonth()/3) + (offset||0);
+  let y = now.getFullYear();
+  while(q>3){ q-=4; y+=1; }
+  while(q<0){ q+=4; y-=1; }
+  const startMonth = q*3;
+  const start = new Date(y, startMonth, 1);
+  const end = new Date(y, startMonth+3, 0);
+  return { start: start.toISOString().slice(0,10), end: end.toISOString().slice(0,10) };
+}
+function eventInQuarter(ev, bounds){
+  const s = ev.startDate || '';
+  const e = ev.endDate || ev.startDate || '';
+  if(!s) return false;
+  return s <= bounds.end && e >= bounds.start;
+}
+function windowBounds(days){
+  const start = todayISO();
+  const d = new Date();
+  d.setDate(d.getDate()+days);
+  return {start, end: d.toISOString().slice(0,10)};
+}
+function eventOverlapsWindow(ev, bounds){
+  const s = ev.startDate || '';
+  const e = ev.endDate || ev.startDate || '';
+  if(!s) return false;
+  return s <= bounds.end && e >= bounds.start;
+}
+
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ---------------- storage ---------------- */
+async function loadAll(){
+  try{
+    const c = await window.storage.get('contacts', true);
+    state.contacts = c ? JSON.parse(c.value) : seedContacts();
+    if(!c) await window.storage.set('contacts', JSON.stringify(state.contacts), true);
+  }catch(e){ state.contacts = seedContacts(); try{ await window.storage.set('contacts', JSON.stringify(state.contacts), true);}catch(e2){} }
+
+  try{
+    const l = await window.storage.get('lists', true);
+    state.lists = l ? JSON.parse(l.value) : seedLists();
+    if(!l) await window.storage.set('lists', JSON.stringify(state.lists), true);
+  }catch(e){ state.lists = seedLists(); try{ await window.storage.set('lists', JSON.stringify(state.lists), true);}catch(e2){} }
+
+  try{
+    const t = await window.storage.get('tasks', true);
+    state.tasks = t ? JSON.parse(t.value) : seedTasks();
+    if(!t) await window.storage.set('tasks', JSON.stringify(state.tasks), true);
+  }catch(e){ state.tasks = seedTasks(); try{ await window.storage.set('tasks', JSON.stringify(state.tasks), true);}catch(e2){} }
+
+  try{
+    const ev = await window.storage.get('events', true);
+    state.events = ev ? JSON.parse(ev.value) : seedEvents();
+    if(!ev) await window.storage.set('events', JSON.stringify(state.events), true);
+  }catch(e){ state.events = seedEvents(); try{ await window.storage.set('events', JSON.stringify(state.events), true);}catch(e2){} }
+
+  try{
+    const s = await window.storage.get('settings', true);
+    state.settings = s ? JSON.parse(s.value) : state.settings;
+    if(!s) await window.storage.set('settings', JSON.stringify(state.settings), true);
+  }catch(e){ try{ await window.storage.set('settings', JSON.stringify(state.settings), true);}catch(e2){} }
+
+  try{
+    const seq = await window.storage.get('sequenceTemplates', true);
+    state.sequenceTemplates = seq ? JSON.parse(seq.value) : seedSequenceTemplates();
+    if(!seq) await window.storage.set('sequenceTemplates', JSON.stringify(state.sequenceTemplates), true);
+  }catch(e){ state.sequenceTemplates = seedSequenceTemplates(); try{ await window.storage.set('sequenceTemplates', JSON.stringify(state.sequenceTemplates), true);}catch(e2){} }
+}
+async function persist(key){
+  try{ await window.storage.set(key, JSON.stringify(state[key]), true); }
+  catch(e){ showToast('Could not save just now \u2014 your change is kept on screen but retry saving.'); }
+}
+
+/* ---------------- seed / sample data ---------------- */
+function seedContacts(){
+  const t0 = todayISO();
+  const back = (n)=>{ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString().slice(0,10); };
+  return [
+    {id:uid('ct'), name:"Helen Marchetti", org:"Northlight Family Office", type:"Family Office", tier:"Tier 1", tags:["West Coast","Multifamily"], owner:"Ariela", email:"h.marchetti@example.com", phone:"", city:"San Francisco, CA", lastContact:back(21), cadenceOverrideDays:null, status:"Awaiting reply", notes:"Warm intro via Kev. Interested in AREF I seed portfolio.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"David Okafor", org:"Beacon Hill Capital Partners", type:"LP / Institutional", tier:"Tier 1", tags:["Emerging Manager Program"], owner:"Bianca Tomkoria", email:"dokafor@example.com", phone:"", city:"Boston, MA", lastContact:back(9), cadenceOverrideDays:21, status:"Outreach sent", notes:"Requested deck after AFIRE panel.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Priya Shenoy", org:"Cascade Advisors (Placement)", type:"Placement Agent", tier:"Tier 2", tags:["Placement","Introductions"], owner:"Gwyneth Leung", email:"priya@example.com", phone:"", city:"Chicago, IL", lastContact:back(40), cadenceOverrideDays:null, status:"Outreach sent", notes:"", priorityQuarter: currentQuarterKey(1), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Marcus Feld", org:"Whitcombe Endowment", type:"LP / Institutional", tier:"Tier 2", tags:["Endowment"], owner:"Mark Julius Mangao", email:"mfeld@example.com", phone:"", city:"Seattle, WA", lastContact:back(3), cadenceOverrideDays:null, status:"Meeting scheduled", notes:"Call booked to review 999 Hiawatha.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Renata Souza", org:"Ironbark Family Office", type:"Family Office", tier:"Tier 3", tags:["Self Storage"], owner:"Ariela", email:"rsouza@example.com", phone:"", city:"Miami, FL", lastContact:back(60), cadenceOverrideDays:null, status:"Not started", notes:"Flagged for self storage thesis outreach.", priorityQuarter: currentQuarterKey(2), sample:true, createdAt:t0}
+  ];
+}
+function seedLists(){
+  return [
+    {id:uid('ls'), name:"AREF I \u2014 First Close Targets", description:"Highest-conviction Tier 1 contacts for the first close push.", contactIds:[], createdAt:todayISO(), sample:true},
+    {id:uid('ls'), name:"Family Offices \u2014 West Coast", description:"Family office relationships concentrated on the West Coast.", contactIds:[], createdAt:todayISO(), sample:true}
+  ];
+}
+function seedTasks(){
+  const t0 = todayISO();
+  const fwd = (n)=>{ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  return [
+    {id:uid('tk'), title:"Send AREF I seed portfolio deck", relatedContactName:"Helen Marchetti", owner:"Ariela", dueDate:fwd(2), status:"Open", priority:"High", notes:"", sample:true},
+    {id:uid('tk'), title:"Prep talking points for Whitcombe call", relatedContactName:"Marcus Feld", owner:"Mark Julius Mangao", dueDate:fwd(1), status:"In progress", priority:"High", notes:"", sample:true},
+    {id:uid('tk'), title:"Log Cascade Advisors intro notes in ledger", relatedContactName:"Priya Shenoy", owner:"Gwyneth Leung", dueDate:fwd(5), status:"Open", priority:"Medium", notes:"", sample:true},
+    {id:uid('tk'), title:"CRM data hygiene: family office category pass", relatedContactName:"", owner:"Ariela", dueDate:fwd(7), status:"Open", priority:"Low", notes:"", sample:true}
+  ];
+}
+function seedSequenceTemplates(){
+  return [
+    {id:uid('sq'), name:"Standard cold outreach", steps:[
+      {type:"Email", title:"Intro email", waitDays:0},
+      {type:"Call", title:"Follow-up call", waitDays:5},
+      {type:"Email", title:"Second follow-up email", waitDays:5},
+      {type:"Other", title:"Final check-in", waitDays:7}
+    ]},
+    {id:uid('sq'), name:"Conference warm intro", steps:[
+      {type:"Email", title:"Nice-to-meet-you email", waitDays:1},
+      {type:"Call", title:"Intro call", waitDays:4},
+      {type:"Email", title:"Send materials", waitDays:3}
+    ]}
+  ];
+}
+function seedEvents(){
+  const fwd = (n)=>{ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  return [
+    {id:uid('ev'), name:"AFIRE Annual Conference", startDate:fwd(30), endDate:fwd(32), location:"New York, NY", type:"Conference", attendeeNames:["Ariela","Kev Zoryan"], goals:"Meet 5 new institutional LPs focused on emerging managers.", notes:"", sample:true},
+    {id:uid('ev'), name:"West Coast Family Office Roundtable", startDate:fwd(10), endDate:fwd(10), location:"Los Angeles, CA", type:"Networking", attendeeNames:["Ariela","Aaron Greeno"], goals:"Deepen relationship with Northlight and peers.", notes:"", sample:true}
+  ];
+}
+
+/* ---------------- rendering: shell ---------------- */
+function el(html){ const d=document.createElement('div'); d.innerHTML=html.trim(); return d.firstChild; }
+function escapeHtml(s){ return (s||"").toString().replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderTopbar(){
+  const sel = document.getElementById('who-select');
+  sel.innerHTML = state.settings.team.map(m=>`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+  sel.value = state.currentUser;
+  sel.onchange = ()=>{ state.currentUser = sel.value; };
+
+  const pill = document.getElementById('mode-toggle');
+  const label = document.getElementById('mode-label');
+  function paint(){
+    pill.classList.toggle('on', state.editMode);
+    pill.classList.toggle('off', !state.editMode);
+    label.textContent = state.editMode ? "Edit mode" : "View mode";
+    document.getElementById('locked-msg').classList.toggle('show', !state.editMode);
+    renderActiveView();
+  }
+  pill.onclick = ()=>{ state.editMode = !state.editMode; paint(); };
+  paint();
+}
+
+function guardEdit(){
+  if(!state.editMode){ showToast("Switch to edit mode to make changes."); return false; }
+  return true;
+}
+
+function switchView(v){
+  state.activeView = v;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
+  renderActiveView();
+}
+function renderActiveView(){
+  updateTabCounts();
+  switch(state.activeView){
+    case 'contacts': renderContacts(); break;
+    case 'followups': renderFollowups(); break;
+    case 'lists': renderLists(); break;
+    case 'tasks': renderTasks(); break;
+    case 'events': renderEvents(); break;
+    case 'priorities': renderPriorities(); break;
+    case 'lookahead': renderLookahead(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+function updateTabCounts(){
+  document.getElementById('tab-n-contacts').textContent = state.contacts.length || '';
+  document.getElementById('tab-n-lists').textContent = state.lists.length || '';
+  document.getElementById('tab-n-tasks').textContent = state.tasks.filter(t=>t.status!=='Done').length || '';
+  document.getElementById('tab-n-events').textContent = state.events.length || '';
+  document.getElementById('tab-n-followups').textContent = getOverdueContacts().length || '';
+}
+
+/* ---------------- CONTACTS ---------------- */
+function populateContactFilterOptions(){
+  const typeSel = document.getElementById('contact-filter-type');
+  const tierSel = document.getElementById('contact-filter-tier');
+  const ownerSel = document.getElementById('contact-filter-owner');
+  if(typeSel.options.length<=1){
+    CONTACT_TYPES.forEach(t=>typeSel.appendChild(el(`<option value="${t}">${t}</option>`)));
+    TIERS.forEach(t=>tierSel.appendChild(el(`<option value="${t}">${t}</option>`)));
+  }
+  const owners = Array.from(new Set(state.settings.team));
+  ownerSel.innerHTML = '<option value="">All owners</option>' + owners.map(o=>`<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('');
+}
+function filteredContacts(){
+  const f = state.filters;
+  return state.contacts.filter(c=>{
+    if(f.contactType && c.type!==f.contactType) return false;
+    if(f.contactTier && c.tier!==f.contactTier) return false;
+    if(f.contactOwner && c.owner!==f.contactOwner) return false;
+    if(f.contactSearch){
+      const s = f.contactSearch.toLowerCase();
+      const hay = (c.name+" "+c.org+" "+(c.tags||[]).join(" ")).toLowerCase();
+      if(!hay.includes(s)) return false;
+    }
+    return true;
+  });
+}
+function tierTagClass(tier){ return tier==='Tier 1' ? 'brass' : tier==='Tier 2' ? 'forest' : ''; }
+function statusTagClass(status){
+  if(["Committed","Responded","Meeting scheduled"].includes(status)) return 'forest';
+  if(["Awaiting reply","Outreach sent"].includes(status)) return 'brass';
+  if(status==="Passed") return 'rust';
+  return '';
+}
+function renderContacts(){
+  populateContactFilterOptions();
+  const wrap = document.getElementById('contacts-table-wrap');
+  const rows = filteredContacts();
+  if(rows.length===0){ wrap.innerHTML = `<div class="empty"><h3>No contacts match</h3><div>Adjust filters or add a new contact to get started.</div></div>`; return; }
+  wrap.innerHTML = `<table><thead><tr>
+    <th>Name</th><th>Organization</th><th>Type</th><th>Tier</th><th>Status</th><th>Owner</th><th>Last contact</th><th>Tags</th>
+  </tr></thead><tbody>${rows.map(c=>`
+    <tr data-id="${c.id}">
+      <td class="name-cell">${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.org)}</td>
+      <td class="muted">${escapeHtml(c.type)}</td>
+      <td><span class="tag ${tierTagClass(c.tier)}">${escapeHtml(c.tier)}</span></td>
+      <td><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span></td>
+      <td class="muted">${escapeHtml(c.owner)}</td>
+      <td class="muted">${fmtDate(c.lastContact)}</td>
+      <td>${(c.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</td>
+    </tr>`).join('')}</tbody></table>`;
+  wrap.querySelectorAll('tbody tr').forEach(tr=>{
+    tr.onclick = ()=> openContactDetail(tr.dataset.id);
+  });
+}
+document.addEventListener('input', (e)=>{
+  if(e.target.id==='contact-search'){ state.filters.contactSearch = e.target.value; renderContacts(); }
+});
+document.addEventListener('change', (e)=>{
+  if(e.target.id==='contact-filter-type'){ state.filters.contactType = e.target.value; renderContacts(); }
+  if(e.target.id==='contact-filter-tier'){ state.filters.contactTier = e.target.value; renderContacts(); }
+  if(e.target.id==='contact-filter-owner'){ state.filters.contactOwner = e.target.value; renderContacts(); }
+  if(e.target.id==='task-filter-owner'){ state.filters.taskOwner = e.target.value; renderTasks(); }
+});
+
+function contactFormHtml(c){
+  c = c || {};
+  return `
+  <div class="field-row">
+    <div class="field"><label>Name</label><input id="f-name" value="${escapeHtml(c.name||'')}"></div>
+    <div class="field"><label>Organization</label><input id="f-org" value="${escapeHtml(c.org||'')}"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Type</label><select id="f-type">${CONTACT_TYPES.map(t=>`<option ${c.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Tier</label><select id="f-tier">${TIERS.map(t=>`<option ${c.tier===t?'selected':''}>${t}</option>`).join('')}</select></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Status</label><select id="f-status">${STATUSES.map(t=>`<option ${c.status===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Owner</label><select id="f-owner">${state.settings.team.map(t=>`<option ${c.owner===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+  </div>
+  <div class="field"><label>Warm path (who already has this relationship)</label>
+    <select id="f-warmpath"><option value="">None yet \u2014 cold</option>${state.settings.team.map(t=>`<option ${c.warmPath===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Email</label><input id="f-email" value="${escapeHtml(c.email||'')}"></div>
+    <div class="field"><label>City / region</label><input id="f-city" value="${escapeHtml(c.city||'')}"></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Last contact date</label><input type="date" id="f-lastcontact" value="${c.lastContact||''}"></div>
+    <div class="field"><label>Cadence override (days)</label><input type="number" id="f-cadence" placeholder="Default: ${state.settings.defaultCadenceDays}" value="${c.cadenceOverrideDays||''}"></div>
+  </div>
+  <div class="field"><label>Priority quarter</label><select id="f-quarter">${nextNQuarters(4).map(q=>`<option ${c.priorityQuarter===q?'selected':''}>${q}</option>`).join('')}</select></div>
+  <div class="field"><label>Tags (comma separated)</label><input id="f-tags" value="${escapeHtml((c.tags||[]).join(', '))}"></div>
+  <div class="field"><label>Notes</label><textarea id="f-notes">${escapeHtml(c.notes||'')}</textarea></div>
+  `;
+}
+function readContactForm(){
+  return {
+    name: document.getElementById('f-name').value.trim(),
+    org: document.getElementById('f-org').value.trim(),
+    type: document.getElementById('f-type').value,
+    tier: document.getElementById('f-tier').value,
+    status: document.getElementById('f-status').value,
+    owner: document.getElementById('f-owner').value,
+    warmPath: document.getElementById('f-warmpath').value,
+    email: document.getElementById('f-email').value.trim(),
+    city: document.getElementById('f-city').value.trim(),
+    lastContact: document.getElementById('f-lastcontact').value || todayISO(),
+    cadenceOverrideDays: document.getElementById('f-cadence').value ? parseInt(document.getElementById('f-cadence').value) : null,
+    priorityQuarter: document.getElementById('f-quarter').value,
+    tags: document.getElementById('f-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    notes: document.getElementById('f-notes').value
+  };
+}
+function openContactModal(existing){
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? "Edit contact" : "Add contact",
+    bodyHtml: contactFormHtml(existing),
+    onSave: async ()=>{
+      const data = readContactForm();
+      if(!data.name){ showToast("Name is required."); return false; }
+      const statusChanged = !existing || existing.status !== data.status;
+      if(data.status !== "Not started" && statusChanged && !data.notes.trim()){
+        showToast(`Add a quick note before marking this contact "${data.status}" \u2014 what's the context?`);
+        return false;
+      }
+      if(isEdit){
+        Object.assign(existing, data);
+        existing.sample = false;
+      } else {
+        state.contacts.push(Object.assign({id:uid('ct'), createdAt:todayISO(), sample:false}, data));
+      }
+      await persist('contacts');
+      renderActiveView();
+      showToast(isEdit ? "Contact updated." : "Contact added.");
+      return true;
+    },
+    onDelete: isEdit ? async ()=>{
+      state.contacts = state.contacts.filter(c=>c.id!==existing.id);
+      await persist('contacts');
+      renderActiveView();
+      showToast("Contact deleted.");
+      return true;
+    } : null
+  });
+}
+function computeSequenceSteps(template, startISO){
+  let cumulative = 0;
+  return template.steps.map(s=>{
+    cumulative += (s.waitDays||0);
+    const d = new Date(startISO+"T00:00:00");
+    d.setDate(d.getDate()+cumulative);
+    return {type:s.type, title:s.title, dueDate:d.toISOString().slice(0,10), done:false, doneDate:null};
+  });
+}
+function startSequenceOnContact(c, templateId){
+  const template = state.sequenceTemplates.find(t=>t.id===templateId);
+  if(!template) return;
+  c.activeSequence = {
+    templateId: template.id,
+    templateName: template.name,
+    startDate: todayISO(),
+    steps: computeSequenceSteps(template, todayISO()),
+    completed: false
+  };
+}
+function markNextSequenceStepDone(c){
+  if(!c.activeSequence) return;
+  const idx = c.activeSequence.steps.findIndex(s=>!s.done);
+  if(idx<0) return;
+  c.activeSequence.steps[idx].done = true;
+  c.activeSequence.steps[idx].doneDate = todayISO();
+  c.lastContact = todayISO();
+  if(c.activeSequence.steps.every(s=>s.done)) c.activeSequence.completed = true;
+}
+function nextPendingSequenceStep(c){
+  if(!c.activeSequence || c.activeSequence.completed) return null;
+  return c.activeSequence.steps.find(s=>!s.done) || null;
+}
+function openContactDetail(id){
+  const c = state.contacts.find(x=>x.id===id);
+  if(!c) return;
+  const daysSince = daysBetween(c.lastContact, todayISO());
+  const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+  const overdue = ACTIVE_OUTREACH_STATUSES.includes(c.status) && daysSince >= cadence;
+  const relatedTasks = state.tasks.filter(t=>t.relatedContactName===c.name);
+  const today = todayISO();
+  const seqHtml = c.activeSequence ? `
+    <div class="activity-log">
+      <div class="eyebrow" style="margin-bottom:8px;">Outreach sequence \u2014 ${escapeHtml(c.activeSequence.templateName)}${c.activeSequence.completed?' (complete)':''}</div>
+      ${c.activeSequence.steps.map(s=>{
+        const stepOverdue = !s.done && s.dueDate < today;
+        return `<div class="activity-item">${s.done?'\u2713':(stepOverdue?'<span class="overdue-badge">due</span>':'\u25cb')} ${escapeHtml(s.title)} <span class="when">&middot; ${escapeHtml(s.type)}, ${s.done? 'done '+fmtDate(s.doneDate) : 'due '+fmtDate(s.dueDate)}</span></div>`;
+      }).join('')}
+      <div style="margin-top:10px;display:flex;gap:8px;">
+        ${!c.activeSequence.completed ? `<button class="btn small" id="seq-advance-btn">Mark next step done</button>` : ''}
+        <button class="btn small btn-danger" id="seq-cancel-btn">Cancel sequence</button>
+      </div>
+    </div>
+  ` : `
+    <div class="activity-log">
+      <div class="eyebrow" style="margin-bottom:8px;">Outreach sequence</div>
+      ${state.sequenceTemplates.length ? `
+        <div style="display:flex;gap:8px;">
+          <select id="seq-template-select" style="flex:1;font-family:'Work Sans',sans-serif;font-size:13px;padding:7px 9px;border-radius:7px;border:1px solid var(--line);">${state.sequenceTemplates.map(t=>`<option value="${t.id}">${escapeHtml(t.name)} (${t.steps.length} steps)</option>`).join('')}</select>
+          <button class="btn small primary" id="seq-start-btn">Start sequence</button>
+        </div>` : `<div class="muted" style="font-size:12.5px;">No sequence templates yet \u2014 add one in Settings.</div>`}
+    </div>
+  `;
+  const bodyHtml = `
+    <div id="detail-panel">
+      <div class="kv"><div class="k">Organization</div><div>${escapeHtml(c.org)}</div></div>
+      <div class="kv"><div class="k">Type / tier</div><div><span class="tag ${tierTagClass(c.tier)}">${escapeHtml(c.tier)}</span> ${escapeHtml(c.type)}</div></div>
+      <div class="kv"><div class="k">Status</div><div><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span> ${overdue ? '<span class="overdue-badge">follow-up overdue</span>' : ''}</div></div>
+      <div class="kv"><div class="k">Owner</div><div>${escapeHtml(c.owner)}</div></div>
+      <div class="kv"><div class="k">Warm path</div><div>${c.warmPath ? escapeHtml(c.warmPath)+" already knows this contact" : '\u2014 cold relationship'}</div></div>
+      <div class="kv"><div class="k">Email</div><div>${escapeHtml(c.email)||'\u2014'}</div></div>
+      <div class="kv"><div class="k">City</div><div>${escapeHtml(c.city)||'\u2014'}</div></div>
+      <div class="kv"><div class="k">Last contact</div><div>${fmtDate(c.lastContact)} (${daysSince} days ago) &middot; cadence ${cadence}d${c.cadenceOverrideDays?' (override)':' (default)'}</div></div>
+      <div class="kv"><div class="k">Priority qtr</div><div>${escapeHtml(c.priorityQuarter||'\u2014')}</div></div>
+      <div class="kv"><div class="k">Tags</div><div>${(c.tags||[]).map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('') || '\u2014'}</div></div>
+      <div class="kv"><div class="k">Notes</div><div>${escapeHtml(c.notes)||'\u2014'}</div></div>
+      ${relatedTasks.length ? `<div class="activity-log"><div class="eyebrow" style="margin-bottom:8px;">Linked tasks</div>${relatedTasks.map(t=>`<div class="activity-item">${escapeHtml(t.title)} <span class="when">&middot; ${escapeHtml(t.status)}, due ${fmtDate(t.dueDate)}</span></div>`).join('')}</div>` : ''}
+      ${seqHtml}
+    </div>`;
+  openModal({
+    title: c.name,
+    bodyHtml,
+    saveLabel: "Edit",
+    onSave: async ()=>{ closeModal(); openContactModal(c); return false; },
+    onDelete: async ()=>{
+      state.contacts = state.contacts.filter(x=>x.id!==c.id);
+      await persist('contacts');
+      renderActiveView();
+      showToast("Contact deleted.");
+      return true;
+    },
+    saveIsEdit: true
+  });
+  const startBtn = document.getElementById('seq-start-btn');
+  if(startBtn) startBtn.onclick = async ()=>{
+    if(!guardEdit()) return;
+    const templateId = document.getElementById('seq-template-select').value;
+    startSequenceOnContact(c, templateId);
+    c.sample = false;
+    await persist('contacts');
+    renderActiveView();
+    openContactDetail(c.id);
+  };
+  const advanceBtn = document.getElementById('seq-advance-btn');
+  if(advanceBtn) advanceBtn.onclick = async ()=>{
+    if(!guardEdit()) return;
+    markNextSequenceStepDone(c);
+    await persist('contacts');
+    renderActiveView();
+    openContactDetail(c.id);
+    showToast("Step marked done.");
+  };
+  const cancelBtn = document.getElementById('seq-cancel-btn');
+  if(cancelBtn) cancelBtn.onclick = async ()=>{
+    if(!guardEdit()) return;
+    if(!confirm('Cancel this outreach sequence for '+c.name+'?')) return;
+    c.activeSequence = null;
+    await persist('contacts');
+    renderActiveView();
+    openContactDetail(c.id);
+  };
+}
+
+/* ---------------- FOLLOW-UPS ---------------- */
+function getOverdueContacts(){
+  const today = todayISO();
+  return state.contacts.filter(c=>{
+    if(!ACTIVE_OUTREACH_STATUSES.includes(c.status)) return false;
+    const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+    return daysBetween(c.lastContact, today) >= cadence;
+  }).sort((a,b)=>{
+    const da = daysBetween(a.lastContact, today) - (a.cadenceOverrideDays||state.settings.defaultCadenceDays);
+    const db = daysBetween(b.lastContact, today) - (b.cadenceOverrideDays||state.settings.defaultCadenceDays);
+    return db - da;
+  });
+}
+function getOverdueSequenceContacts(){
+  const today = todayISO();
+  return state.contacts.filter(c=>{
+    const step = nextPendingSequenceStep(c);
+    return step && step.dueDate < today;
+  });
+}
+function getUpcomingSequenceItems(windowEnd){
+  const today = todayISO();
+  const items = [];
+  state.contacts.forEach(c=>{
+    const step = nextPendingSequenceStep(c);
+    if(step && step.dueDate >= today && step.dueDate <= windowEnd) items.push({contact:c, step});
+  });
+  return items.sort((a,b)=> a.step.dueDate.localeCompare(b.step.dueDate));
+}
+function getStaleContacts(){
+  const today = todayISO();
+  const staleDays = state.settings.staleDays || 45;
+  return state.contacts.filter(c=>{
+    if(["Committed","Passed"].includes(c.status)) return false;
+    const reasons = [];
+    if(daysBetween(c.lastContact, today) >= staleDays) reasons.push(`no activity in ${daysBetween(c.lastContact, today)}d`);
+    if(!c.org) reasons.push("missing organization");
+    if(!c.owner) reasons.push("missing owner");
+    c._staleReasons = reasons;
+    return reasons.length>0;
+  });
+}
+function renderFollowups(){
+  const overdue = getOverdueContacts();
+  const overdueSeq = getOverdueSequenceContacts();
+  const stale = getStaleContacts();
+  const statsWrap = document.getElementById('followup-stats');
+  const activeOutreach = state.contacts.filter(c=>ACTIVE_OUTREACH_STATUSES.includes(c.status)).length;
+  statsWrap.innerHTML = `
+    <div class="stat-card alert"><div class="num">${overdue.length}</div><div class="label">Overdue for follow-up</div></div>
+    <div class="stat-card alert"><div class="num">${overdueSeq.length}</div><div class="label">Overdue sequence steps</div></div>
+    <div class="stat-card"><div class="num">${stale.length}</div><div class="label">Data hygiene flags</div></div>
+    <div class="stat-card"><div class="num">${activeOutreach}</div><div class="label">Active outreach in flight</div></div>
+    <div class="stat-card"><div class="num">${state.settings.defaultCadenceDays}d</div><div class="label">Default nudge cadence</div></div>
+  `;
+  const wrap = document.getElementById('followups-table-wrap');
+  const today = todayISO();
+  let html = '';
+
+  if(overdue.length===0 && overdueSeq.length===0){
+    html += `<div class="empty" style="margin-bottom:20px;"><h3>Nothing overdue</h3><div>Every active outreach thread and sequence step is within its window.</div></div>`;
+  } else {
+    if(overdue.length){
+      html += `<h3 style="font-size:14px;margin-bottom:10px;">Overdue by cadence</h3><table><thead><tr><th>Name</th><th>Organization</th><th>Owner</th><th>Last contact</th><th>Days since</th><th>Cadence</th><th>Status</th><th></th></tr></thead><tbody>
+        ${overdue.map(c=>{
+          const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+          const d = daysBetween(c.lastContact, today);
+          return `<tr data-id="${c.id}">
+            <td class="name-cell">${escapeHtml(c.name)}</td>
+            <td>${escapeHtml(c.org)}</td>
+            <td class="muted">${escapeHtml(c.owner)}</td>
+            <td class="muted">${fmtDate(c.lastContact)}</td>
+            <td><span class="overdue-badge">${d} days</span></td>
+            <td class="muted">${cadence}d${c.cadenceOverrideDays?' (override)':''}</td>
+            <td><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span></td>
+            <td><button class="btn small mark-followed" data-id="${c.id}">Mark followed up</button></td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>`;
+    }
+    if(overdueSeq.length){
+      html += `<h3 style="font-size:14px;margin:20px 0 10px;">Overdue sequence steps</h3><table><thead><tr><th>Name</th><th>Organization</th><th>Sequence</th><th>Step</th><th>Due</th><th>Owner</th></tr></thead><tbody>
+        ${overdueSeq.map(c=>{
+          const step = nextPendingSequenceStep(c);
+          return `<tr data-id="${c.id}">
+            <td class="name-cell">${escapeHtml(c.name)}</td>
+            <td>${escapeHtml(c.org)}</td>
+            <td class="muted">${escapeHtml(c.activeSequence.templateName)}</td>
+            <td>${escapeHtml(step.title)} <span class="tag brass">${escapeHtml(step.type)}</span></td>
+            <td><span class="overdue-badge">${fmtDate(step.dueDate)}</span></td>
+            <td class="muted">${escapeHtml(c.owner)}</td>
+          </tr>`;
+        }).join('')}
+      </tbody></table>`;
+    }
+  }
+
+  html += `<h3 style="font-size:14px;margin:24px 0 10px;">Data hygiene flags</h3>`;
+  if(stale.length===0){
+    html += `<div class="empty"><h3>Nothing flagged</h3><div>No contacts are stale or missing key fields right now.</div></div>`;
+  } else {
+    html += `<table><thead><tr><th>Name</th><th>Organization</th><th>Owner</th><th>Issue</th></tr></thead><tbody>
+      ${stale.map(c=>`<tr data-id="${c.id}">
+        <td class="name-cell">${escapeHtml(c.name)}</td>
+        <td>${escapeHtml(c.org)||'\u2014'}</td>
+        <td class="muted">${escapeHtml(c.owner)||'\u2014'}</td>
+        <td class="muted">${c._staleReasons.join(', ')}</td>
+      </tr>`).join('')}
+    </tbody></table>`;
+  }
+
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('tbody tr').forEach(tr=>{
+    tr.addEventListener('click', (e)=>{ if(e.target.classList.contains('mark-followed')) return; openContactDetail(tr.dataset.id); });
+  });
+  wrap.querySelectorAll('.mark-followed').forEach(btn=>{
+    btn.onclick = async (e)=>{
+      e.stopPropagation();
+      if(!guardEdit()) return;
+      const c = state.contacts.find(x=>x.id===btn.dataset.id);
+      c.lastContact = todayISO();
+      await persist('contacts');
+      renderActiveView();
+      showToast("Logged today as last contact.");
+    };
+  });
+}
+
+/* ---------------- LISTS ---------------- */
+function listMatchesContact(list, c){
+  const f = list.filter || {};
+  if(f.type && c.type!==f.type) return false;
+  if(f.tier && c.tier!==f.tier) return false;
+  if(f.owner && c.owner!==f.owner) return false;
+  if(f.tag && !(c.tags||[]).some(t=>t.toLowerCase().includes(f.tag.toLowerCase()))) return false;
+  return true;
+}
+function computeListContacts(list){
+  if(list.mode==='dynamic') return state.contacts.filter(c=>listMatchesContact(list, c));
+  return list.contactIds.map(id=>state.contacts.find(c=>c.id===id)).filter(Boolean);
+}
+function renderLists(){
+  const wrap = document.getElementById('lists-wrap');
+  if(state.lists.length===0){ wrap.innerHTML = `<div class="empty"><h3>No mailing lists yet</h3><div>Create a list to group contacts for a fundraising push.</div></div>`; return; }
+  wrap.innerHTML = state.lists.map(l=>{
+    const contacts = computeListContacts(l);
+    return `
+    <div class="card" style="padding:16px 18px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;">
+        <div>
+          <h3 style="font-size:16px;">${escapeHtml(l.name)} ${l.mode==='dynamic' ? '<span class="tag forest">smart list</span>' : ''}</h3>
+          <div class="muted" style="font-size:12.5px;margin-top:3px;">${escapeHtml(l.description||'')}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex:none;">
+          <span class="tag brass">${contacts.length} contact${contacts.length===1?'':'s'}</span>
+          <button class="btn small" data-act="edit" data-id="${l.id}">Edit</button>
+          <button class="btn small" data-act="export" data-id="${l.id}">Export</button>
+        </div>
+      </div>
+      ${contacts.length ? `<div style="margin-top:10px;">${contacts.map(c=>`<span class="tag">${escapeHtml(c.name)}</span>`).join('')}</div>` : ''}
+    </div>
+  `;}).join('');
+  wrap.querySelectorAll('[data-act="edit"]').forEach(b=> b.onclick = ()=> openListModal(state.lists.find(l=>l.id===b.dataset.id)));
+  wrap.querySelectorAll('[data-act="export"]').forEach(b=> b.onclick = ()=> exportListToExcel(state.lists.find(l=>l.id===b.dataset.id)));
+}
+function listFormHtml(l){
+  l = l || {};
+  const mode = l.mode || 'static';
+  const filter = l.filter || {};
+  const checked = new Set(l.contactIds||[]);
+  return `
+    <div class="field"><label>List name</label><input id="f-lname" value="${escapeHtml(l.name||'')}"></div>
+    <div class="field"><label>Description</label><textarea id="f-ldesc">${escapeHtml(l.description||'')}</textarea></div>
+    <div class="field"><label>List type</label>
+      <div class="view-toggle" id="f-lmode-toggle">
+        <button type="button" data-mode="static" class="${mode==='static'?'active':''}">Static \u2014 pick contacts</button>
+        <button type="button" data-mode="dynamic" class="${mode==='dynamic'?'active':''}">Smart \u2014 auto-updating filter</button>
+      </div>
+    </div>
+    <div id="f-static-wrap" style="display:${mode==='static'?'block':'none'};">
+      <div class="field"><label>Contacts in this list</label>
+        <div class="checkbox-list">
+          ${state.contacts.map(c=>`<label><input type="checkbox" value="${c.id}" ${checked.has(c.id)?'checked':''}> ${escapeHtml(c.name)} <span class="muted">\u2014 ${escapeHtml(c.org)}</span></label>`).join('') || '<div class="muted" style="padding:6px;">No contacts yet. Add contacts first.</div>'}
+        </div>
+      </div>
+    </div>
+    <div id="f-dynamic-wrap" style="display:${mode==='dynamic'?'block':'none'};">
+      <div class="helptext" style="margin-bottom:10px;">Contacts matching all filled filters below are included automatically \u2014 leave any blank to not filter on it.</div>
+      <div class="field-row">
+        <div class="field"><label>Type</label><select id="f-lf-type"><option value="">Any</option>${CONTACT_TYPES.map(t=>`<option ${filter.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+        <div class="field"><label>Tier</label><select id="f-lf-tier"><option value="">Any</option>${TIERS.map(t=>`<option ${filter.tier===t?'selected':''}>${t}</option>`).join('')}</select></div>
+      </div>
+      <div class="field-row">
+        <div class="field"><label>Owner</label><select id="f-lf-owner"><option value="">Any</option>${state.settings.team.map(t=>`<option ${filter.owner===t?'selected':''}>${escapeHtml(t)}</option>`).join('')}</select></div>
+        <div class="field"><label>Tag contains</label><input id="f-lf-tag" value="${escapeHtml(filter.tag||'')}"></div>
+      </div>
+    </div>
+  `;
+}
+function openListModal(existing){
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? "Edit mailing list" : "Create mailing list",
+    bodyHtml: listFormHtml(existing),
+    onSave: async ()=>{
+      const name = document.getElementById('f-lname').value.trim();
+      if(!name){ showToast("List name is required."); return false; }
+      const mode = document.querySelector('#f-lmode-toggle button.active').dataset.mode;
+      let data;
+      if(mode==='dynamic'){
+        data = { name, description: document.getElementById('f-ldesc').value.trim(), mode:'dynamic', contactIds:[], filter:{
+          type: document.getElementById('f-lf-type').value,
+          tier: document.getElementById('f-lf-tier').value,
+          owner: document.getElementById('f-lf-owner').value,
+          tag: document.getElementById('f-lf-tag').value.trim()
+        }};
+      } else {
+        const ids = Array.from(document.querySelectorAll('#f-static-wrap .checkbox-list input:checked')).map(i=>i.value);
+        data = { name, description: document.getElementById('f-ldesc').value.trim(), mode:'static', contactIds: ids, filter:null };
+      }
+      if(isEdit){ Object.assign(existing, data); existing.sample=false; }
+      else state.lists.push(Object.assign({id:uid('ls'), createdAt:todayISO(), sample:false}, data));
+      await persist('lists');
+      renderActiveView();
+      showToast(isEdit ? "List updated." : "List created.");
+      return true;
+    },
+    onDelete: isEdit ? async ()=>{
+      state.lists = state.lists.filter(l=>l.id!==existing.id);
+      await persist('lists');
+      renderActiveView();
+      showToast("List deleted.");
+      return true;
+    } : null
+  });
+  document.querySelectorAll('#f-lmode-toggle button').forEach(b=>{
+    b.onclick = ()=>{
+      document.querySelectorAll('#f-lmode-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+      document.getElementById('f-static-wrap').style.display = b.dataset.mode==='static' ? 'block':'none';
+      document.getElementById('f-dynamic-wrap').style.display = b.dataset.mode==='dynamic' ? 'block':'none';
+    };
+  });
+}
+
+/* ---------------- TASKS ---------------- */
+function renderTasks(){
+  const ownerSel = document.getElementById('task-filter-owner');
+  if(ownerSel.options.length<=1){
+    state.settings.team.forEach(m=> ownerSel.appendChild(el(`<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`)));
+  }
+  const board = document.getElementById('task-board');
+  const filtered = state.tasks.filter(t=> !state.filters.taskOwner || t.owner===state.filters.taskOwner);
+  const today = todayISO();
+  board.innerHTML = TASK_STATUSES.map(status=>{
+    const items = filtered.filter(t=>t.status===status);
+    return `<div class="board-col" data-status="${status}"><h3>${status} <span class="muted">(${items.length})</span></h3>${
+      items.length===0 ? '<div class="muted" style="font-size:12px;padding:8px 2px;">No tasks</div>' :
+      items.map(t=>{
+        const overdue = status!=='Done' && t.dueDate && t.dueDate < today;
+        return `<div class="task-card ${overdue?'overdue':''}" draggable="true" data-id="${t.id}">
+          <div class="t"><span class="pri-dot pri-${t.priority}"></span>${escapeHtml(t.title)}</div>
+          <div class="meta"><span>${escapeHtml(t.owner)}</span><span class="${overdue?'overdue-badge':''}">${fmtDate(t.dueDate)}</span></div>
+          ${t.relatedContactName ? `<div class="muted" style="font-size:11px;margin-top:5px;">${escapeHtml(t.relatedContactName)}</div>` : ''}
+        </div>`;
+      }).join('')
+    }</div>`;
+  }).join('');
+  board.querySelectorAll('.task-card').forEach(card=>{
+    card.onclick = ()=> openTaskModal(state.tasks.find(t=>t.id===card.dataset.id));
+    card.addEventListener('dragstart', (e)=>{
+      if(!state.editMode){ e.preventDefault(); showToast("Switch to edit mode to reorder tasks."); return; }
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+    });
+    card.addEventListener('dragend', ()=>{ card.classList.remove('dragging'); });
+  });
+  board.querySelectorAll('.board-col').forEach(col=>{
+    col.addEventListener('dragover', (e)=>{
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      col.classList.add('drag-over');
+    });
+    col.addEventListener('dragleave', ()=>{ col.classList.remove('drag-over'); });
+    col.addEventListener('drop', async (e)=>{
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      if(!guardEdit()) return;
+      const taskId = e.dataTransfer.getData('text/plain');
+      const task = state.tasks.find(t=>t.id===taskId);
+      const newStatus = col.dataset.status;
+      if(!task || task.status===newStatus) return;
+      task.status = newStatus;
+      await persist('tasks');
+      renderActiveView();
+      showToast(`Moved to ${newStatus}.`);
+    });
+  });
+}
+function taskFormHtml(t){
+  t = t || {};
+  return `
+    <div class="field"><label>Task title</label><input id="f-title" value="${escapeHtml(t.title||'')}"></div>
+    <div class="field"><label>Related contact (optional)</label>
+      <select id="f-contact"><option value="">None</option>${state.contacts.map(c=>`<option ${t.relatedContactName===c.name?'selected':''}>${escapeHtml(c.name)}</option>`).join('')}</select>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Owner</label><select id="f-towner">${state.settings.team.map(m=>`<option ${t.owner===m?'selected':''}>${escapeHtml(m)}</option>`).join('')}</select></div>
+      <div class="field"><label>Due date</label><input type="date" id="f-due" value="${t.dueDate||todayISO()}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Status</label><select id="f-tstatus">${TASK_STATUSES.map(s=>`<option ${t.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label>Priority</label><select id="f-tpriority">${TASK_PRIORITIES.map(s=>`<option ${t.priority===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-tnotes">${escapeHtml(t.notes||'')}</textarea></div>
+  `;
+}
+function openTaskModal(existing){
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? "Edit task" : "Add task",
+    bodyHtml: taskFormHtml(existing),
+    onSave: async ()=>{
+      const title = document.getElementById('f-title').value.trim();
+      if(!title){ showToast("Task title is required."); return false; }
+      const data = {
+        title,
+        relatedContactName: document.getElementById('f-contact').value,
+        owner: document.getElementById('f-towner').value,
+        dueDate: document.getElementById('f-due').value,
+        status: document.getElementById('f-tstatus').value,
+        priority: document.getElementById('f-tpriority').value,
+        notes: document.getElementById('f-tnotes').value
+      };
+      if(isEdit){ Object.assign(existing, data); existing.sample=false; }
+      else state.tasks.push(Object.assign({id:uid('tk'), sample:false}, data));
+      await persist('tasks');
+      renderActiveView();
+      showToast(isEdit ? "Task updated." : "Task added.");
+      return true;
+    },
+    onDelete: isEdit ? async ()=>{
+      state.tasks = state.tasks.filter(t=>t.id!==existing.id);
+      await persist('tasks');
+      renderActiveView();
+      showToast("Task deleted.");
+      return true;
+    } : null
+  });
+}
+
+/* ---------------- EVENTS ---------------- */
+function renderEvents(){
+  if(state.eventsView==='calendar'){
+    document.getElementById('events-grid').style.display='none';
+    document.getElementById('cal-grid').style.display='';
+    document.getElementById('cal-controls').style.display='flex';
+    document.getElementById('events-filter-toggle').style.display='none';
+    renderEventsCalendar();
+    return;
+  }
+  document.getElementById('events-grid').style.display='';
+  document.getElementById('cal-grid').style.display='none';
+  document.getElementById('events-filter-toggle').style.display='flex';
+  document.getElementById('cal-controls').style.display='none';
+  const grid = document.getElementById('events-grid');
+  if(state.events.length===0){ grid.innerHTML = `<div class="empty"><h3>No events tracked</h3><div>Add a conference or networking event to plan around it.</div></div>`; return; }
+  let list = state.events;
+  if(state.eventsFilter==='quarter'){
+    const bounds = quarterBounds(0);
+    list = list.filter(ev=> eventInQuarter(ev, bounds));
+  }
+  if(list.length===0){ grid.innerHTML = `<div class="empty"><h3>Nothing this quarter</h3><div>No events fall in the current quarter. Switch to "All events" to see the full list.</div></div>`; return; }
+  const sorted = [...list].sort((a,b)=> (a.startDate||'').localeCompare(b.startDate||''));
+  grid.innerHTML = sorted.map(ev=>`
+    <div class="event-card" data-id="${ev.id}">
+      <div class="dates">${fmtDate(ev.startDate)}${ev.endDate && ev.endDate!==ev.startDate ? ' \u2013 '+fmtDate(ev.endDate) : ''}</div>
+      <h3>${escapeHtml(ev.name)}</h3>
+      <div class="loc">${escapeHtml(ev.location)} &middot; <span class="tag">${escapeHtml(ev.type)}</span></div>
+      <div class="muted" style="font-size:12.5px;">${escapeHtml(ev.goals||'')}</div>
+      ${(ev.attendeeNames||[]).length ? `<div style="margin-top:8px;">${ev.attendeeNames.map(a=>`<span class="tag brass">${escapeHtml(a)}</span>`).join('')}</div>` : ''}
+    </div>
+  `).join('');
+  grid.querySelectorAll('.event-card').forEach(card=>{
+    card.onclick = ()=> openEventModal(state.events.find(e=>e.id===card.dataset.id));
+  });
+}
+function eventFormHtml(ev){
+  ev = ev || {};
+  const attendees = new Set(ev.attendeeNames||[]);
+  return `
+    <div class="field"><label>Event name</label><input id="f-ename" value="${escapeHtml(ev.name||'')}"></div>
+    <div class="field-row">
+      <div class="field"><label>Start date</label><input type="date" id="f-estart" value="${ev.startDate||todayISO()}"></div>
+      <div class="field"><label>End date</label><input type="date" id="f-eend" value="${ev.endDate||ev.startDate||todayISO()}"></div>
+    </div>
+    <div class="field-row">
+      <div class="field"><label>Location</label><input id="f-eloc" value="${escapeHtml(ev.location||'')}"></div>
+      <div class="field"><label>Type</label><select id="f-etype">${EVENT_TYPES.map(t=>`<option ${ev.type===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    </div>
+    <div class="field"><label>Networking goals</label><textarea id="f-egoals">${escapeHtml(ev.goals||'')}</textarea></div>
+    <div class="field"><label>Attendees from Arselle</label>
+      <div class="checkbox-list">${state.settings.team.map(m=>`<label><input type="checkbox" value="${escapeHtml(m)}" ${attendees.has(m)?'checked':''}> ${escapeHtml(m)}</label>`).join('')}</div>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-enotes">${escapeHtml(ev.notes||'')}</textarea></div>
+  `;
+}
+function openEventModal(existing){
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? "Edit event" : "Add event",
+    bodyHtml: eventFormHtml(existing),
+    onSave: async ()=>{
+      const name = document.getElementById('f-ename').value.trim();
+      if(!name){ showToast("Event name is required."); return false; }
+      const data = {
+        name,
+        startDate: document.getElementById('f-estart').value,
+        endDate: document.getElementById('f-eend').value,
+        location: document.getElementById('f-eloc').value.trim(),
+        type: document.getElementById('f-etype').value,
+        goals: document.getElementById('f-egoals').value,
+        attendeeNames: Array.from(document.querySelectorAll('#modal .checkbox-list input:checked')).map(i=>i.value),
+        notes: document.getElementById('f-enotes').value
+      };
+      if(isEdit){ Object.assign(existing, data); existing.sample=false; }
+      else state.events.push(Object.assign({id:uid('ev'), sample:false}, data));
+      await persist('events');
+      renderActiveView();
+      showToast(isEdit ? "Event updated." : "Event added.");
+      return true;
+    },
+    onDelete: isEdit ? async ()=>{
+      state.events = state.events.filter(e=>e.id!==existing.id);
+      await persist('events');
+      renderActiveView();
+      showToast("Event deleted.");
+      return true;
+    } : null
+  });
+}
+
+function eventsOnDate(dateStr){
+  return state.events.filter(ev=>{
+    const start = ev.startDate || '';
+    const end = ev.endDate || ev.startDate || '';
+    return start && dateStr >= start && dateStr <= end;
+  });
+}
+function quarterStartMonth(m){ return Math.floor(m/3)*3; }
+function buildMonthGrid(year, month){
+  const first = new Date(year, month, 1);
+  const startDay = first.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const monthName = first.toLocaleDateString('en-US',{month:'long'});
+  const today = todayISO();
+  let cells = '';
+  for(let i=0;i<startDay;i++) cells += `<div class="cal-day pad"></div>`;
+  for(let d=1; d<=daysInMonth; d++){
+    const dateStr = year+"-"+String(month+1).padStart(2,'0')+"-"+String(d).padStart(2,'0');
+    const evs = eventsOnDate(dateStr);
+    const isToday = dateStr===today;
+    cells += `<div class="cal-day ${evs.length?'has-event':''} ${isToday?'today':''}" data-date="${dateStr}">
+      <span>${d}</span>
+      ${evs.length ? `<div class="dots">${evs.slice(0,3).map(()=>'<span></span>').join('')}</div>` : ''}
+    </div>`;
+  }
+  return `<div class="cal-month">
+    <h4>${monthName} ${year}</h4>
+    <div class="cal-weekdays"><div>S</div><div>M</div><div>T</div><div>W</div><div>T</div><div>F</div><div>S</div></div>
+    <div class="cal-days">${cells}</div>
+  </div>`;
+}
+function renderEventsCalendar(){
+  const grid = document.getElementById('cal-grid');
+  const label = document.getElementById('cal-label');
+  const anchor = state.calAnchor;
+  const year = anchor.getFullYear();
+  grid.className = state.calSpan;
+  let months = [];
+  if(state.calSpan==='quarter'){
+    const qStart = quarterStartMonth(anchor.getMonth());
+    months = [qStart, qStart+1, qStart+2];
+    const qNum = qStart/3 + 1;
+    label.textContent = `Q${qNum} ${year}`;
+  } else {
+    months = [0,1,2,3,4,5,6,7,8,9,10,11];
+    label.textContent = `${year}`;
+  }
+  grid.innerHTML = months.map(m=> buildMonthGrid(year, m)).join('');
+  grid.querySelectorAll('.cal-day.has-event').forEach(dayEl=>{
+    dayEl.onclick = ()=>{
+      const evs = eventsOnDate(dayEl.dataset.date);
+      openModal({
+        title: fmtDate(dayEl.dataset.date),
+        bodyHtml: evs.map(ev=>`
+          <div style="padding:8px 0;border-bottom:1px solid var(--line);">
+            <div style="font-weight:600;">${escapeHtml(ev.name)}</div>
+            <div class="muted" style="font-size:12px;">${escapeHtml(ev.location)} &middot; ${escapeHtml(ev.type)}</div>
+          </div>`).join(''),
+        hideFooter: true
+      });
+    };
+  });
+}
+function shiftCalendar(dir){
+  const anchor = state.calAnchor;
+  if(state.calSpan==='quarter') anchor.setMonth(anchor.getMonth() + dir*3);
+  else anchor.setFullYear(anchor.getFullYear() + dir);
+  renderEventsCalendar();
+}
+
+/* ---------------- PRIORITIES ---------------- */
+function renderPriorities(){
+  const quarters = nextNQuarters(4);
+  const wrap = document.getElementById('pri-grid-wrap');
+  let html = `<div id="pri-grid">`;
+  html += `<div class="pri-header-row"><div>Tier</div>${quarters.map(q=>`<div>${q}</div>`).join('')}</div>`;
+  TIERS.forEach(tier=>{
+    html += `<div class="pri-row"><div class="row-label">${tier}</div>`;
+    quarters.forEach(q=>{
+      const matches = state.contacts.filter(c=>c.tier===tier && c.priorityQuarter===q);
+      const n = matches.length;
+      const bg = n===0 ? 'transparent' : n<2 ? 'var(--brass-bg)' : n<4 ? '#E7D3A6' : 'var(--brass)';
+      const fg = n>=4 ? '#fff' : 'var(--ink)';
+      html += `<div class="pri-cell" style="background:${bg};color:${fg};" data-tier="${tier}" data-q="${q}">
+        <div class="pri-count">${n}</div><div class="clabel">contact${n===1?'':'s'}</div>
+      </div>`;
+    });
+    html += `</div>`;
+  });
+  html += `</div>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('.pri-cell').forEach(cell=>{
+    cell.onclick = ()=>{
+      const tier = cell.dataset.tier, q = cell.dataset.q;
+      const matches = state.contacts.filter(c=>c.tier===tier && c.priorityQuarter===q);
+      openModal({
+        title: `${tier} \u00b7 ${q}`,
+        bodyHtml: matches.length ? `<table><thead><tr><th>Name</th><th>Organization</th><th>Status</th><th>Owner</th></tr></thead><tbody>${matches.map(c=>`<tr><td class="name-cell">${escapeHtml(c.name)}</td><td>${escapeHtml(c.org)}</td><td><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span></td><td class="muted">${escapeHtml(c.owner)}</td></tr>`).join('')}</tbody></table>` : `<div class="muted">No contacts flagged for this tier and quarter.</div>`,
+        hideFooter: true
+      });
+    };
+  });
+}
+
+/* ---------------- LOOK AHEAD ---------------- */
+function renderLookahead(){
+  const bounds = windowBounds(state.lookaheadWindow);
+  const today = todayISO();
+  const wrap = document.getElementById('lookahead-wrap');
+
+  const requiredCadence = getOverdueContacts();
+  const requiredSeq = getOverdueSequenceContacts();
+  const recommended = getUpcomingSequenceItems(bounds.end);
+  const recommendedCadence = state.contacts.filter(c=>{
+    if(!ACTIVE_OUTREACH_STATUSES.includes(c.status)) return false;
+    const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+    const dueDate = new Date(c.lastContact+"T00:00:00"); dueDate.setDate(dueDate.getDate()+cadence);
+    const dueISO = dueDate.toISOString().slice(0,10);
+    return dueISO > today && dueISO <= bounds.end;
+  });
+  const milestones = state.tasks.filter(t=> t.status!=='Done' && t.dueDate && t.dueDate <= bounds.end)
+    .sort((a,b)=> (a.dueDate||'').localeCompare(b.dueDate||''));
+  const conferences = state.events.filter(ev=> eventOverlapsWindow(ev, bounds))
+    .sort((a,b)=> (a.startDate||'').localeCompare(b.startDate||''));
+
+  const windowLabel = state.lookaheadWindow===14 ? "next 2 weeks" : "next 30 days";
+
+  function section(title, rows, emptyMsg, rowRenderer){
+    return `<h3 style="font-size:14px;margin:22px 0 10px;">${title} <span class="muted" style="font-weight:400;">(${rows.length})</span></h3>` +
+      (rows.length===0 ? `<div class="empty"><h3>${emptyMsg}</h3></div>` : `<table><tbody>${rows.map(rowRenderer).join('')}</tbody></table>`);
+  }
+
+  let html = `<div class="eyebrow" style="margin-bottom:14px;">At a glance for the ${windowLabel} \u2014 ${fmtDate(bounds.start)} to ${fmtDate(bounds.end)}</div>`;
+
+  html += section("Required follow-ups (overdue now)",
+    [...requiredCadence.map(c=>({kind:'cadence',c})), ...requiredSeq.map(c=>({kind:'seq',c}))],
+    "Nothing overdue right now.",
+    (item)=>{
+      const c = item.c;
+      if(item.kind==='cadence'){
+        const d = daysBetween(c.lastContact, today);
+        return `<tr data-id="${c.id}"><td class="name-cell">${escapeHtml(c.name)}</td><td>${escapeHtml(c.org)}</td><td class="muted">${escapeHtml(c.owner)}</td><td><span class="overdue-badge">${d}d overdue on cadence</span></td></tr>`;
+      }
+      const step = nextPendingSequenceStep(c);
+      return `<tr data-id="${c.id}"><td class="name-cell">${escapeHtml(c.name)}</td><td>${escapeHtml(c.org)}</td><td class="muted">${escapeHtml(c.owner)}</td><td><span class="overdue-badge">sequence step "${escapeHtml(step.title)}" due ${fmtDate(step.dueDate)}</span></td></tr>`;
+    }
+  );
+
+  html += section("Recommended outreach (due this window)",
+    [...recommended.map(r=>({kind:'seq', c:r.contact, step:r.step})), ...recommendedCadence.map(c=>({kind:'cadence', c}))],
+    "No outreach due in this window yet.",
+    (item)=>{
+      const c = item.c;
+      if(item.kind==='seq'){
+        return `<tr data-id="${c.id}"><td class="name-cell">${escapeHtml(c.name)}</td><td>${escapeHtml(c.org)}</td><td class="muted">${escapeHtml(c.owner)}</td><td class="muted">${escapeHtml(item.step.title)} due ${fmtDate(item.step.dueDate)}</td></tr>`;
+      }
+      const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+      return `<tr data-id="${c.id}"><td class="name-cell">${escapeHtml(c.name)}</td><td>${escapeHtml(c.org)}</td><td class="muted">${escapeHtml(c.owner)}</td><td class="muted">cadence follow-up due within ${cadence}d window</td></tr>`;
+    }
+  );
+
+  html += section("Milestones (tasks due)",
+    milestones,
+    "No tasks due in this window.",
+    (t)=>{
+      const overdue = t.dueDate < today;
+      return `<tr><td class="name-cell"><span class="pri-dot pri-${t.priority}"></span>${escapeHtml(t.title)}</td><td class="muted">${escapeHtml(t.owner)}</td><td>${overdue?'<span class="overdue-badge">'+fmtDate(t.dueDate)+' (overdue)</span>':fmtDate(t.dueDate)}</td><td class="muted">${escapeHtml(t.status)}</td></tr>`;
+    }
+  );
+
+  html += section("Conferences & events",
+    conferences,
+    "No conferences or events in this window.",
+    (ev)=> `<tr><td class="name-cell">${escapeHtml(ev.name)}</td><td class="muted">${fmtDate(ev.startDate)}${ev.endDate && ev.endDate!==ev.startDate ? ' \u2013 '+fmtDate(ev.endDate) : ''}</td><td class="muted">${escapeHtml(ev.location)}</td><td><span class="tag">${escapeHtml(ev.type)}</span></td></tr>`
+  );
+
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('tr[data-id]').forEach(tr=>{
+    tr.style.cursor = 'pointer';
+    tr.addEventListener('click', ()=> openContactDetail(tr.dataset.id));
+  });
+}
+function exportLookahead(){
+  const bounds = windowBounds(state.lookaheadWindow);
+  const today = todayISO();
+  const requiredRows = [
+    ...getOverdueContacts().map(c=>({Name:c.name, Organization:c.org, Owner:c.owner, Issue:`${daysBetween(c.lastContact,today)}d overdue on cadence`})),
+    ...getOverdueSequenceContacts().map(c=>{ const step=nextPendingSequenceStep(c); return {Name:c.name, Organization:c.org, Owner:c.owner, Issue:`Sequence step "${step.title}" due ${step.dueDate}`}; })
+  ];
+  const recommendedCadence = state.contacts.filter(c=>{
+    if(!ACTIVE_OUTREACH_STATUSES.includes(c.status)) return false;
+    const cadence = c.cadenceOverrideDays || state.settings.defaultCadenceDays;
+    const dueDate = new Date(c.lastContact+"T00:00:00"); dueDate.setDate(dueDate.getDate()+cadence);
+    const dueISO = dueDate.toISOString().slice(0,10);
+    return dueISO > today && dueISO <= bounds.end;
+  });
+  const recommendedRows = [
+    ...getUpcomingSequenceItems(bounds.end).map(r=>({Name:r.contact.name, Organization:r.contact.org, Owner:r.contact.owner, Detail:`${r.step.title} due ${r.step.dueDate}`})),
+    ...recommendedCadence.map(c=>({Name:c.name, Organization:c.org, Owner:c.owner, Detail:`Cadence follow-up due by ${bounds.end}`}))
+  ];
+  const milestoneRows = state.tasks.filter(t=> t.status!=='Done' && t.dueDate && t.dueDate <= bounds.end)
+    .map(t=>({Title:t.title, Owner:t.owner, "Due date":t.dueDate, Status:t.status, Priority:t.priority}));
+  const eventRows = state.events.filter(ev=> eventOverlapsWindow(ev, bounds))
+    .map(ev=>({Name:ev.name, "Start date":ev.startDate, "End date":ev.endDate, Location:ev.location, Type:ev.type}));
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(requiredRows), "Required Follow-ups");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(recommendedRows), "Recommended Outreach");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(milestoneRows), "Milestones");
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(eventRows), "Conferences");
+  XLSX.writeFile(wb, `Arselle_LookAhead_${state.lookaheadWindow}d.xlsx`);
+}
+
+/* ---------------- SETTINGS ---------------- */
+function renderSettings(){
+  document.getElementById('setting-cadence').value = state.settings.defaultCadenceDays;
+  document.getElementById('setting-staledays').value = state.settings.staleDays || 45;
+  document.getElementById('setting-team').value = state.settings.team.join(', ');
+  renderSequenceTemplates();
+}
+function renderSequenceTemplates(){
+  const wrap = document.getElementById('sequence-templates-wrap');
+  if(state.sequenceTemplates.length===0){ wrap.innerHTML = `<div class="muted" style="font-size:12.5px;">No templates yet.</div>`; return; }
+  wrap.innerHTML = state.sequenceTemplates.map(t=>`
+    <div class="card" style="padding:12px 14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+      <div>
+        <div style="font-weight:600;font-size:13.5px;">${escapeHtml(t.name)}</div>
+        <div class="muted" style="font-size:12px;margin-top:2px;">${t.steps.map(s=>escapeHtml(s.title)).join(' \u2192 ')}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex:none;">
+        <button class="btn small" data-act="edit-seq" data-id="${t.id}">Edit</button>
+        <button class="btn small btn-danger" data-act="del-seq" data-id="${t.id}">Delete</button>
+      </div>
+    </div>
+  `).join('');
+  wrap.querySelectorAll('[data-act="edit-seq"]').forEach(b=> b.onclick = ()=> openSequenceTemplateModal(state.sequenceTemplates.find(t=>t.id===b.dataset.id)));
+  wrap.querySelectorAll('[data-act="del-seq"]').forEach(b=> b.onclick = async ()=>{
+    if(!guardEdit()) return;
+    if(!confirm('Delete this sequence template? Contacts already on it keep their progress.')) return;
+    state.sequenceTemplates = state.sequenceTemplates.filter(t=>t.id!==b.dataset.id);
+    await persist('sequenceTemplates');
+    renderSequenceTemplates();
+    showToast("Template deleted.");
+  });
+}
+function sequenceTemplateFormHtml(t){
+  t = t || {steps:[{type:"Email",title:"",waitDays:0}]};
+  return `
+    <div class="field"><label>Template name</label><input id="f-seq-name" value="${escapeHtml(t.name||'')}"></div>
+    <div class="field"><label>Steps (in order)</label>
+      <div id="seq-steps-editor">
+        ${t.steps.map((s,i)=>`
+          <div class="field-row seq-step-row" data-idx="${i}" style="grid-template-columns:100px 1fr 110px 34px;align-items:end;">
+            <div class="field" style="margin-bottom:8px;"><label>${i===0?'Type':''}</label><select class="seq-step-type">${SEQUENCE_STEP_TYPES.map(ty=>`<option ${s.type===ty?'selected':''}>${ty}</option>`).join('')}</select></div>
+            <div class="field" style="margin-bottom:8px;"><label>${i===0?'Step title':''}</label><input class="seq-step-title" value="${escapeHtml(s.title||'')}"></div>
+            <div class="field" style="margin-bottom:8px;"><label>${i===0?'Wait days after prior':''}</label><input type="number" min="0" class="seq-step-wait" value="${s.waitDays||0}"></div>
+            <button type="button" class="btn small btn-danger seq-step-remove" style="margin-bottom:8px;">&times;</button>
+          </div>
+        `).join('')}
+      </div>
+      <button type="button" class="btn small" id="seq-step-add">Add step</button>
+    </div>
+  `;
+}
+function readSequenceStepsFromForm(){
+  return Array.from(document.querySelectorAll('#seq-steps-editor .seq-step-row')).map(row=>({
+    type: row.querySelector('.seq-step-type').value,
+    title: row.querySelector('.seq-step-title').value.trim(),
+    waitDays: parseInt(row.querySelector('.seq-step-wait').value)||0
+  })).filter(s=>s.title);
+}
+function wireSequenceStepEditor(){
+  const editor = document.getElementById('seq-steps-editor');
+  function wireRemove(){
+    editor.querySelectorAll('.seq-step-remove').forEach(btn=>{
+      btn.onclick = ()=>{ btn.closest('.seq-step-row').remove(); };
+    });
+  }
+  wireRemove();
+  document.getElementById('seq-step-add').onclick = ()=>{
+    const row = el(`<div class="field-row seq-step-row" style="grid-template-columns:100px 1fr 110px 34px;align-items:end;">
+      <div class="field" style="margin-bottom:8px;"><select class="seq-step-type">${SEQUENCE_STEP_TYPES.map(ty=>`<option>${ty}</option>`).join('')}</select></div>
+      <div class="field" style="margin-bottom:8px;"><input class="seq-step-title" placeholder="Step title"></div>
+      <div class="field" style="margin-bottom:8px;"><input type="number" min="0" class="seq-step-wait" value="3"></div>
+      <button type="button" class="btn small btn-danger seq-step-remove" style="margin-bottom:8px;">&times;</button>
+    </div>`);
+    editor.appendChild(row);
+    wireRemove();
+  };
+}
+function openSequenceTemplateModal(existing){
+  const isEdit = !!existing;
+  openModal({
+    title: isEdit ? "Edit sequence template" : "Add sequence template",
+    bodyHtml: sequenceTemplateFormHtml(existing),
+    onSave: async ()=>{
+      const name = document.getElementById('f-seq-name').value.trim();
+      if(!name){ showToast("Template name is required."); return false; }
+      const steps = readSequenceStepsFromForm();
+      if(steps.length===0){ showToast("Add at least one step with a title."); return false; }
+      if(isEdit){ existing.name = name; existing.steps = steps; }
+      else state.sequenceTemplates.push({id:uid('sq'), name, steps});
+      await persist('sequenceTemplates');
+      renderSequenceTemplates();
+      showToast(isEdit ? "Template updated." : "Template added.");
+      return true;
+    },
+    onDelete: isEdit ? async ()=>{
+      state.sequenceTemplates = state.sequenceTemplates.filter(t=>t.id!==existing.id);
+      await persist('sequenceTemplates');
+      renderSequenceTemplates();
+      showToast("Template deleted.");
+      return true;
+    } : null
+  });
+  wireSequenceStepEditor();
+}
+document.getElementById('add-sequence-template-btn').addEventListener('click', ()=>{ if(guardEdit()) openSequenceTemplateModal(); });
+document.getElementById('save-settings-btn').addEventListener('click', async ()=>{
+  if(!guardEdit()) return;
+  const v = parseInt(document.getElementById('setting-cadence').value);
+  if(!v || v<1){ showToast("Enter a valid number of days."); return; }
+  const sd = parseInt(document.getElementById('setting-staledays').value);
+  if(!sd || sd<1){ showToast("Enter a valid stale-days threshold."); return; }
+  state.settings.defaultCadenceDays = v;
+  state.settings.staleDays = sd;
+  await persist('settings');
+  showToast("Settings saved.");
+  renderActiveView();
+});
+document.getElementById('save-team-btn').addEventListener('click', async ()=>{
+  if(!guardEdit()) return;
+  const list = document.getElementById('setting-team').value.split(',').map(s=>s.trim()).filter(Boolean);
+  if(list.length===0){ showToast("Add at least one team member."); return; }
+  state.settings.team = list;
+  if(!list.includes(state.currentUser)) state.currentUser = list[0];
+  await persist('settings');
+  renderTopbar();
+  showToast("Team list saved.");
+});
+document.getElementById('clear-sample-btn').addEventListener('click', async ()=>{
+  if(!guardEdit()) return;
+  state.contacts = state.contacts.filter(c=>!c.sample);
+  state.lists = state.lists.filter(l=>!l.sample);
+  state.tasks = state.tasks.filter(t=>!t.sample);
+  state.events = state.events.filter(e=>!e.sample);
+  await Promise.all([persist('contacts'), persist('lists'), persist('tasks'), persist('events')]);
+  renderActiveView();
+  showToast("Sample data cleared.");
+});
+
+/* ---------------- MODAL ---------------- */
+function openModal({title, bodyHtml, onSave, onDelete, saveLabel, hideFooter}){
+  const overlay = document.getElementById('modal-overlay');
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-head"><h2>${escapeHtml(title)}</h2><button class="close-x" id="modal-close">&times;</button></div>
+    <div class="modal-body">${bodyHtml}</div>
+    ${hideFooter ? '' : `<div class="modal-foot">
+      <div>${onDelete ? `<button class="btn ghost btn-danger" id="modal-delete">Delete</button>` : ''}</div>
+      <div><button class="btn ghost" id="modal-cancel">Cancel</button> <button class="btn primary" id="modal-save">${saveLabel||'Save'}</button></div>
+    </div>`}
+  `;
+  overlay.classList.add('open');
+  document.getElementById('modal-close').onclick = closeModal;
+  if(!hideFooter){
+    document.getElementById('modal-cancel').onclick = closeModal;
+    document.getElementById('modal-save').onclick = async ()=>{
+      if(!guardEdit()) return;
+      const ok = await onSave();
+      if(ok!==false) closeModal();
+    };
+    if(onDelete){
+      document.getElementById('modal-delete').onclick = async ()=>{
+        if(!guardEdit()) return;
+        if(confirm('Delete this record? This cannot be undone.')){
+          await onDelete();
+          closeModal();
+        }
+      };
+    }
+  }
+}
+function closeModal(){ document.getElementById('modal-overlay').classList.remove('open'); document.getElementById('modal').innerHTML=''; }
+document.getElementById('modal-overlay').addEventListener('click', (e)=>{ if(e.target.id==='modal-overlay') closeModal(); });
+
+/* ---------------- EXCEL EXPORT ---------------- */
+function downloadWorkbook(rows, sheetName, filename){
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName.slice(0,31));
+  XLSX.writeFile(wb, filename);
+}
+function exportContacts(){
+  const rows = filteredContacts().map(c=>({
+    Name:c.name, Organization:c.org, Type:c.type, Tier:c.tier, Status:c.status, Owner:c.owner,
+    Email:c.email, City:c.city, "Last contact":c.lastContact, "Cadence override (days)":c.cadenceOverrideDays||'',
+    "Priority quarter":c.priorityQuarter, Tags:(c.tags||[]).join('; '), Notes:c.notes
+  }));
+  downloadWorkbook(rows, "Contacts", "Arselle_Contacts.xlsx");
+}
+function exportFollowups(){
+  const today = todayISO();
+  const rows = getOverdueContacts().map(c=>({
+    Name:c.name, Organization:c.org, Owner:c.owner, "Last contact":c.lastContact,
+    "Days since":daysBetween(c.lastContact,today), "Cadence (days)":c.cadenceOverrideDays||state.settings.defaultCadenceDays, Status:c.status
+  }));
+  downloadWorkbook(rows, "Needs Follow-up", "Arselle_Followups.xlsx");
+}
+function exportListToExcel(list){
+  const rows = computeListContacts(list).map(c=>({Name:c.name, Organization:c.org, Type:c.type, Tier:c.tier, Status:c.status, Owner:c.owner, Email:c.email, "Last contact":c.lastContact}));
+  downloadWorkbook(rows, list.name, `Arselle_List_${list.name.replace(/[^a-z0-9]+/gi,'_')}.xlsx`);
+}
+function exportTasks(){
+  const rows = state.tasks.map(t=>({Title:t.title, "Related contact":t.relatedContactName, Owner:t.owner, "Due date":t.dueDate, Status:t.status, Priority:t.priority, Notes:t.notes}));
+  downloadWorkbook(rows, "Tasks", "Arselle_Tasks.xlsx");
+}
+function exportEvents(){
+  let list = state.events;
+  if(state.eventsFilter==='quarter'){
+    const bounds = quarterBounds(0);
+    list = list.filter(ev=> eventInQuarter(ev, bounds));
+  }
+  const rows = list.map(e=>({Name:e.name, "Start date":e.startDate, "End date":e.endDate, Location:e.location, Type:e.type, Attendees:(e.attendeeNames||[]).join('; '), Goals:e.goals, Notes:e.notes}));
+  downloadWorkbook(rows, "Events", "Arselle_Events.xlsx");
+}
+
+/* ---------------- IMPORT (events + contacts) ---------------- */
+function getField(row, aliases){
+  const keys = Object.keys(row);
+  for(const alias of aliases){
+    const hit = keys.find(k => k.trim().toLowerCase() === alias.toLowerCase());
+    if(hit && String(row[hit]).trim() !== '') return String(row[hit]).trim();
+  }
+  return '';
+}
+function normalizeDate(raw){
+  if(!raw) return '';
+  const s = raw.trim();
+  if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+  const d = new Date(s);
+  if(!isNaN(d)) return d.toISOString().slice(0,10);
+  return '';
+}
+function readWorkbookRows(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    const isCsv = /\.csv$/i.test(file.name);
+    reader.onload = (e)=>{
+      try{
+        const wb = isCsv ? XLSX.read(e.target.result, {type:'string'}) : XLSX.read(e.target.result, {type:'array', cellDates:true});
+        let allRows = [];
+        wb.SheetNames.forEach(sheetName=>{
+          const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], {defval:'', raw:false, dateNF:'yyyy-mm-dd'});
+          allRows = allRows.concat(rows);
+        });
+        resolve(allRows);
+      }catch(err){ reject(err); }
+    };
+    reader.onerror = reject;
+    if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+  });
+}
+function inferEventType(name){
+  const n = name.toLowerCase();
+  if(/reception|social|roundtable|meetup|happy hour|mixer/.test(n)) return "Networking";
+  if(/webinar/.test(n)) return "Other";
+  return "Conference";
+}
+function importEventsFromRows(rows){
+  let added=0, updated=0, skipped=0;
+  rows.forEach(row=>{
+    const name = getField(row, ['EVENT NAME','NAME','EVENT']);
+    const startDate = normalizeDate(getField(row, ['START DATE','START','DATE']));
+    if(!name || !startDate){ skipped++; return; }
+    const endDate = normalizeDate(getField(row, ['END DATE','END'])) || startDate;
+    const location = getField(row, ['EVENT LOCATION/ADDRESS','LOCATION','ADDRESS']);
+    const link = getField(row, ['LINK']);
+    const duration = getField(row, ['EVENT TIME DURATION','TIME DURATION','DURATION']);
+    const registration = getField(row, ['REGISTRATION','REGISTRATION OPEN','REGISTRATION STATUS']);
+    const deadline = getField(row, ['REGISTRATION DEADLINE']);
+    const costs = getField(row, ['COSTS','COST']);
+    const noteParts = [];
+    if(registration) noteParts.push('Registration: '+registration);
+    if(deadline) noteParts.push('Deadline: '+deadline);
+    if(costs) noteParts.push('Costs: '+costs);
+    if(duration) noteParts.push('Time: '+duration);
+    if(link) noteParts.push('Ref: '+link);
+    const notes = noteParts.join(' \u00b7 ');
+    const key = name.toLowerCase()+'|'+startDate;
+    const existing = state.events.find(ev => (ev.name.toLowerCase()+'|'+ev.startDate) === key);
+    if(existing){
+      existing.endDate = endDate; existing.location = location || existing.location;
+      existing.notes = notes || existing.notes; existing.sample = false;
+      updated++;
+    } else {
+      state.events.push({id:uid('ev'), name, startDate, endDate, location, type:inferEventType(name), attendeeNames:[], goals:'', notes, sample:false});
+      added++;
+    }
+  });
+  return {added, updated, skipped};
+}
+function importContactsFromRows(rows){
+  let added=0, updated=0, skipped=0;
+  rows.forEach(row=>{
+    const name = getField(row, ['NAME','CONTACT NAME','FULL NAME']);
+    if(!name){ skipped++; return; }
+    const org = getField(row, ['ORGANIZATION','ORG','COMPANY','FIRM']);
+    const email = getField(row, ['EMAIL','EMAIL ADDRESS']);
+    const city = getField(row, ['CITY','LOCATION','REGION']);
+    const typeRaw = getField(row, ['TYPE','CONTACT TYPE','CATEGORY']);
+    const type = CONTACT_TYPES.find(t=>t.toLowerCase()===typeRaw.toLowerCase()) || (typeRaw || "Other");
+    const tierRaw = getField(row, ['TIER','PRIORITY']);
+    const tier = TIERS.find(t=>t.toLowerCase()===tierRaw.toLowerCase()) || "Tier 2";
+    const owner = getField(row, ['OWNER','ASSIGNED TO','RELATIONSHIP OWNER']) || state.currentUser;
+    const lastContact = normalizeDate(getField(row, ['LAST CONTACT','LAST CONTACT DATE'])) || todayISO();
+    const statusRaw = getField(row, ['STATUS']);
+    const status = STATUSES.find(s=>s.toLowerCase()===statusRaw.toLowerCase()) || "Not started";
+    const tags = getField(row, ['TAGS']).split(/[,;]/).map(s=>s.trim()).filter(Boolean);
+    const notes = getField(row, ['NOTES']);
+    const key = (name+'|'+org).toLowerCase();
+    const existing = state.contacts.find(c => (c.name+'|'+c.org).toLowerCase() === key);
+    if(existing){
+      Object.assign(existing, {org: org||existing.org, email: email||existing.email, city: city||existing.city, notes: notes||existing.notes});
+      existing.sample = false;
+      updated++;
+    } else {
+      state.contacts.push({id:uid('ct'), name, org, type, tier, tags, owner, email, phone:'', city, lastContact, cadenceOverrideDays:null, status, notes, priorityQuarter: currentQuarterKey(0), sample:false, createdAt:todayISO()});
+      added++;
+    }
+  });
+  return {added, updated, skipped};
+}
+function openImportModal(kind){
+  openModal({
+    title: kind==='events' ? "Import conferences & events" : "Import contacts",
+    bodyHtml: `
+      <div class="helptext" style="margin-bottom:12px;">
+        ${kind==='events'
+          ? 'Upload an Excel (.xlsx) or CSV file. Works with the standard conference tracker columns: Start Date, End Date, Event Name, Location, Link, Registration, Registration Deadline, Costs, Duration. Every sheet in the workbook is read. Re-importing the same file updates existing events instead of duplicating them.'
+          : 'Upload an Excel (.xlsx) or CSV export. Expected columns (case-insensitive, any subset works): Name, Organization, Type, Tier, Owner, Email, City, Last Contact, Status, Tags, Notes. Matches on name + organization, so re-importing updates existing contacts rather than duplicating them.'}
+      </div>
+      <div class="field"><input type="file" id="import-file" accept=".xlsx,.xls,.csv"></div>
+      <div id="import-result" class="muted" style="font-size:12.5px;margin-top:8px;"></div>
+    `,
+    saveLabel: "Import",
+    onSave: async ()=>{
+      const fileInput = document.getElementById('import-file');
+      const file = fileInput.files[0];
+      if(!file){ showToast("Choose a file first."); return false; }
+      try{
+        const rows = await readWorkbookRows(file);
+        const result = kind==='events' ? importEventsFromRows(rows) : importContactsFromRows(rows);
+        await persist(kind==='events' ? 'events' : 'contacts');
+        renderActiveView();
+        showToast(`Imported: ${result.added} added, ${result.updated} updated, ${result.skipped} skipped.`);
+        return true;
+      }catch(err){
+        showToast("Could not read that file. Confirm it's a valid .xlsx or .csv.");
+        return false;
+      }
+    }
+  });
+}
+
+/* ---------------- INIT ---------------- */
+document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=> switchView(b.dataset.view)));
+document.getElementById('contact-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openContactModal(); });
+document.getElementById('list-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openListModal(); });
+document.getElementById('task-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openTaskModal(); });
+document.getElementById('event-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openEventModal(); });
+document.getElementById('event-import-btn').addEventListener('click', ()=>{ if(guardEdit()) openImportModal('events'); });
+document.getElementById('contact-import-btn').addEventListener('click', ()=>{ if(guardEdit()) openImportModal('contacts'); });
+document.querySelectorAll('#events-view-toggle button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.eventsView = b.dataset.mode;
+    document.querySelectorAll('#events-view-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+    renderEvents();
+  });
+});
+document.querySelectorAll('#events-filter-toggle button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.eventsFilter = b.dataset.filter;
+    document.querySelectorAll('#events-filter-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+    renderEvents();
+  });
+});
+document.querySelectorAll('#cal-span-toggle button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.calSpan = b.dataset.span;
+    document.querySelectorAll('#cal-span-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+    renderEventsCalendar();
+  });
+});
+document.getElementById('cal-prev').addEventListener('click', ()=> shiftCalendar(-1));
+document.getElementById('cal-next').addEventListener('click', ()=> shiftCalendar(1));
+document.querySelectorAll('#lookahead-window-toggle button').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.lookaheadWindow = parseInt(b.dataset.days);
+    document.querySelectorAll('#lookahead-window-toggle button').forEach(x=>x.classList.toggle('active', x===b));
+    renderLookahead();
+  });
+});
+document.getElementById('lookahead-export').addEventListener('click', exportLookahead);
+document.getElementById('contacts-export').addEventListener('click', exportContacts);
+document.getElementById('followups-export').addEventListener('click', exportFollowups);
+document.getElementById('tasks-export').addEventListener('click', exportTasks);
+document.getElementById('events-export').addEventListener('click', exportEvents);
+
+(async function init(){
+  await loadAll();
+  if(!state.settings.team || state.settings.team.length===0) state.settings.team = DEFAULT_TEAM.slice();
+  if(!state.settings.staleDays) state.settings.staleDays = 45;
+  state.currentUser = state.settings.team[0];
+  if(!state.settings.importedConferenceTracker){
+    const result = importEventsFromRows(CONFERENCE_TRACKER_ROWS);
+    state.settings.importedConferenceTracker = true;
+    await persist('events');
+    await persist('settings');
+    console.log('Conference tracker import:', result);
+  }
+  renderTopbar();
+  switchView('contacts');
+})();
+</script>
+</body>
+</html>

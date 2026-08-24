@@ -1,0 +1,223 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth ---------------------------------------------------------------
+
+enum Role {
+  ADMIN // can edit data and manage team member roles
+  EDITOR // can edit data
+  VIEWER // read-only
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(VIEWER)
+  createdAt     DateTime  @default(now())
+
+  accounts       Account[]
+  sessions       Session[]
+  ownedContacts  Contact[] @relation("ContactOwner")
+  warmPathFor    Contact[] @relation("ContactWarmPath")
+  ownedTasks     Task[]    @relation("TaskOwner")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// --- Domain ---------------------------------------------------------------
+
+enum ContactType {
+  LP_INSTITUTIONAL
+  FAMILY_OFFICE
+  PLACEMENT_AGENT
+  BROKER_ADVISOR
+  SPONSOR_COGP
+  CONSULTANT
+  OTHER
+}
+
+enum ContactTier {
+  TIER_1
+  TIER_2
+  TIER_3
+}
+
+enum ContactStatus {
+  NOT_STARTED
+  OUTREACH_SENT
+  AWAITING_REPLY
+  RESPONDED
+  MEETING_SCHEDULED
+  DILIGENCE
+  COMMITTED
+  PASSED
+}
+
+model Contact {
+  id                 String        @id @default(cuid())
+  name               String
+  org                String?
+  type               ContactType   @default(OTHER)
+  tier               ContactTier   @default(TIER_2)
+  status             ContactStatus @default(NOT_STARTED)
+  ownerId            String?
+  owner              User?         @relation("ContactOwner", fields: [ownerId], references: [id])
+  warmPathId         String?
+  warmPath           User?         @relation("ContactWarmPath", fields: [warmPathId], references: [id])
+  email              String?
+  phone              String?
+  city               String?
+  lastContact        DateTime?     @db.Date
+  cadenceOverrideDays Int?
+  priorityQuarter    String? // e.g. "2026-Q3"
+  tags               String[]      @default([])
+  notes              String?       @default("")
+  // { templateId, templateName, startDate, completed, steps: [{type,title,dueDate,done,doneDate}] } | null
+  activeSequence     Json?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  tasks Task[]
+
+  @@index([status])
+  @@index([type])
+  @@index([tier])
+  @@index([ownerId])
+}
+
+enum MailingListMode {
+  STATIC
+  DYNAMIC
+}
+
+model MailingList {
+  id          String          @id @default(cuid())
+  name        String
+  description String?
+  mode        MailingListMode @default(STATIC)
+
+  // STATIC mode
+  contactIds String[] @default([])
+
+  // DYNAMIC mode: a saved filter, recomputed against Contact every time the
+  // list is viewed rather than a fixed membership.
+  filterType    ContactType?
+  filterTier    ContactTier?
+  filterOwnerId String?
+  filterTag     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum EventType {
+  CONFERENCE
+  NETWORKING
+  ROADSHOW
+  OTHER
+}
+
+model Event {
+  id          String    @id @default(cuid())
+  name        String
+  startDate   DateTime  @db.Date
+  endDate     DateTime  @db.Date
+  location    String?
+  type        EventType @default(OTHER)
+  attendeeIds String[]  @default([])
+  goals       String?   @default("")
+  notes       String?   @default("")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([startDate])
+}
+
+enum TaskStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+}
+
+enum TaskPriority {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model Task {
+  id        String       @id @default(cuid())
+  title     String
+  contactId String?
+  contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  ownerId   String?
+  owner     User?        @relation("TaskOwner", fields: [ownerId], references: [id])
+  dueDate   DateTime?    @db.Date
+  status    TaskStatus   @default(OPEN)
+  priority  TaskPriority @default(MEDIUM)
+  notes     String?      @default("")
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([status])
+  @@index([ownerId])
+}
+
+// Single-row table (id is always "singleton") holding admin-editable defaults.
+model Settings {
+  id                 String @id @default("singleton")
+  defaultCadenceDays Int    @default(14)
+  staleDays          Int    @default(45)
+}
+
+model SequenceTemplate {
+  id        String   @id @default(cuid())
+  name      String
+  // [{ type: "Email"|"Call"|"LinkedIn"|"Other", title: string, waitDays: number }]
+  steps     Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "arselle-ledger",
+      "runtimeExecutable": "C:\\Users\\ArielaOsuna\\AppData\\Local\\nodejs-portable\\node-v22.14.0-win-x64\\node.exe",
+      "runtimeArgs": ["node_modules/next/dist/bin/next", "dev"],
+      "port": 3000
+    }
+  ]
+}

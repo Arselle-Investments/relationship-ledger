@@ -1,0 +1,35 @@
+{
+  "name": "arselle-relationship-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev"
+  },
+  "dependencies": {
+    "@auth/prisma-adapter": "^2.7.4",
+    "@dnd-kit/core": "^6.1.0",
+    "@dnd-kit/sortable": "^8.0.0",
+    "@prisma/client": "^5.22.0",
+    "exceljs": "^4.4.0",
+    "next": "^15.0.3",
+    "next-auth": "5.0.0-beta.32",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^15.0.3",
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.3"
+  }
+}
