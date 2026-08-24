@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { extractContactFromMessage } from "@/lib/ai";
+import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
 import { CorrespondenceStatus } from "@prisma/client";
 
@@ -57,5 +58,16 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ correspondence }, { status: 201 });
+  let finalCorrespondence = correspondence;
+  if (contactId) {
+    const updated = await maybeCreateStageSuggestion({
+      correspondenceId: correspondence.id,
+      contactId,
+      subject: data.subject ?? "",
+      bodyText: data.bodyText,
+    });
+    if (updated) finalCorrespondence = updated;
+  }
+
+  return NextResponse.json({ correspondence: finalCorrespondence }, { status: 201 });
 }

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ContactStatus, StageChangeSource } from "@prisma/client";
+import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
 
 export async function recordStageChange(params: {
   contactId: string;
@@ -19,4 +20,17 @@ export async function recordStageChange(params: {
       source: params.source ?? StageChangeSource.MANUAL,
     },
   });
+}
+
+/** Short plain-text summary of a contact's last few stage changes, for feeding to the AI classifier. */
+export async function getRecentStageHistorySummary(contactId: string, limit = 3): Promise<string> {
+  const changes = await prisma.contactStatusChange.findMany({
+    where: { contactId },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+  });
+  if (changes.length === 0) return "";
+  return changes
+    .map((c) => `moved to ${CONTACT_STATUS_LABELS[c.toStatus]} on ${c.createdAt.toISOString().slice(0, 10)}`)
+    .join("; ");
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
+import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { CorrespondenceStatus } from "@prisma/client";
 
 const schema = z.discriminatedUnion("mode", [
@@ -34,10 +35,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   let contactId: string;
+  let shouldClassify = false;
   if (parsed.data.mode === "existing") {
     const contact = await prisma.contact.findUnique({ where: { id: parsed.data.contactId } });
     if (!contact) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
     contactId = contact.id;
+    shouldClassify = true; // an established contact has a real "current stage" to signal a move from
   } else {
     const contact = await prisma.contact.create({
       data: {
@@ -55,5 +58,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     where: { id },
     data: { contactId, status: CorrespondenceStatus.MATCHED },
   });
-  return NextResponse.json({ correspondence: updated });
+
+  let finalCorrespondence = updated;
+  if (shouldClassify) {
+    const withSuggestion = await maybeCreateStageSuggestion({
+      correspondenceId: id,
+      contactId,
+      subject: correspondence.subject ?? "",
+      bodyText: correspondence.bodyText,
+    });
+    if (withSuggestion) finalCorrespondence = withSuggestion;
+  }
+
+  return NextResponse.json({ correspondence: finalCorrespondence });
 }

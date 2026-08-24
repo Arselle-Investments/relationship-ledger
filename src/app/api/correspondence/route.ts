@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
-import { CorrespondenceStatus } from "@prisma/client";
+import { CorrespondenceStatus, SuggestionState } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -14,12 +14,16 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") as CorrespondenceStatus | null;
   const contactId = searchParams.get("contactId");
+  const suggestionState = searchParams.get("suggestionState") as SuggestionState | null;
+  const includeContact = searchParams.get("includeContact") === "true";
 
   const correspondence = await prisma.correspondence.findMany({
     where: {
       ...(status ? { status } : {}),
       ...(contactId ? { contactId } : {}),
+      ...(suggestionState ? { suggestionState } : {}),
     },
+    include: includeContact ? { contact: true } : undefined,
     orderBy: { receivedAt: "desc" },
   });
   return NextResponse.json({ correspondence });

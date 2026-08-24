@@ -178,8 +178,24 @@ model Correspondence {
   status        CorrespondenceStatus @default(SUGGESTED)
   createdAt     DateTime             @default(now())
 
+  // AI's read of whether this message signals a pipeline-stage change for the
+  // contact it's matched to. Only ever a suggestion — nothing here changes a
+  // contact's actual status until a human confirms it via the stage-suggestion
+  // endpoints, which is why it lives on the correspondence, not the contact.
+  suggestedStatus     ContactStatus?
+  suggestionRationale String?
+  suggestionState     SuggestionState @default(NONE)
+
   @@index([contactId])
   @@index([status])
+  @@index([suggestionState])
+}
+
+enum SuggestionState {
+  NONE // not classified, or classifier found no stage signal
+  PENDING // awaiting human confirm/dismiss
+  CONFIRMED
+  DISMISSED
 }
 
 enum MailingListMode {

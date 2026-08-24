@@ -2,6 +2,69 @@
 
 import { useState } from "react";
 import { Contact, Correspondence } from "@prisma/client";
+import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+
+type CorrespondenceWithContact = Correspondence & { contact: Contact | null };
+
+function StageSuggestionCard({
+  item,
+  canEdit,
+  onResolved,
+}: {
+  item: CorrespondenceWithContact;
+  canEdit: boolean;
+  onResolved: (id: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+
+  async function confirm() {
+    setBusy(true);
+    const res = await fetch(`/api/correspondence/${item.id}/confirm-suggestion`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) onResolved(item.id);
+  }
+
+  async function dismiss() {
+    setBusy(true);
+    const res = await fetch(`/api/correspondence/${item.id}/dismiss-suggestion`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) onResolved(item.id);
+  }
+
+  return (
+    <div className="card" style={{ padding: 16, marginBottom: 12 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 14 }}>{item.contact?.name ?? "Unknown contact"}</div>
+          <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+            {item.subject || "(no subject)"} &middot; {new Date(item.receivedAt).toLocaleString()}
+          </div>
+        </div>
+        <span className="tag brass">stage suggestion</span>
+      </div>
+      {item.suggestedStatus && (
+        <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--forest-bg)", borderRadius: 6, fontSize: 12.5 }}>
+          Move to <strong>{CONTACT_STATUS_LABELS[item.suggestedStatus]}</strong>
+          {item.suggestionRationale ? ` — ${item.suggestionRationale}` : ""}
+        </div>
+      )}
+      {canEdit ? (
+        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+          <button className="btn small primary" onClick={confirm} disabled={busy}>
+            Confirm
+          </button>
+          <button className="btn small ghost" onClick={dismiss} disabled={busy}>
+            Dismiss
+          </button>
+        </div>
+      ) : (
+        <div className="helptext" style={{ marginTop: 10 }}>
+          View-only — an editor needs to resolve this.
+        </div>
+      )}
+    </div>
+  );
+}
 
 function CorrespondenceCard({
   item,
@@ -146,21 +209,46 @@ function CorrespondenceCard({
 
 export function InboxClient({
   initialSuggested,
+  initialPendingStageChanges,
   contacts,
   canEdit,
 }: {
   initialSuggested: Correspondence[];
+  initialPendingStageChanges: CorrespondenceWithContact[];
   contacts: Contact[];
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialSuggested);
+  const [stageSuggestions, setStageSuggestions] = useState(initialPendingStageChanges);
 
   function resolve(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
   }
 
+  function resolveStageSuggestion(id: string) {
+    setStageSuggestions((prev) => prev.filter((i) => i.id !== id));
+  }
+
   return (
     <div>
+      <h3 style={{ marginBottom: 10 }}>Suggested stage changes</h3>
+      <div className="eyebrow" style={{ marginBottom: 14 }}>
+        Correspondence that looks like it signals a pipeline move — review before anything on the contact changes
+      </div>
+      {stageSuggestions.length === 0 ? (
+        <div className="empty" style={{ marginBottom: 28 }}>
+          <h3>Nothing pending</h3>
+          <div>No AI-suggested stage changes waiting on review.</div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 28 }}>
+          {stageSuggestions.map((item) => (
+            <StageSuggestionCard key={item.id} item={item} canEdit={canEdit} onResolved={resolveStageSuggestion} />
+          ))}
+        </div>
+      )}
+
+      <h3 style={{ marginBottom: 10 }}>Suggested contacts</h3>
       <div className="eyebrow" style={{ marginBottom: 14 }}>
         Messages fed from the Fundraising Teams channel that didn&rsquo;t match an existing contact
       </div>

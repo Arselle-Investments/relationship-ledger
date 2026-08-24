@@ -86,6 +86,16 @@ export function ContactModal({
     onLiveUpdate(updated);
   }
 
+  async function handleSuggestionConfirmed() {
+    if (!contact) return;
+    const res = await fetch(`/api/contacts/${contact.id}`);
+    if (!res.ok) return;
+    const json = await res.json();
+    setLiveContact(json.contact);
+    setValues(toFormValues(json.contact));
+    onLiveUpdate(json.contact);
+  }
+
   useEffect(() => {
     if (!contact) return;
     fetch(`/api/tasks?contactId=${contact.id}`)
@@ -303,7 +313,9 @@ export function ContactModal({
               ))}
             </div>
           )}
-          {isEdit && contact && <ActivityTimeline contactId={contact.id} />}
+          {isEdit && contact && (
+            <ActivityTimeline contactId={contact.id} canEdit={canEdit} onContactChanged={handleSuggestionConfirmed} />
+          )}
           {isEdit && liveContact && (
             <ContactSequenceSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
           )}
