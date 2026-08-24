@@ -6,6 +6,7 @@ import { Settings } from "@prisma/client";
 export function CadenceSection({ settings, canEdit }: { settings: Settings; canEdit: boolean }) {
   const [cadence, setCadence] = useState(settings.defaultCadenceDays);
   const [staleDays, setStaleDays] = useState(settings.staleDays);
+  const [stuckDays, setStuckDays] = useState(settings.stuckDays);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -15,7 +16,7 @@ export function CadenceSection({ settings, canEdit }: { settings: Settings; canE
     const res = await fetch("/api/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ defaultCadenceDays: cadence, staleDays }),
+      body: JSON.stringify({ defaultCadenceDays: cadence, staleDays, stuckDays }),
     });
     setSaving(false);
     if (res.ok) setSaved(true);
@@ -48,6 +49,18 @@ export function CadenceSection({ settings, canEdit }: { settings: Settings; canE
           disabled={!canEdit}
           style={{ maxWidth: 140 }}
         />
+      </div>
+      <div className="field">
+        <label>Flag as stuck after (days) with no stage movement</label>
+        <input
+          type="number"
+          min={1}
+          value={stuckDays}
+          onChange={(e) => setStuckDays(parseInt(e.target.value, 10) || 1)}
+          disabled={!canEdit}
+          style={{ maxWidth: 140 }}
+        />
+        <div className="helptext">Drives the Stuck Contacts list — contacts whose pipeline stage hasn&rsquo;t changed in this long.</div>
       </div>
       {canEdit && (
         <button className="btn primary" onClick={handleSave} disabled={saving}>

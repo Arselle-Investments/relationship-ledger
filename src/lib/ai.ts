@@ -144,3 +144,35 @@ ${params.bodyText.slice(0, 8000)}`,
     rationale: suggestedStatus ? input.rationale : null,
   };
 }
+
+/**
+ * Drafts a short, low-pressure check-in email for a contact that's gone quiet
+ * in their current stage. Plain text, no tool-use needed — this is meant to
+ * be read and edited by a person before sending, not sent automatically.
+ */
+export async function draftCheckInEmail(params: {
+  name: string;
+  org: string | null;
+  status: ContactStatus;
+  daysInStage: number;
+  notes: string | null;
+}): Promise<string> {
+  const anthropic = getClient();
+  const message = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 400,
+    messages: [
+      {
+        role: "user",
+        content: `Draft a short, warm, low-pressure check-in email to an LP/investor contact who's gone quiet. Write only the email body (no subject line, no placeholders like [Your Name] — sign off simply as "Best,"). Keep it under 120 words, no hard sell.
+
+Contact: ${params.name}${params.org ? `, ${params.org}` : ""}
+Current pipeline stage: ${CONTACT_STATUS_LABELS[params.status]}
+Time with no movement in this stage: ${params.daysInStage} days
+${params.notes ? `Latest notes on file: ${params.notes}` : ""}`,
+      },
+    ],
+  });
+  const textBlock = message.content.find((c) => c.type === "text");
+  return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
+}

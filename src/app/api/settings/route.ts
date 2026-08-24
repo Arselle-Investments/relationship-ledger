@@ -16,6 +16,7 @@ export async function GET() {
 const schema = z.object({
   defaultCadenceDays: z.number().int().positive().optional(),
   staleDays: z.number().int().positive().optional(),
+  stuckDays: z.number().int().positive().optional(),
 });
 
 export async function PATCH(req: NextRequest) {

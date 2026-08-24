@@ -281,6 +281,7 @@ model Settings {
   id                 String @id @default("singleton")
   defaultCadenceDays Int    @default(14)
   staleDays          Int    @default(45)
+  stuckDays          Int    @default(30)
 }
 
 model SequenceTemplate {

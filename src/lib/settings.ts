@@ -8,7 +8,7 @@ export async function getSettings() {
   return prisma.settings.create({ data: { id: SETTINGS_ID } });
 }
 
-export async function updateSettings(data: { defaultCadenceDays?: number; staleDays?: number }) {
+export async function updateSettings(data: { defaultCadenceDays?: number; staleDays?: number; stuckDays?: number }) {
   await getSettings(); // ensure the row exists
   return prisma.settings.update({ where: { id: SETTINGS_ID }, data });
 }
