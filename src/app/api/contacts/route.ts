@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { contactInputSchema, validateStatusNoteRule } from "@/lib/contact-schema";
 import { buildContactWhere } from "@/lib/contact-query";
+import { recordStageChange } from "@/lib/stage-history";
+import { ContactStatus } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -67,6 +69,16 @@ export async function POST(req: NextRequest) {
     },
     include: { owner: true, warmPath: true },
   });
+
+  if (data.status !== ContactStatus.NOT_STARTED) {
+    await recordStageChange({
+      contactId: contact.id,
+      fromStatus: null,
+      toStatus: data.status,
+      note: data.notes ?? "",
+      changedByName: actingUser.name,
+    });
+  }
 
   return NextResponse.json({ contact }, { status: 201 });
 }

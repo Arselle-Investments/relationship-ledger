@@ -10,8 +10,8 @@ import {
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
-import { Correspondence } from "@prisma/client";
 import { ContactSequenceSection } from "./ContactSequenceSection";
+import { ActivityTimeline } from "./ActivityTimeline";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -78,7 +78,6 @@ export function ContactModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [linkedTasks, setLinkedTasks] = useState<TaskWithRelations[] | null>(null);
-  const [correspondence, setCorrespondence] = useState<Correspondence[] | null>(null);
   const [liveContact, setLiveContact] = useState<ContactWithRelations | null>(contact);
   const isEdit = !!contact;
 
@@ -93,10 +92,6 @@ export function ContactModal({
       .then((r) => r.json())
       .then((json) => setLinkedTasks(json.tasks ?? []))
       .catch(() => setLinkedTasks([]));
-    fetch(`/api/correspondence?contactId=${contact.id}`)
-      .then((r) => r.json())
-      .then((json) => setCorrespondence(json.correspondence ?? []))
-      .catch(() => setCorrespondence([]));
   }, [contact]);
 
   function set<K extends keyof ContactFormValues>(key: K, value: ContactFormValues[K]) {
@@ -308,18 +303,7 @@ export function ContactModal({
               ))}
             </div>
           )}
-          {isEdit && correspondence !== null && correspondence.length > 0 && (
-            <div className="activity-log">
-              <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--ink-soft)", marginBottom: 8 }}>
-                Correspondence
-              </label>
-              {correspondence.map((c) => (
-                <div key={c.id} className="activity-item">
-                  <span className="when">{new Date(c.receivedAt).toLocaleDateString()}</span> — {c.subject || "(no subject)"}
-                </div>
-              ))}
-            </div>
-          )}
+          {isEdit && contact && <ActivityTimeline contactId={contact.id} />}
           {isEdit && liveContact && (
             <ContactSequenceSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
           )}

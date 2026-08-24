@@ -122,11 +122,35 @@ model Contact {
 
   tasks Task[]
   correspondence Correspondence[]
+  stageChanges   ContactStatusChange[]
 
   @@index([status])
   @@index([type])
   @@index([tier])
   @@index([ownerId])
+}
+
+enum StageChangeSource {
+  MANUAL // a person changed the status directly
+  AI_SUGGESTED // a person confirmed an AI-proposed stage change from correspondence
+}
+
+// One row per status transition, so the funnel/pipeline view can show movement
+// over time rather than just a current snapshot, and "stuck in stage N days"
+// can be computed from an actual timestamp instead of guessed at.
+model ContactStatusChange {
+  id             String            @id @default(cuid())
+  contactId      String
+  contact        Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  fromStatus     ContactStatus?
+  toStatus       ContactStatus
+  note           String
+  source         StageChangeSource @default(MANUAL)
+  changedByName  String?
+  createdAt      DateTime          @default(now())
+
+  @@index([contactId])
+  @@index([toStatus])
 }
 
 enum CorrespondenceStatus {

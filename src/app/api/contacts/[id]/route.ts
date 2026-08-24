@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { contactInputSchema, validateStatusNoteRule } from "@/lib/contact-schema";
+import { recordStageChange } from "@/lib/stage-history";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -19,8 +20,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 }
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     return errorResponse(e);
   }
@@ -72,6 +74,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
     include: { owner: true, warmPath: true },
   });
+
+  if (data.status !== undefined && data.status !== existing.status) {
+    await recordStageChange({
+      contactId: id,
+      fromStatus: existing.status,
+      toStatus: data.status,
+      note: nextNotes ?? "",
+      changedByName: actingUser.name,
+    });
+  }
 
   return NextResponse.json({ contact });
 }
