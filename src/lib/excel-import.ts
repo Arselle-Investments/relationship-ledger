@@ -29,9 +29,11 @@ function parseSheet(sheet: ExcelJS.Worksheet): Record<string, string>[] {
       obj[header] =
         raw instanceof Date
           ? raw.toISOString().slice(0, 10)
-          : typeof raw === "object" && raw !== null && "text" in raw
-            ? String((raw as { text: string }).text)
-            : String(raw ?? "");
+          : typeof raw === "object" && raw !== null && "hyperlink" in raw
+            ? String((raw as { hyperlink: string }).hyperlink)
+            : typeof raw === "object" && raw !== null && "text" in raw
+              ? String((raw as { text: string }).text)
+              : String(raw ?? "");
     });
     if (Object.values(obj).some((v) => v.trim() !== "")) rows.push(obj);
   });

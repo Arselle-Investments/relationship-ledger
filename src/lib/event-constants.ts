@@ -15,10 +15,11 @@ function invert(labels: Record<EventType, string>): Record<string, EventType> {
 
 export const EVENT_TYPE_BY_LABEL = invert(EVENT_TYPE_LABELS);
 
+// Matches the reference prototype's inferEventType exactly: a conference tracker is
+// overwhelmingly conferences, so that's the default rather than a keyword match.
 export function inferEventType(name: string): EventType {
   const n = name.toLowerCase();
-  if (n.includes("conference") || n.includes("summit") || n.includes("forum")) return EventType.CONFERENCE;
-  if (n.includes("roadshow")) return EventType.ROADSHOW;
-  if (n.includes("network") || n.includes("mixer") || n.includes("happy hour")) return EventType.NETWORKING;
-  return EventType.OTHER;
+  if (/reception|social|roundtable|meetup|happy hour|mixer/.test(n)) return EventType.NETWORKING;
+  if (/webinar/.test(n)) return EventType.OTHER;
+  return EventType.CONFERENCE;
 }

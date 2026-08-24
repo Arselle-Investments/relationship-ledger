@@ -31,7 +31,7 @@ export function DangerZoneSection() {
     <div className="card" style={{ padding: 22, maxWidth: 640 }}>
       <h3 style={{ marginBottom: 6 }}>Danger zone</h3>
       <div className="helptext" style={{ marginBottom: 14 }}>
-        Permanently deletes every contact, task, and mailing list — useful for wiping test data before real
+        Permanently deletes every contact, task, mailing list, and event — useful for wiping test data before real
         onboarding. Team accounts and roles are not affected.
       </div>
       <div className="field">
