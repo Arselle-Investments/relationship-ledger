@@ -49,7 +49,9 @@ h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:600;margin:0;color:var(--i
 .tab-btn.disabled{color:var(--line);cursor:default;}
 .tab-btn.disabled:hover{color:var(--line);}
 
-.view{padding-top:22px;}
+/* Wide content (tables) scrolls within the page's own content column rather
+   than shifting the whole page horizontally on narrow screens. */
+.view{padding-top:22px;max-width:100%;overflow-x:auto;}
 
 /* Toolbar */
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
