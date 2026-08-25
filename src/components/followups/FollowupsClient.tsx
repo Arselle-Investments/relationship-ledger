@@ -21,6 +21,23 @@ export function FollowupsClient({
   const [stale, setStale] = useState(initialStale);
   const [overdueSequences, setOverdueSequences] = useState(initialOverdueSequences);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [selectedCadence, setSelectedCadence] = useState<Set<string>>(new Set());
+  const [selectedSequence, setSelectedSequence] = useState<Set<string>>(new Set());
+  const [creatingTasks, setCreatingTasks] = useState(false);
+  const [taskMsg, setTaskMsg] = useState<string | null>(null);
+
+  const totalSelected = selectedCadence.size + selectedSequence.size;
+
+  function toggle(set: Set<string>, setter: (s: Set<string>) => void, id: string) {
+    const next = new Set(set);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setter(next);
+  }
+
+  function toggleAll(ids: string[], set: Set<string>, setter: (s: Set<string>) => void) {
+    setter(set.size === ids.length ? new Set() : new Set(ids));
+  }
 
   async function markFollowedUp(id: string) {
     setBusyId(id);
@@ -45,6 +62,33 @@ export function FollowupsClient({
     }
   }
 
+  async function createTasksForSelected() {
+    if (totalSelected === 0) return;
+    setCreatingTasks(true);
+    setTaskMsg(null);
+    const res = await fetch("/api/followups/create-tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        cadenceContactIds: Array.from(selectedCadence),
+        sequenceContactIds: Array.from(selectedSequence),
+      }),
+    });
+    setCreatingTasks(false);
+    if (!res.ok) {
+      setTaskMsg("Something went wrong creating tasks.");
+      return;
+    }
+    const json = await res.json();
+    setTaskMsg(
+      json.created === 0
+        ? "No new tasks created — the selected follow-ups already had one open."
+        : `Created ${json.created} task${json.created === 1 ? "" : "s"}${json.skipped > 0 ? ` (${json.skipped} already had one open)` : ""}.`
+    );
+    setSelectedCadence(new Set());
+    setSelectedSequence(new Set());
+  }
+
   return (
     <div>
       <div className="stat-row">
@@ -67,10 +111,17 @@ export function FollowupsClient({
           Sorted by most overdue first &middot; default cadence and per-contact overrides both apply
         </div>
         <div className="spacer" />
+        {canEdit && (
+          <button className="btn" onClick={createTasksForSelected} disabled={totalSelected === 0 || creatingTasks}>
+            {creatingTasks ? "Creating…" : `Create tasks for selected${totalSelected ? ` (${totalSelected})` : ""}`}
+          </button>
+        )}
         <a className="btn" href="/api/followups/export">
           Export to Excel
         </a>
       </div>
+
+      {taskMsg && <div className="helptext" style={{ marginBottom: 16 }}>{taskMsg}</div>}
 
       <h3 style={{ marginBottom: 12 }}>Overdue by cadence</h3>
       {overdue.length === 0 ? (
@@ -82,6 +133,16 @@ export function FollowupsClient({
         <table style={{ marginBottom: 24 }}>
           <thead>
             <tr>
+              {canEdit && (
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedCadence.size === overdue.length}
+                    onChange={() => toggleAll(overdue.map((c) => c.id), selectedCadence, setSelectedCadence)}
+                    title="Select all"
+                  />
+                </th>
+              )}
               <th>Name</th>
               <th>Organization</th>
               <th>Status</th>
@@ -93,6 +154,15 @@ export function FollowupsClient({
           <tbody>
             {overdue.map((c) => (
               <tr key={c.id}>
+                {canEdit && (
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedCadence.has(c.id)}
+                      onChange={() => toggle(selectedCadence, setSelectedCadence, c.id)}
+                    />
+                  </td>
+                )}
                 <td className="name-cell">{c.name}</td>
                 <td>{c.org || <span className="muted">—</span>}</td>
                 <td>{CONTACT_STATUS_LABELS[c.status]}</td>
@@ -127,6 +197,18 @@ export function FollowupsClient({
         <table style={{ marginBottom: 24 }}>
           <thead>
             <tr>
+              {canEdit && (
+                <th>
+                  <input
+                    type="checkbox"
+                    checked={selectedSequence.size === overdueSequences.length}
+                    onChange={() =>
+                      toggleAll(overdueSequences.map((c) => c.id), selectedSequence, setSelectedSequence)
+                    }
+                    title="Select all"
+                  />
+                </th>
+              )}
               <th>Name</th>
               <th>Organization</th>
               <th>Sequence step</th>
@@ -137,6 +219,15 @@ export function FollowupsClient({
           <tbody>
             {overdueSequences.map((c) => (
               <tr key={c.id}>
+                {canEdit && (
+                  <td onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      checked={selectedSequence.has(c.id)}
+                      onChange={() => toggle(selectedSequence, setSelectedSequence, c.id)}
+                    />
+                  </td>
+                )}
                 <td className="name-cell">{c.name}</td>
                 <td>{c.org || <span className="muted">—</span>}</td>
                 <td>{c.step.title}</td>
