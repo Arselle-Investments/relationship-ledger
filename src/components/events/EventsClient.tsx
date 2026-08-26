@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import { Event, User } from "@prisma/client";
 import { quarterBounds, eventInQuarter } from "@/lib/events";
+import { REGIONS, Region, inferRegion } from "@/lib/region";
 import { EventsGrid } from "./EventsGrid";
 import { EventsCalendar } from "./EventsCalendar";
+import { EventsMap } from "./EventsMap";
 import { EventModal } from "./EventModal";
 
 export function EventsClient({
@@ -17,8 +19,9 @@ export function EventsClient({
   canEdit: boolean;
 }) {
   const [events, setEvents] = useState(initialEvents);
-  const [viewMode, setViewMode] = useState<"cards" | "calendar">("cards");
+  const [viewMode, setViewMode] = useState<"cards" | "calendar" | "map">("cards");
   const [cardsFilter, setCardsFilter] = useState<"all" | "quarter">("all");
+  const [regionFilter, setRegionFilter] = useState<Region | "all">("all");
   const [editing, setEditing] = useState<Event | null | "new">(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
@@ -26,11 +29,16 @@ export function EventsClient({
 
   const attendeeNamesById = useMemo(() => new Map(team.map((u) => [u.id, u.name || u.email || ""])), [team]);
 
+  const byRegion = useMemo(() => {
+    if (regionFilter === "all") return events;
+    return events.filter((ev) => inferRegion(ev.location) === regionFilter);
+  }, [events, regionFilter]);
+
   const filteredCards = useMemo(() => {
-    if (cardsFilter !== "quarter") return events;
+    if (cardsFilter !== "quarter") return byRegion;
     const bounds = quarterBounds(0);
-    return events.filter((ev) => eventInQuarter(ev, bounds));
-  }, [events, cardsFilter]);
+    return byRegion.filter((ev) => eventInQuarter(ev, bounds));
+  }, [byRegion, cardsFilter]);
 
   function upsertLocal(event: Event) {
     setEvents((prev) => {
@@ -72,6 +80,9 @@ export function EventsClient({
           <button className={viewMode === "calendar" ? "active" : ""} onClick={() => setViewMode("calendar")}>
             Calendar
           </button>
+          <button className={viewMode === "map" ? "active" : ""} onClick={() => setViewMode("map")}>
+            Map
+          </button>
         </div>
         {viewMode === "cards" && (
           <div className="view-toggle">
@@ -83,6 +94,14 @@ export function EventsClient({
             </button>
           </div>
         )}
+        <select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value as Region | "all")}>
+          <option value="all">All regions</option>
+          {REGIONS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
         <div className="spacer" />
         <a className="btn" href={`/api/events/export${viewMode === "cards" ? `?filter=${cardsFilter}` : ""}`}>
           Export to Excel
@@ -114,8 +133,10 @@ export function EventsClient({
 
       {viewMode === "cards" ? (
         <EventsGrid events={filteredCards} attendeeNamesById={attendeeNamesById} onClickEvent={setEditing} />
+      ) : viewMode === "calendar" ? (
+        <EventsCalendar events={byRegion} />
       ) : (
-        <EventsCalendar events={events} />
+        <EventsMap events={byRegion} />
       )}
 
       {editing !== null && (
