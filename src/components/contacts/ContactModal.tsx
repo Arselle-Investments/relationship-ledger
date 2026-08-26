@@ -12,6 +12,7 @@ import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
 import { ContactSequenceSection } from "./ContactSequenceSection";
 import { ActivityTimeline } from "./ActivityTimeline";
+import { ContactResearchSection } from "./ContactResearchSection";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -318,6 +319,9 @@ export function ContactModal({
           )}
           {isEdit && liveContact && (
             <ContactSequenceSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
+          )}
+          {isEdit && liveContact && (
+            <ContactResearchSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
           )}
           {error && <div className="error-text">{error}</div>}
         </div>

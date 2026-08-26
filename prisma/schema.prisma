@@ -122,6 +122,14 @@ model Contact {
   // Agora" batch — lets that export always mean "everyone since last time",
   // whether the contact was added manually or confirmed from the Inbox.
   agoraExportedAt    DateTime?
+  // Public-web research (bio snippet + recent news), refreshed on demand from
+  // the contact card. Null/empty until a team member requests it — this is
+  // never fetched automatically, since coverage is inherently uneven.
+  researchBio        String?
+  researchBioSource  String?
+  // [{ title, url, date, summary }]
+  researchNews       Json?
+  researchUpdatedAt  DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 

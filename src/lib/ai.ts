@@ -209,3 +209,110 @@ Dates ${params.travelerName} will be there: ${params.startDate} to ${params.endD
   const textBlock = message.content.find((c) => c.type === "text");
   return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
 }
+
+export type ContactNewsItem = {
+  title: string;
+  url: string;
+  date: string | null;
+  summary: string;
+};
+
+export type ContactResearch = {
+  bio: string | null;
+  bioSource: string | null;
+  news: ContactNewsItem[];
+};
+
+const RESEARCH_TOOL = {
+  name: "contact_research",
+  description: "Structured research findings about a person, extracted from web search results.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      bio: {
+        type: ["string", "null"],
+        description:
+          "2-4 sentence professional bio/background snippet (current role, firm, relevant experience). Null if nothing credible was found for this specific person.",
+      },
+      bioSource: { type: ["string", "null"], description: "URL the bio was drawn from. Null if bio is null." },
+      news: {
+        type: "array",
+        description: "Recent news articles or press mentions specifically about this person, most recent first. Empty array if none found.",
+        items: {
+          type: "object",
+          properties: {
+            title: { type: "string" },
+            url: { type: "string" },
+            date: { type: ["string", "null"], description: "Approximate publish date as YYYY-MM-DD, or null if unknown." },
+            summary: { type: "string", description: "One sentence on what the article/mention says." },
+          },
+          required: ["title", "url", "date", "summary"],
+        },
+      },
+    },
+    required: ["bio", "bioSource", "news"],
+  },
+};
+
+/**
+ * Looks up a contact's public footprint on the open web — a short bio snippet
+ * (firm site or another public bio page) and any recent news mentioning them
+ * by name — so the team has more context and connection points before a
+ * conversation. Deliberately two-pass: the first call lets Claude search
+ * freely and reason in prose (server-side web search doesn't mix well with a
+ * forced tool call), the second extracts that prose into a strict schema. On
+ * a name with no public presence this correctly comes back empty rather than
+ * inventing something — coverage is expected to be uneven across contacts.
+ */
+export async function researchContact(params: {
+  name: string;
+  org: string | null;
+  city: string | null;
+}): Promise<ContactResearch> {
+  const anthropic = getClient();
+
+  const searchStep = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+    messages: [
+      {
+        role: "user",
+        content: `Research this person using web search. Find:
+1. A short professional bio/background — current role, firm, and relevant experience — ideally from their firm's website or another credible public bio page.
+2. Any recent news articles or press mentions specifically about them (not just general news about their firm).
+
+Person: ${params.name}${params.org ? `, ${params.org}` : ""}${params.city ? ` (based in ${params.city})` : ""}
+
+Report what you find, with source URLs. If you can't confidently find this specific person — e.g. the name is too common and results are ambiguous, or there's no public presence — say so clearly rather than guessing or substituting someone else with a similar name.`,
+      },
+    ],
+  });
+  const findingsText = searchStep.content
+    .filter((c) => c.type === "text")
+    .map((c) => (c.type === "text" ? c.text : ""))
+    .join("\n\n");
+
+  const extractStep = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1000,
+    tools: [RESEARCH_TOOL],
+    tool_choice: { type: "tool", name: "contact_research" },
+    messages: [
+      {
+        role: "user",
+        content: `Extract structured findings from this research summary about ${params.name}. Only include information clearly about this specific person — discard anything uncertain, generic, or about someone else with a similar name.\n\n${
+          findingsText || "No findings — the search returned nothing usable."
+        }`,
+      },
+    ],
+  });
+  const toolUse = extractStep.content.find((c) => c.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") return { bio: null, bioSource: null, news: [] };
+  const input = toolUse.input as ContactResearch;
+  return {
+    bio: input.bio || null,
+    bioSource: input.bioSource || null,
+    news: Array.isArray(input.news) ? input.news.slice(0, 5) : [],
+  };
+}
