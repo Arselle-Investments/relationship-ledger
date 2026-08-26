@@ -31,9 +31,11 @@ function parseSheet(sheet: ExcelJS.Worksheet): Record<string, string>[] {
           ? raw.toISOString().slice(0, 10)
           : typeof raw === "object" && raw !== null && "hyperlink" in raw
             ? String((raw as { hyperlink: string }).hyperlink)
-            : typeof raw === "object" && raw !== null && "text" in raw
-              ? String((raw as { text: string }).text)
-              : String(raw ?? "");
+            : typeof raw === "object" && raw !== null && "richText" in raw
+              ? (raw as { richText: { text: string }[] }).richText.map((run) => run.text).join("")
+              : typeof raw === "object" && raw !== null && "text" in raw
+                ? String((raw as { text: string }).text)
+                : String(raw ?? "");
     });
     if (Object.values(obj).some((v) => v.trim() !== "")) rows.push(obj);
   });
