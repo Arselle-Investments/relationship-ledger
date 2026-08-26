@@ -1,21 +1,6 @@
-import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { Role } from "@prisma/client";
-
-const TABS: { href: string; label: string; enabled: boolean }[] = [
-  { href: "/contacts", label: "Contacts", enabled: true },
-  { href: "/inbox", label: "Inbox", enabled: true },
-  { href: "/followups", label: "Needs follow-up", enabled: true },
-  { href: "/lists", label: "Mailing lists", enabled: true },
-  { href: "/tasks", label: "Tasks", enabled: true },
-  { href: "/events", label: "Conferences & events", enabled: true },
-  { href: "/travel", label: "Travel", enabled: true },
-  { href: "/funnel", label: "Funnel", enabled: true },
-  { href: "/stuck-contacts", label: "Stuck contacts", enabled: true },
-  { href: "/priorities", label: "Priorities", enabled: true },
-  { href: "/lookahead", label: "Look ahead", enabled: true },
-  { href: "/settings", label: "Settings", enabled: true },
-];
+import { TwoTierNav } from "@/components/TwoTierNav";
 
 export function AppShell({
   activeHref,
@@ -66,24 +51,7 @@ export function AppShell({
         </div>
       </div>
 
-      <div id="tabs">
-        {TABS.map((tab) =>
-          tab.enabled ? (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`tab-btn ${activeHref === tab.href ? "active" : ""}`}
-            >
-              {tab.label}
-              {tab.href === "/inbox" && !!inboxCount && <span className="n">{inboxCount}</span>}
-            </Link>
-          ) : (
-            <span key={tab.href} className="tab-btn disabled" title="Coming in a later phase">
-              {tab.label}
-            </span>
-          )
-        )}
-      </div>
+      <TwoTierNav activeHref={activeHref} inboxCount={inboxCount} />
 
       {!canEdit && (
         <div className="locked-msg" style={{ marginTop: 22 }}>
