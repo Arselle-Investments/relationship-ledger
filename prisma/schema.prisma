@@ -29,6 +29,7 @@ model User {
   ownedContacts  Contact[] @relation("ContactOwner")
   warmPathFor    Contact[] @relation("ContactWarmPath")
   ownedTasks     Task[]    @relation("TaskOwner")
+  travelPlans    Travel[]
 }
 
 model Account {
@@ -117,6 +118,10 @@ model Contact {
   notes              String?       @default("")
   // { templateId, templateName, startDate, completed, steps: [{type,title,dueDate,done,doneDate}] } | null
   activeSequence     Json?
+  // Null until this contact has been included in an "export new contacts for
+  // Agora" batch — lets that export always mean "everyone since last time",
+  // whether the contact was added manually or confirmed from the Inbox.
+  agoraExportedAt    DateTime?
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -244,6 +249,24 @@ model Event {
   updatedAt   DateTime  @updatedAt
 
   @@index([startDate])
+}
+
+// One upcoming trip for one team member. City is free text, matched against
+// Contact.city the same way (case-insensitive substring) rather than a
+// controlled list — same "start simple, refine once we see real matching
+// quality" call made for event-type inference.
+model Travel {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city      String
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  notes     String?  @default("")
+  createdAt DateTime @default(now())
+
+  @@index([startDate])
+  @@index([userId])
 }
 
 enum TaskStatus {

@@ -11,16 +11,17 @@ export default async function LookaheadPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, tasks, events, settings] = await Promise.all([
+  const [contacts, tasks, events, travel, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     prisma.task.findMany({ include: { owner: true, contact: true } }),
     prisma.event.findMany(),
+    prisma.travel.findMany({ include: { user: true } }),
     getSettings(),
   ]);
 
   return (
     <AppShell activeHref="/lookahead" user={user}>
-      <LookaheadClient contacts={contacts} tasks={tasks} events={events} settings={settings} />
+      <LookaheadClient contacts={contacts} tasks={tasks} events={events} travel={travel} settings={settings} />
     </AppShell>
   );
 }

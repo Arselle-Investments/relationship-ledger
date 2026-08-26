@@ -8,6 +8,8 @@ import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { eventOverlapsWindow } from "@/lib/events";
 import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
+import { contactMatchesCity } from "@/lib/travel-match";
+import { TravelWithUser } from "@/lib/travel";
 import { ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
 import { Event as EventModel } from "@prisma/client";
@@ -20,11 +22,13 @@ export function LookaheadClient({
   contacts,
   tasks,
   events,
+  travel,
   settings,
 }: {
   contacts: ContactWithRelations[];
   tasks: TaskWithRelations[];
   events: EventModel[];
+  travel: TravelWithUser[];
   settings: Settings;
 }) {
   const [windowDays, setWindowDays] = useState<14 | 30>(14);
@@ -52,6 +56,14 @@ export function LookaheadClient({
         .filter((ev) => eventOverlapsWindow(ev, bounds))
         .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
     [events, bounds]
+  );
+  const upcomingTravel = useMemo(
+    () =>
+      travel
+        .filter((t) => eventOverlapsWindow(t, bounds))
+        .map((t) => ({ ...t, matches: contacts.filter((c) => contactMatchesCity(c, t.city)) }))
+        .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
+    [travel, contacts, bounds]
   );
 
   const windowLabel = windowDays === 14 ? "next 2 weeks" : "next 30 days";
@@ -189,6 +201,33 @@ export function LookaheadClient({
                   <td className="muted">{ev.location}</td>
                   <td>
                     <span className="tag">{EVENT_TYPE_LABELS[ev.type]}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      <Section title="Team travel" count={upcomingTravel.length} emptyMsg="No team travel in this window.">
+        {upcomingTravel.length > 0 && (
+          <table>
+            <tbody>
+              {upcomingTravel.map((t) => (
+                <tr key={t.id}>
+                  <td className="name-cell">{t.city}</td>
+                  <td className="muted">
+                    {fmtDate(t.startDate)} – {fmtDate(t.endDate)}
+                  </td>
+                  <td className="muted">{t.user.name || t.user.email}</td>
+                  <td>
+                    {t.matches.length > 0 ? (
+                      <a className="btn small" href="/travel">
+                        {t.matches.length} matching contact{t.matches.length === 1 ? "" : "s"}
+                      </a>
+                    ) : (
+                      <span className="muted">No matching contacts</span>
+                    )}
                   </td>
                 </tr>
               ))}

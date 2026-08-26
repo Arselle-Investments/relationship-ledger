@@ -9,6 +9,7 @@ import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { eventOverlapsWindow } from "@/lib/events";
 import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
+import { contactMatchesCity } from "@/lib/travel-match";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
@@ -22,10 +23,11 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const days = searchParams.get("days") === "30" ? 30 : 14;
 
-  const [contacts, tasks, events, settings] = await Promise.all([
+  const [contacts, tasks, events, travel, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     prisma.task.findMany({ include: { owner: true, contact: true } }),
     prisma.event.findMany(),
+    prisma.travel.findMany({ include: { user: true } }),
     getSettings(),
   ]);
 
@@ -41,6 +43,9 @@ export async function GET(req: NextRequest) {
     .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0));
   const conferences = events
     .filter((ev) => eventOverlapsWindow(ev, bounds))
+    .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
+  const upcomingTravel = travel
+    .filter((t) => eventOverlapsWindow(t, bounds))
     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
   const workbook = new ExcelJS.Workbook();
@@ -130,6 +135,26 @@ export async function GET(req: NextRequest) {
       end: ev.endDate.toISOString().slice(0, 10),
       location: safeCell(ev.location ?? ""),
       type: EVENT_TYPE_LABELS[ev.type],
+    });
+  }
+
+  const travelSheet = workbook.addWorksheet("Team Travel");
+  travelSheet.columns = [
+    { header: "City", key: "city", width: 22 },
+    { header: "Start Date", key: "start", width: 14 },
+    { header: "End Date", key: "end", width: 14 },
+    { header: "Traveler", key: "traveler", width: 20 },
+    { header: "Matching Contacts", key: "matches", width: 18 },
+  ];
+  travelSheet.getRow(1).font = { bold: true };
+  for (const t of upcomingTravel) {
+    const matchCount = contacts.filter((c) => contactMatchesCity(c, t.city)).length;
+    travelSheet.addRow({
+      city: safeCell(t.city),
+      start: t.startDate.toISOString().slice(0, 10),
+      end: t.endDate.toISOString().slice(0, 10),
+      traveler: safeCell(t.user.name ?? t.user.email ?? ""),
+      matches: matchCount,
     });
   }
 

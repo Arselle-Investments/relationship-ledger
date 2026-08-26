@@ -176,3 +176,36 @@ ${params.notes ? `Latest notes on file: ${params.notes}` : ""}`,
   const textBlock = message.content.find((c) => c.type === "text");
   return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
 }
+
+/**
+ * Drafts a short "I'll be in town" email for a contact based in a city a
+ * team member is about to visit. Same philosophy as the check-in draft:
+ * plain text, meant to be read and edited before sending, never sent
+ * automatically.
+ */
+export async function draftTravelOutreachEmail(params: {
+  contactName: string;
+  contactOrg: string | null;
+  travelerName: string;
+  city: string;
+  startDate: string;
+  endDate: string;
+}): Promise<string> {
+  const anthropic = getClient();
+  const message = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 400,
+    messages: [
+      {
+        role: "user",
+        content: `Draft a short, warm email from ${params.travelerName} to an LP/investor contact, letting them know ${params.travelerName} will be in the contact's city and proposing to meet up. Write only the email body (no subject line, no placeholders like [Your Name] — sign off simply as "Best,"). Keep it under 100 words, casual and low-pressure, not a sales pitch.
+
+Contact: ${params.contactName}${params.contactOrg ? `, ${params.contactOrg}` : ""}
+City: ${params.city}
+Dates ${params.travelerName} will be there: ${params.startDate} to ${params.endDate}`,
+      },
+    ],
+  });
+  const textBlock = message.content.find((c) => c.type === "text");
+  return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
+}

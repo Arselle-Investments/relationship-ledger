@@ -23,7 +23,11 @@ export function ContactsClient({
   const [editing, setEditing] = useState<ContactWithRelations | null | "new">(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [agoraExporting, setAgoraExporting] = useState(false);
+  const [agoraMsg, setAgoraMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const pendingAgoraCount = contacts.filter((c) => !c.agoraExportedAt).length;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -82,6 +86,31 @@ export function ContactsClient({
     setContacts(refreshed.contacts);
   }
 
+  async function handleAgoraExport() {
+    setAgoraExporting(true);
+    setAgoraMsg(null);
+    const res = await fetch("/api/contacts/export-new-for-agora", { method: "POST" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      setAgoraExporting(false);
+      setAgoraMsg(json.error ?? "Something went wrong.");
+      return;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setAgoraExporting(false);
+    setAgoraMsg(`Exported ${pendingAgoraCount} contact${pendingAgoraCount === 1 ? "" : "s"} — marked as sent to Agora.`);
+    const refreshed = await fetch("/api/contacts").then((r) => r.json());
+    setContacts(refreshed.contacts);
+  }
+
   return (
     <div>
       <div className="toolbar">
@@ -116,6 +145,11 @@ export function ContactsClient({
           ))}
         </select>
         <div className="spacer" />
+        {canEdit && pendingAgoraCount > 0 && (
+          <button className="btn" onClick={handleAgoraExport} disabled={agoraExporting}>
+            {agoraExporting ? "Exporting…" : `Export new for Agora (${pendingAgoraCount})`}
+          </button>
+        )}
         <a className="btn" href={exportUrl()}>
           Export to Excel
         </a>
@@ -143,6 +177,7 @@ export function ContactsClient({
       </div>
 
       {importMsg && <div className="helptext" style={{ marginBottom: 12 }}>{importMsg}</div>}
+      {agoraMsg && <div className="helptext" style={{ marginBottom: 12 }}>{agoraMsg}</div>}
 
       {filtered.length === 0 ? (
         <div className="empty">
