@@ -31,7 +31,7 @@ export function EventsClient({
 
   const byRegion = useMemo(() => {
     if (regionFilter === "all") return events;
-    return events.filter((ev) => inferRegion(ev.location) === regionFilter);
+    return events.filter((ev) => inferRegion(ev.name, ev.location) === regionFilter);
   }, [events, regionFilter]);
 
   const filteredCards = useMemo(() => {

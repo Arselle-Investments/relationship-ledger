@@ -17,7 +17,7 @@ export function EventsMap({ events }: { events: Event[] }) {
     const counts = new Map<string, number>();
     let unmapped = 0;
     for (const ev of events) {
-      const state = inferState(ev.location);
+      const state = inferState(ev.name, ev.location);
       if (!state) {
         unmapped++;
         continue;

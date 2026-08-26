@@ -1,7 +1,8 @@
-// Free-text location -> US state -> Census region, so the conference tracker
-// can be filtered/mapped without requiring a controlled address format.
-// Same "start simple, refine once we see real matching quality" call as the
-// event-type and travel-city heuristics elsewhere in this app.
+// Free-text location (and, as a fallback, the conference name itself) -> US
+// state -> Census region, so the conference tracker can be filtered/mapped
+// without requiring a controlled address format. Same "start simple, refine
+// once we see real matching quality" call as the event-type and travel-city
+// heuristics elsewhere in this app.
 
 export type Region = "Northeast" | "Midwest" | "South" | "West" | "Unknown";
 
@@ -28,13 +29,18 @@ const STATE_NAMES: Record<string, string> = {
   "Washington DC": "DC", "Washington, DC": "DC", "Washington D.C.": "DC",
 };
 
-// Major metros that show up in location text without a trailing state — a
-// small, hand-picked list rather than a full geocoder.
+// Major metros that show up in location text (or a conference's title, e.g.
+// "ALTSLA 2026 (Los Angeles)") without a trailing state — a small,
+// hand-picked list rather than a full geocoder.
 const CITY_TO_STATE: Record<string, string> = {
   "new york city": "NY",
+  nyc: "NY",
   "las vegas": "NV",
   "los angeles": "CA",
   "san francisco": "CA",
+  "san diego": "CA",
+  "newport beach": "CA",
+  "silicon valley": "CA",
   chicago: "IL",
   boston: "MA",
   miami: "FL",
@@ -52,24 +58,62 @@ const CITY_TO_STATE: Record<string, string> = {
   "washington dc": "DC",
 };
 
-export function inferState(location: string | null | undefined): string | null {
-  if (!location) return null;
-  const abbrevMatch = location.match(/,\s*([A-Z]{2})\b/);
+// Regional nicknames common in "Private Wealth <Region> Forum"-style titles
+// that don't name a single city or state at all. Mapped straight to a
+// representative state so the map view still has somewhere to put a dot.
+const REGION_NICKNAME_TO_STATE: Record<string, string> = {
+  norcal: "CA",
+  "nor cal": "CA",
+  socal: "CA",
+  "so cal": "CA",
+  "bay area": "CA",
+  "pac northwest": "WA",
+  "pacific northwest": "WA",
+  "tri-state": "NY",
+  "new england": "MA",
+  carolinas: "NC",
+  "mid-atlantic": "VA",
+  "dc metro": "DC",
+  "great plains": "KS",
+  southeast: "GA",
+  midwest: "IL",
+};
+
+function matchIn(text: string): string | null {
+  // "City, ST" or "City, ST 12345" — the common comma-separated form.
+  const abbrevMatch = text.match(/,\s*([A-Z]{2})\b/);
   if (abbrevMatch && abbrevMatch[1] in STATE_TO_REGION) return abbrevMatch[1];
+  // "City ST 12345" — same idea without the comma, anchored to a zip code
+  // so a stray two-letter word elsewhere in the address isn't mistaken for one.
+  const zipMatch = text.match(/\b([A-Z]{2})\s+\d{5}\b/);
+  if (zipMatch && zipMatch[1] in STATE_TO_REGION) return zipMatch[1];
 
   for (const [name, abbr] of Object.entries(STATE_NAMES)) {
-    if (new RegExp(`\\b${name}\\b`, "i").test(location)) return abbr;
+    if (new RegExp(`\\b${name}\\b`, "i").test(text)) return abbr;
   }
 
-  const lower = location.toLowerCase();
+  const lower = text.toLowerCase();
   for (const [city, abbr] of Object.entries(CITY_TO_STATE)) {
     if (lower.includes(city)) return abbr;
+  }
+  for (const [nickname, abbr] of Object.entries(REGION_NICKNAME_TO_STATE)) {
+    if (lower.includes(nickname)) return abbr;
   }
 
   return null;
 }
 
-export function inferRegion(location: string | null | undefined): Region {
-  const state = inferState(location);
+/**
+ * Infers a US state from an event's location, falling back to its name —
+ * conference titles routinely carry the real context clue ("ALTSLA 2026 (Los
+ * Angeles)", "10th Annual Private Wealth NorCal Forum") when the location
+ * field itself is "TBA" or a venue name with no address.
+ */
+export function inferState(name: string | null | undefined, location?: string | null): string | null {
+  return matchIn(location ?? "") ?? matchIn(name ?? "");
+}
+
+export function inferRegion(name: string | null | undefined, location?: string | null): Region {
+  const state = inferState(name, location);
   return (state && STATE_TO_REGION[state]) || "Unknown";
 }
