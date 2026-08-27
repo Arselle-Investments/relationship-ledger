@@ -38,7 +38,7 @@ export function AgoraReplaceSection() {
         Deletes every contact and recreates the roster from a fresh Agora export — including anything local-only,
         like a contact confirmed from a Teams message that hasn&rsquo;t been pushed back to Agora yet, or notes/tags
         added here. Meant for a full re-baseline, not routine updates — for a handful of new entries, use
-        &ldquo;Import from Agora&rdquo; on the Contacts page instead, which only adds/refreshes and never deletes.
+        &ldquo;Import from Agora&rdquo; above instead, which only adds/refreshes and never deletes.
       </div>
       <div className="field">
         <label>Type REPLACE to confirm</label>
