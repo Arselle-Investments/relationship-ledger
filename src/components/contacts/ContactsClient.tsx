@@ -2,9 +2,10 @@
 
 import { useMemo, useRef, useState } from "react";
 import { User, ContactType, ContactTier } from "@prisma/client";
-import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "./ContactModal";
+import { AdvancedFilters, ContactsFilterModal, EMPTY_ADVANCED_FILTERS, countActiveAdvancedFilters } from "./ContactsFilterModal";
 
 export function ContactsClient({
   initialContacts,
@@ -20,28 +21,59 @@ export function ContactsClient({
   const [typeFilter, setTypeFilter] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
+  const [agoraTypeFilter, setAgoraTypeFilter] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
+  const [showAllFilters, setShowAllFilters] = useState(false);
   const [editing, setEditing] = useState<ContactWithRelations | null | "new">(null);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [agoraImporting, setAgoraImporting] = useState(false);
+  const [agoraImportMsg, setAgoraImportMsg] = useState<string | null>(null);
   const [agoraExporting, setAgoraExporting] = useState(false);
   const [agoraMsg, setAgoraMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const agoraFileInputRef = useRef<HTMLInputElement>(null);
 
   const pendingAgoraCount = contacts.filter((c) => !c.agoraExportedAt).length;
+  const activeAdvancedCount = countActiveAdvancedFilters(advancedFilters);
+
+  const agoraTypes = useMemo(
+    () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
+    [contacts]
+  );
+  const locations = useMemo(
+    () => Array.from(new Set(contacts.map((c) => c.primaryLocation).filter((v): v is string => !!v))).sort(),
+    [contacts]
+  );
+  const allTags = useMemo(() => Array.from(new Set(contacts.flatMap((c) => c.tags ?? []))).sort(), [contacts]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const commitmentMin = advancedFilters.commitmentMin ? Number(advancedFilters.commitmentMin) : null;
+    const commitmentMax = advancedFilters.commitmentMax ? Number(advancedFilters.commitmentMax) : null;
     return contacts.filter((c) => {
       if (typeFilter && c.type !== typeFilter) return false;
       if (tierFilter && c.tier !== tierFilter) return false;
       if (ownerFilter && c.ownerId !== ownerFilter) return false;
+      if (agoraTypeFilter && c.agoraType !== agoraTypeFilter) return false;
+      if (advancedFilters.status && c.status !== advancedFilters.status) return false;
+      if (advancedFilters.warmPathId && c.warmPathId !== advancedFilters.warmPathId) return false;
+      if (advancedFilters.primaryLocation && c.primaryLocation !== advancedFilters.primaryLocation) return false;
+      if (advancedFilters.tag && !(c.tags ?? []).includes(advancedFilters.tag)) return false;
+      if (advancedFilters.emailTier && c.emailTier !== Number(advancedFilters.emailTier)) return false;
+      if (advancedFilters.hasEmail && !c.email) return false;
+      if (advancedFilters.hasPhone && !c.phone) return false;
+      if (commitmentMin !== null && (c.commitmentLow == null || c.commitmentLow < commitmentMin)) return false;
+      if (commitmentMax !== null && (c.commitmentHigh == null || c.commitmentHigh > commitmentMax)) return false;
       if (q) {
-        const haystack = [c.name, c.org ?? "", ...(c.tags ?? [])].join(" ").toLowerCase();
+        const haystack = [c.name, c.org ?? "", c.primaryLocation ?? "", c.agoraType ?? "", ...(c.tags ?? [])]
+          .join(" ")
+          .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
       return true;
     });
-  }, [contacts, search, typeFilter, tierFilter, ownerFilter]);
+  }, [contacts, search, typeFilter, tierFilter, ownerFilter, agoraTypeFilter, advancedFilters]);
 
   function upsertLocal(contact: ContactWithRelations) {
     setContacts((prev) => {
@@ -82,6 +114,32 @@ export function ContactsClient({
       return;
     }
     setImportMsg(`Imported: ${json.added} added, ${json.updated} updated, ${json.skipped} skipped.`);
+    const refreshed = await fetch("/api/contacts").then((r) => r.json());
+    setContacts(refreshed.contacts);
+  }
+
+  async function handleAgoraImportFile(file: File) {
+    if (
+      !confirm(
+        `This will REPLACE all ${contacts.length} contacts currently in the ledger with what's in "${file.name}". This can't be undone. Continue?`
+      )
+    ) {
+      return;
+    }
+    setAgoraImporting(true);
+    setAgoraImportMsg(null);
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/contacts/import-agora", { method: "POST", body: form });
+    const json = await res.json();
+    setAgoraImporting(false);
+    if (!res.ok) {
+      setAgoraImportMsg(json.error ?? "Import failed.");
+      return;
+    }
+    setAgoraImportMsg(
+      `Replaced the roster with ${json.imported} contacts from Agora${json.skipped ? ` (${json.skipped} rows had no name and were skipped)` : ""}${json.listsCleared ? ` — ${json.listsCleared} mailing list(s) were cleared since their contacts no longer exist` : ""}.`
+    );
     const refreshed = await fetch("/api/contacts").then((r) => r.json());
     setContacts(refreshed.contacts);
   }
@@ -144,6 +202,17 @@ export function ContactsClient({
             </option>
           ))}
         </select>
+        <select value={agoraTypeFilter} onChange={(e) => setAgoraTypeFilter(e.target.value)}>
+          <option value="">All Agora types</option>
+          {agoraTypes.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+        <button className="btn" onClick={() => setShowAllFilters(true)}>
+          All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
+        </button>
         <div className="spacer" />
         {canEdit && pendingAgoraCount > 0 && (
           <button className="btn" onClick={handleAgoraExport} disabled={agoraExporting}>
@@ -169,6 +238,20 @@ export function ContactsClient({
             <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={importing}>
               {importing ? "Importing…" : "Import"}
             </button>
+            <input
+              ref={agoraFileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleAgoraImportFile(file);
+                e.target.value = "";
+              }}
+            />
+            <button className="btn" onClick={() => agoraFileInputRef.current?.click()} disabled={agoraImporting}>
+              {agoraImporting ? "Replacing…" : "Import from Agora (replace all)"}
+            </button>
             <button className="btn primary" onClick={() => setEditing("new")}>
               Add contact
             </button>
@@ -178,6 +261,10 @@ export function ContactsClient({
 
       {importMsg && <div className="helptext" style={{ marginBottom: 12 }}>{importMsg}</div>}
       {agoraMsg && <div className="helptext" style={{ marginBottom: 12 }}>{agoraMsg}</div>}
+      {agoraImportMsg && <div className="helptext" style={{ marginBottom: 12 }}>{agoraImportMsg}</div>}
+      <div className="helptext" style={{ marginBottom: 12 }}>
+        Showing {filtered.length} of {contacts.length} contacts.
+      </div>
 
       {filtered.length === 0 ? (
         <div className="empty">
@@ -191,10 +278,8 @@ export function ContactsClient({
               <th>Name</th>
               <th>Organization</th>
               <th>Type</th>
-              <th>Tier</th>
-              <th>Status</th>
+              <th>Location</th>
               <th>Owner</th>
-              <th>Last contact</th>
               <th>Tags</th>
             </tr>
           </thead>
@@ -203,22 +288,32 @@ export function ContactsClient({
               <tr key={c.id} onClick={() => setEditing(c)}>
                 <td className="name-cell">{c.name}</td>
                 <td>{c.org || <span className="muted">—</span>}</td>
-                <td>{CONTACT_TYPE_LABELS[c.type]}</td>
-                <td>{CONTACT_TIER_LABELS[c.tier]}</td>
-                <td>{CONTACT_STATUS_LABELS[c.status]}</td>
+                <td>{c.agoraType || CONTACT_TYPE_LABELS[c.type]}</td>
+                <td>{c.primaryLocation || c.city || <span className="muted">—</span>}</td>
                 <td>{c.owner?.name || <span className="muted">—</span>}</td>
-                <td>{c.lastContact ? new Date(c.lastContact).toISOString().slice(0, 10) : <span className="muted">—</span>}</td>
                 <td>
-                  {(c.tags ?? []).map((t) => (
+                  {(c.tags ?? []).slice(0, 2).map((t) => (
                     <span key={t} className="tag">
                       {t}
                     </span>
                   ))}
+                  {(c.tags ?? []).length > 2 && <span className="muted">+{(c.tags ?? []).length - 2}</span>}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
+      )}
+
+      {showAllFilters && (
+        <ContactsFilterModal
+          filters={advancedFilters}
+          onChange={setAdvancedFilters}
+          onClose={() => setShowAllFilters(false)}
+          locations={locations}
+          tags={allTags}
+          team={team}
+        />
       )}
 
       {editing !== null && (

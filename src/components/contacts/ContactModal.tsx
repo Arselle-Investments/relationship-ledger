@@ -13,6 +13,7 @@ import { TaskWithRelations } from "@/types/task";
 import { ContactSequenceSection } from "./ContactSequenceSection";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ContactResearchSection } from "./ContactResearchSection";
+import { ContactAgoraSection } from "./ContactAgoraSection";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -323,6 +324,7 @@ export function ContactModal({
           {isEdit && liveContact && (
             <ContactResearchSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
           )}
+          {isEdit && liveContact && <ContactAgoraSection contact={liveContact} />}
           {error && <div className="error-text">{error}</div>}
         </div>
         {canEdit && (

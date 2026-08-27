@@ -130,6 +130,15 @@ model Contact {
   // [{ title, url, date, summary }]
   researchNews       Json?
   researchUpdatedAt  DateTime?
+  // --- Agora reference data (read-only in the app; refreshed on the next
+  // "Import from Agora" sync, never hand-edited) ---
+  agoraType          String? // Agora's own "Type" categorization, e.g. "Family Office", "Investor"
+  primaryLocation    String? // Agora's coarse "Primary Location", e.g. "SF Bay Area"
+  staffNames         String[] @default([]) // raw "Staff Members" names, however many Agora lists
+  commitmentLow      Float?
+  commitmentHigh     Float?
+  emailTier          Int? // Agora's "Tier for Email Tracking" — unrelated to our own ContactTier
+  agoraRaw           Json? // the full parsed row from the Agora export, every column, for full fidelity
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
@@ -141,6 +150,8 @@ model Contact {
   @@index([type])
   @@index([tier])
   @@index([ownerId])
+  @@index([agoraType])
+  @@index([primaryLocation])
 }
 
 enum StageChangeSource {
