@@ -5,7 +5,23 @@
 // string that a plain .includes() check against it is low-risk of a false
 // positive on unrelated location text.
 const LOCATION_ALIAS_GROUPS: string[][] = [
-  ["san francisco", "sf bay area", "bay area", "silicon valley"],
+  [
+    "san francisco",
+    "sf bay area",
+    "bay area",
+    "silicon valley",
+    "san jose",
+    "norcal",
+    "nor cal",
+    "northern california",
+    "oakland",
+    "palo alto",
+    "menlo park",
+    "peninsula",
+    "south bay",
+    "east bay",
+    "marin",
+  ],
 ];
 
 function inSameAliasGroup(a: string, b: string): boolean {

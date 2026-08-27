@@ -12,6 +12,7 @@ const SECTIONS: SectionDef[] = [
     label: "Relationships",
     tabs: [
       { href: "/contacts", label: "Contacts" },
+      { href: "/companies", label: "Companies" },
       { href: "/lists", label: "Mailing Lists" },
     ],
   },
