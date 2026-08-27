@@ -4,7 +4,15 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
+import { isStaffEmail } from "@/lib/staff-emails";
 import { CorrespondenceStatus } from "@prisma/client";
+import type { AddressObject } from "mailparser";
+
+function addressList(field: AddressObject | AddressObject[] | undefined) {
+  if (!field) return [];
+  const arr = Array.isArray(field) ? field : [field];
+  return arr.flatMap((a) => a.value ?? []);
+}
 
 /**
  * One-time historical backfill: parses a batch of .eml files (saved investor
@@ -17,7 +25,8 @@ import { CorrespondenceStatus } from "@prisma/client";
  * directly for the sender's name/email rather than asking the model to guess
  * it from body text (which is what the Teams path has to do, since a
  * forwarded message's real sender is buried in freeform text). The model is
- * still used for organization, since that's rarely in the headers.
+ * only called when that header doesn't resolve to an existing contact —
+ * once it does, org is already on file and there's nothing left to extract.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -55,19 +64,49 @@ export async function POST(req: NextRequest) {
       const subject = parsed.subject || "";
       const bodyText = parsed.text || "";
       const fromEntry = !Array.isArray(parsed.from) ? parsed.from?.value?.[0] : undefined;
-      const headerEmail = fromEntry?.address?.toLowerCase() || null;
-      const headerName = fromEntry?.name || null;
+      let headerEmail = fromEntry?.address?.toLowerCase() || null;
+      let headerName = fromEntry?.name || null;
 
-      const extracted = await extractContactFromMessage(subject, bodyText);
-      const extractedEmail = headerEmail || extracted.email;
-      const extractedName = headerName || extracted.name;
+      if (isStaffEmail(headerEmail)) {
+        // This is one of our own team's sent/forwarded emails — the sender
+        // isn't "the contact." Use the first external recipient instead.
+        const recipients = [...addressList(parsed.to), ...addressList(parsed.cc)];
+        const external = recipients.find((r) => r.address && !isStaffEmail(r.address));
+        headerEmail = external?.address?.toLowerCase() || null;
+        headerName = external?.name || null;
+      }
 
+      // A confident header-based match means there's nothing left for AI to
+      // add — org is already on file for an existing contact, and identity
+      // is already known. Only call the model when the header didn't
+      // resolve to an existing contact.
       let contactId: string | null = null;
-      if (extractedEmail) {
+      if (headerEmail) {
         const match = await prisma.contact.findFirst({
-          where: { email: { equals: extractedEmail, mode: "insensitive" } },
+          where: { email: { equals: headerEmail, mode: "insensitive" } },
         });
         if (match) contactId = match.id;
+      }
+
+      let extractedEmail = headerEmail;
+      let extractedName = headerName;
+      let extractedOrg: string | null = null;
+
+      if (!contactId) {
+        const extracted = await extractContactFromMessage(subject, bodyText);
+        extractedEmail = headerEmail || extracted.email;
+        extractedName = headerName || extracted.name;
+        extractedOrg = extracted.org;
+        if (isStaffEmail(extractedEmail)) {
+          extractedEmail = null;
+          extractedName = null;
+        }
+        if (extractedEmail && extractedEmail !== headerEmail) {
+          const match = await prisma.contact.findFirst({
+            where: { email: { equals: extractedEmail, mode: "insensitive" } },
+          });
+          if (match) contactId = match.id;
+        }
       }
 
       const correspondence = await prisma.correspondence.create({
@@ -80,7 +119,7 @@ export async function POST(req: NextRequest) {
           contactId,
           extractedName,
           extractedEmail,
-          extractedOrg: extracted.org,
+          extractedOrg,
           status: contactId ? CorrespondenceStatus.MATCHED : CorrespondenceStatus.SUGGESTED,
         },
       });

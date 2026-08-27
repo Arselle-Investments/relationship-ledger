@@ -14,6 +14,12 @@ function getClient(): Anthropic {
 }
 
 const MODEL = process.env.ANTHROPIC_MODEL || "claude-sonnet-5";
+// Structured extraction and classification below both force a tool call with
+// a small, fixed schema — there's no open-ended writing for a bigger model to
+// do better at, so a much cheaper/faster model handles them just as
+// reliably. Reserve the full model for the drafting/research functions
+// further down, where writing quality and web-search reasoning matter.
+const FAST_MODEL = process.env.ANTHROPIC_FAST_MODEL || "claude-haiku-4-5-20251001";
 
 export type ExtractedContact = {
   name: string | null;
@@ -44,7 +50,7 @@ const EXTRACT_TOOL = {
 export async function extractContactFromMessage(subject: string, bodyText: string): Promise<ExtractedContact> {
   const anthropic = getClient();
   const message = await anthropic.messages.create({
-    model: MODEL,
+    model: FAST_MODEL,
     max_tokens: 512,
     tools: [EXTRACT_TOOL],
     tool_choice: { type: "tool", name: "extracted_contact" },
@@ -113,7 +119,7 @@ export async function classifyStageSignal(params: {
   const anthropic = getClient();
   const statusList = STATUS_VALUES.map((s) => `${s} (${CONTACT_STATUS_LABELS[s]})`).join(", ");
   const message = await anthropic.messages.create({
-    model: MODEL,
+    model: FAST_MODEL,
     max_tokens: 512,
     tools: [STAGE_SIGNAL_TOOL],
     tool_choice: { type: "tool", name: "stage_signal" },

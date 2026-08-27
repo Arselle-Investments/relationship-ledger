@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
+import { isStaffEmail } from "@/lib/staff-emails";
 import { CorrespondenceStatus } from "@prisma/client";
 
 /**
@@ -34,6 +35,14 @@ export async function POST(req: NextRequest) {
   }
 
   const extracted = await extractContactFromMessage(data.subject ?? "", data.bodyText);
+  // A message that's genuinely internal-only (a teammate's note about a call,
+  // no external party actually on the thread) can lead the model to return
+  // the internal author since there's nothing external to find — never treat
+  // one of our own team as "the contact."
+  if (isStaffEmail(extracted.email)) {
+    extracted.email = null;
+    extracted.name = null;
+  }
 
   let contactId: string | null = null;
   if (extracted.email) {
