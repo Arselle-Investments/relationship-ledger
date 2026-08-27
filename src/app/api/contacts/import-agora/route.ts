@@ -67,9 +67,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No contacts with a name were found in that file." }, { status: 400 });
   }
 
+  // These contacts are coming straight from Agora, so they're already
+  // current there by definition — mark them as exported so "Export new for
+  // Agora" only ever surfaces contacts that originated on our side (e.g.
+  // confirmed from a Teams message) and haven't made it back into Agora yet.
+  const importedAt = new Date();
+  const contactsToCreate = contactsData.map((c) => ({ ...c, agoraExportedAt: importedAt }));
+
   await prisma.$transaction([
     prisma.contact.deleteMany({}),
-    prisma.contact.createMany({ data: contactsData }),
+    prisma.contact.createMany({ data: contactsToCreate }),
   ]);
 
   // Static mailing lists can only reference contacts that still exist —
