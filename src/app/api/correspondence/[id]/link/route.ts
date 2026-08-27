@@ -12,6 +12,9 @@ const schema = z.discriminatedUnion("mode", [
     name: z.string().trim().min(1, "Name is required."),
     org: z.string().trim().optional().nullable(),
     email: z.string().trim().optional().nullable(),
+    phone: z.string().trim().optional().nullable(),
+    city: z.string().trim().optional().nullable(),
+    title: z.string().trim().optional().nullable(),
   }),
 ]);
 
@@ -47,8 +50,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         name: parsed.data.name,
         org: parsed.data.org || null,
         email: parsed.data.email || null,
+        phone: parsed.data.phone || null,
+        city: parsed.data.city || null,
         ownerId: actingUser.id,
-        notes: "",
+        notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
       },
     });
     contactId = contact.id;

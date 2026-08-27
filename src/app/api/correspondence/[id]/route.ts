@@ -3,7 +3,13 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { CorrespondenceStatus } from "@prisma/client";
 
-/** Dismiss a suggested correspondence entry — it stays for the record, just no longer actionable. */
+const ALLOWED_STATUSES = new Set([CorrespondenceStatus.IGNORED, CorrespondenceStatus.SUGGESTED]);
+
+/**
+ * Dismiss a suggested correspondence entry (it stays for the record, just no
+ * longer actionable), or undo that and put it back as a suggestion — e.g. an
+ * "ignore" clicked by mistake.
+ */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await requireEditor();
@@ -13,12 +19,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  if (body.status !== CorrespondenceStatus.IGNORED) {
-    return NextResponse.json({ error: "Only dismissing (IGNORED) is supported here." }, { status: 400 });
+  if (!ALLOWED_STATUSES.has(body.status)) {
+    return NextResponse.json({ error: "Only dismissing (IGNORED) or undoing (SUGGESTED) is supported here." }, { status: 400 });
   }
   const correspondence = await prisma.correspondence.update({
     where: { id },
-    data: { status: CorrespondenceStatus.IGNORED },
+    data: { status: body.status },
   });
   return NextResponse.json({ correspondence });
 }

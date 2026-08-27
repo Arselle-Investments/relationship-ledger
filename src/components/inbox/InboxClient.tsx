@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Contact, ContactStatus, Correspondence } from "@prisma/client";
 import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { parseSignature } from "@/lib/signature-parse";
 
 const STATUS_OPTIONS = Object.values(ContactStatus);
 
@@ -166,19 +167,33 @@ function CorrespondenceCard({
   contacts,
   canEdit,
   onResolved,
+  onIgnored,
 }: {
   item: Correspondence;
   contacts: Contact[];
   canEdit: boolean;
   onResolved: (id: string) => void;
+  onIgnored: (item: Correspondence) => void;
 }) {
   const [linking, setLinking] = useState(false);
   const [name, setName] = useState(item.extractedName ?? "");
   const [org, setOrg] = useState(item.extractedOrg ?? "");
   const [email, setEmail] = useState(item.extractedEmail ?? "");
+  const [phone, setPhone] = useState("");
+  const [city, setCity] = useState("");
+  const [title, setTitle] = useState("");
+  const [signatureParsed, setSignatureParsed] = useState(false);
   const [existingContactId, setExistingContactId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  function parseFromSignature() {
+    const found = parseSignature(item.bodyText);
+    setSignatureParsed(true);
+    if (found.phone) setPhone(found.phone);
+    if (found.title) setTitle(found.title);
+    if (found.city) setCity(found.city);
+  }
 
   async function createNew() {
     setError(null);
@@ -190,7 +205,15 @@ function CorrespondenceCard({
     const res = await fetch(`/api/correspondence/${item.id}/link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ mode: "new", name: name.trim(), org: org.trim() || null, email: email.trim() || null }),
+      body: JSON.stringify({
+        mode: "new",
+        name: name.trim(),
+        org: org.trim() || null,
+        email: email.trim() || null,
+        phone: phone.trim() || null,
+        city: city.trim() || null,
+        title: title.trim() || null,
+      }),
     });
     const json = await res.json();
     setBusy(false);
@@ -233,7 +256,7 @@ function CorrespondenceCard({
       setError(json.error ?? "Something went wrong.");
       return;
     }
-    onResolved(item.id);
+    onIgnored({ ...item, status: "IGNORED" as Correspondence["status"] });
   }
 
   return (
@@ -297,6 +320,30 @@ function CorrespondenceCard({
             <label>Email</label>
             <input value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
+          <div style={{ marginBottom: 10 }}>
+            <button type="button" className="btn small" onClick={parseFromSignature}>
+              Pull details from signature
+            </button>
+            {signatureParsed && !phone && !title && !city && (
+              <span className="helptext" style={{ marginLeft: 8 }}>
+                Didn&rsquo;t find a phone, title, or location in the message.
+              </span>
+            )}
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Phone</label>
+              <input value={phone} onChange={(e) => setPhone(e.target.value)} />
+            </div>
+            <div className="field">
+              <label>Title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} />
+            </div>
+          </div>
+          <div className="field">
+            <label>Location</label>
+            <input value={city} onChange={(e) => setCity(e.target.value)} />
+          </div>
           {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn small primary" onClick={createNew} disabled={busy}>
@@ -317,16 +364,21 @@ function CorrespondenceCard({
 
 export function InboxClient({
   initialSuggested,
+  initialIgnored,
   initialPendingStageChanges,
   contacts,
   canEdit,
 }: {
   initialSuggested: Correspondence[];
+  initialIgnored: Correspondence[];
   initialPendingStageChanges: CorrespondenceWithContact[];
   contacts: Contact[];
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialSuggested);
+  const [ignoredItems, setIgnoredItems] = useState(initialIgnored);
+  const [showIgnored, setShowIgnored] = useState(false);
+  const [undoingId, setUndoingId] = useState<string | null>(null);
   const [stageSuggestions, setStageSuggestions] = useState(initialPendingStageChanges);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [statusChoices, setStatusChoices] = useState<Record<string, ContactStatus>>({});
@@ -334,6 +386,24 @@ export function InboxClient({
 
   function resolve(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function handleIgnored(item: Correspondence) {
+    setItems((prev) => prev.filter((i) => i.id !== item.id));
+    setIgnoredItems((prev) => [item, ...prev]);
+  }
+
+  async function undoIgnore(item: Correspondence) {
+    setUndoingId(item.id);
+    const res = await fetch(`/api/correspondence/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "SUGGESTED" }),
+    });
+    setUndoingId(null);
+    if (!res.ok) return;
+    setIgnoredItems((prev) => prev.filter((i) => i.id !== item.id));
+    setItems((prev) => [item, ...prev]);
   }
 
   function resolveStageSuggestion(id: string) {
@@ -451,8 +521,55 @@ export function InboxClient({
         </div>
       ) : (
         items.map((item) => (
-          <CorrespondenceCard key={item.id} item={item} contacts={contacts} canEdit={canEdit} onResolved={resolve} />
+          <CorrespondenceCard
+            key={item.id}
+            item={item}
+            contacts={contacts}
+            canEdit={canEdit}
+            onResolved={resolve}
+            onIgnored={handleIgnored}
+          />
         ))
+      )}
+
+      {canEdit && ignoredItems.length > 0 && (
+        <div style={{ marginTop: 20 }}>
+          <button className="btn small ghost" onClick={() => setShowIgnored((v) => !v)}>
+            {showIgnored ? "Hide" : "Show"} ignored ({ignoredItems.length})
+          </button>
+          {showIgnored && (
+            <div style={{ marginTop: 12 }}>
+              {ignoredItems.map((item) => (
+                <div key={item.id} className="card" style={{ padding: 16, marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14 }}>{item.subject || "(no subject)"}</div>
+                      <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+                        {new Date(item.receivedAt).toLocaleString()}
+                      </div>
+                    </div>
+                    <span className="tag muted">ignored</span>
+                  </div>
+                  <div
+                    className="muted"
+                    style={{ fontSize: 12.5, marginTop: 10, whiteSpace: "pre-wrap", maxHeight: 80, overflow: "auto" }}
+                  >
+                    {item.bodyText.slice(0, 300)}
+                  </div>
+                  <div style={{ marginTop: 10 }}>
+                    <button
+                      className="btn small"
+                      onClick={() => undoIgnore(item)}
+                      disabled={undoingId === item.id}
+                    >
+                      {undoingId === item.id ? "Undoing…" : "Undo"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
