@@ -1,8 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Contact, Correspondence } from "@prisma/client";
+import { Contact, ContactStatus, Correspondence } from "@prisma/client";
 import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+
+const STATUS_OPTIONS = Object.values(ContactStatus);
 
 function EmlImportSection({ canEdit }: { canEdit: boolean }) {
   const [importing, setImporting] = useState(false);
@@ -68,17 +70,30 @@ type CorrespondenceWithContact = Correspondence & { contact: Contact | null };
 function StageSuggestionCard({
   item,
   canEdit,
+  selected,
+  onToggleSelect,
+  statusChoice,
+  onStatusChoiceChange,
   onResolved,
 }: {
   item: CorrespondenceWithContact;
   canEdit: boolean;
+  selected: boolean;
+  onToggleSelect: (checked: boolean) => void;
+  statusChoice: ContactStatus;
+  onStatusChoiceChange: (status: ContactStatus) => void;
   onResolved: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const overridden = item.suggestedStatus !== null && statusChoice !== item.suggestedStatus;
 
   async function confirm() {
     setBusy(true);
-    const res = await fetch(`/api/correspondence/${item.id}/confirm-suggestion`, { method: "POST" });
+    const res = await fetch(`/api/correspondence/${item.id}/confirm-suggestion`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: statusChoice }),
+    });
     setBusy(false);
     if (res.ok) onResolved(item.id);
   }
@@ -93,24 +108,45 @@ function StageSuggestionCard({
   return (
     <div className="card" style={{ padding: 16, marginBottom: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-        <div>
-          <div style={{ fontWeight: 600, fontSize: 14 }}>{item.contact?.name ?? "Unknown contact"}</div>
-          <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
-            {item.subject || "(no subject)"} &middot; {new Date(item.receivedAt).toLocaleString()}
+        <div style={{ display: "flex", gap: 10, alignItems: "flex-start" }}>
+          {canEdit && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={(e) => onToggleSelect(e.target.checked)}
+              style={{ marginTop: 3 }}
+            />
+          )}
+          <div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{item.contact?.name ?? "Unknown contact"}</div>
+            <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
+              {item.subject || "(no subject)"} &middot; {new Date(item.receivedAt).toLocaleString()}
+            </div>
           </div>
         </div>
         <span className="tag brass">stage suggestion</span>
       </div>
       {item.suggestedStatus && (
         <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--forest-bg)", borderRadius: 6, fontSize: 12.5 }}>
-          Move to <strong>{CONTACT_STATUS_LABELS[item.suggestedStatus]}</strong>
+          AI suggests <strong>{CONTACT_STATUS_LABELS[item.suggestedStatus]}</strong>
           {item.suggestionRationale ? ` — ${item.suggestionRationale}` : ""}
         </div>
       )}
       {canEdit ? (
-        <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+        <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <select
+            value={statusChoice}
+            onChange={(e) => onStatusChoiceChange(e.target.value as ContactStatus)}
+            style={{ fontSize: 12.5 }}
+          >
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s} value={s}>
+                {CONTACT_STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
           <button className="btn small primary" onClick={confirm} disabled={busy}>
-            Confirm
+            {overridden ? `Confirm as ${CONTACT_STATUS_LABELS[statusChoice]}` : "Confirm"}
           </button>
           <button className="btn small ghost" onClick={dismiss} disabled={busy}>
             Dismiss
@@ -279,6 +315,9 @@ export function InboxClient({
 }) {
   const [items, setItems] = useState(initialSuggested);
   const [stageSuggestions, setStageSuggestions] = useState(initialPendingStageChanges);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [statusChoices, setStatusChoices] = useState<Record<string, ContactStatus>>({});
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   function resolve(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -286,6 +325,54 @@ export function InboxClient({
 
   function resolveStageSuggestion(id: string) {
     setStageSuggestions((prev) => prev.filter((i) => i.id !== id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  }
+
+  function statusChoiceFor(item: CorrespondenceWithContact): ContactStatus {
+    return statusChoices[item.id] ?? item.suggestedStatus ?? ContactStatus.NOT_STARTED;
+  }
+
+  function toggleSelect(id: string, checked: boolean) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll(checked: boolean) {
+    setSelectedIds(checked ? new Set(stageSuggestions.map((i) => i.id)) : new Set());
+  }
+
+  async function confirmSelected() {
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      const item = stageSuggestions.find((i) => i.id === id);
+      if (!item) continue;
+      const res = await fetch(`/api/correspondence/${id}/confirm-suggestion`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: statusChoiceFor(item) }),
+      });
+      if (res.ok) resolveStageSuggestion(id);
+    }
+    setBulkBusy(false);
+  }
+
+  async function dismissSelected() {
+    setBulkBusy(true);
+    const ids = Array.from(selectedIds);
+    for (const id of ids) {
+      const res = await fetch(`/api/correspondence/${id}/dismiss-suggestion`, { method: "POST" });
+      if (res.ok) resolveStageSuggestion(id);
+    }
+    setBulkBusy(false);
   }
 
   return (
@@ -303,8 +390,39 @@ export function InboxClient({
         </div>
       ) : (
         <div style={{ marginBottom: 28 }}>
+          {canEdit && (
+            <div className="toolbar" style={{ marginBottom: 12 }}>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size > 0 && selectedIds.size === stageSuggestions.length}
+                  onChange={(e) => toggleSelectAll(e.target.checked)}
+                />
+                Select all
+              </label>
+              <div className="spacer" />
+              <div className="muted" style={{ fontSize: 12.5 }}>
+                {selectedIds.size > 0 ? `${selectedIds.size} selected` : ""}
+              </div>
+              <button className="btn small primary" onClick={confirmSelected} disabled={selectedIds.size === 0 || bulkBusy}>
+                {bulkBusy ? "Working…" : "Confirm selected"}
+              </button>
+              <button className="btn small ghost" onClick={dismissSelected} disabled={selectedIds.size === 0 || bulkBusy}>
+                Dismiss selected
+              </button>
+            </div>
+          )}
           {stageSuggestions.map((item) => (
-            <StageSuggestionCard key={item.id} item={item} canEdit={canEdit} onResolved={resolveStageSuggestion} />
+            <StageSuggestionCard
+              key={item.id}
+              item={item}
+              canEdit={canEdit}
+              selected={selectedIds.has(item.id)}
+              onToggleSelect={(checked) => toggleSelect(item.id, checked)}
+              statusChoice={statusChoiceFor(item)}
+              onStatusChoiceChange={(status) => setStatusChoices((prev) => ({ ...prev, [item.id]: status }))}
+              onResolved={resolveStageSuggestion}
+            />
           ))}
         </div>
       )}
