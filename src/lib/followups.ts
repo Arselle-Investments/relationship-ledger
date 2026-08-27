@@ -50,6 +50,9 @@ export function getStaleContacts(
       if (days >= staleDays) reasons.push(`no activity in ${days}d`);
       if (!c.org) reasons.push("missing organization");
       if (!c.ownerId) reasons.push("missing owner");
+      // Agora's own placeholder convention for "we don't actually have this
+      // person's email" — e.g. "tbd@needemail.com", "needemail2@firm.com".
+      if (c.email?.toLowerCase().includes("needemail")) reasons.push("placeholder email — needs a real address");
       return { ...c, staleReasons: reasons };
     })
     .filter((c) => c.staleReasons.length > 0);
