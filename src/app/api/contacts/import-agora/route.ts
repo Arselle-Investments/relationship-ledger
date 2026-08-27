@@ -7,12 +7,19 @@ import { DEV_TEAM } from "@/lib/dev-team";
 import { Role } from "@prisma/client";
 
 /**
- * Replaces the entire contact roster with a fresh Agora export. This is
- * intentionally a full replace, not an upsert: Agora is the system of record
- * for who our contacts are, and re-running this is how the team keeps the
- * ledger in sync after a new pull (removed contacts should actually
- * disappear here too, matching the same "replace, don't merge" approach
- * already used for the conference tracker import).
+ * Non-destructive Agora sync: matches each row against an existing contact
+ * by email and either creates a new one or refreshes it — never deletes
+ * anything. This is the everyday "a handful of new entries showed up in
+ * Agora" path.
+ *
+ * On a match, only fields with no editable form in the app are refreshed
+ * (Agora type, primary location, staff, commitment range, email tier, the
+ * full raw row) plus a tag merge — org/email/phone/city/notes are left
+ * alone since a team member may have deliberately corrected or enriched
+ * them locally, and re-running this shouldn't silently overwrite that. Owner
+ * is only set if the contact doesn't already have one. For a full refresh of
+ * every field (e.g. the very first bulk load), use the admin-only
+ * "replace all" import in Settings instead.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -34,11 +41,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No rows found in that file." }, { status: 400 });
   }
 
-  // Real sign-in (Entra ID) isn't wired up yet, so a team member only has a
-  // User row once they've used the dev-login bypass at least once — which
-  // means "Staff Members" matching would silently only ever work for
-  // whoever happened to have logged in already. Make sure the known team
-  // roster exists so ownership actually gets assigned as expected.
+  // Same rationale as the replace-all import: make sure the known team
+  // roster exists so "Staff Members" matching can actually assign an owner.
   await Promise.all(
     DEV_TEAM.map((m) =>
       prisma.user.upsert({
@@ -52,45 +56,46 @@ export async function POST(req: NextRequest) {
   const users = await prisma.user.findMany();
   const userByName = new Map(users.map((u) => [(u.name ?? "").toLowerCase(), u]));
 
+  const existingContacts = await prisma.contact.findMany({ where: { email: { not: null } } });
+  const existingByEmail = new Map(existingContacts.map((c) => [c.email!.toLowerCase(), c]));
+
+  let created = 0;
+  let updated = 0;
   let skipped = 0;
-  const contactsData = [];
+  const importedAt = new Date();
+
   for (const row of rows) {
     const built = buildAgoraContact(row, userByName);
     if (!built) {
       skipped++;
       continue;
     }
-    contactsData.push(built);
+
+    const existing = built.email ? existingByEmail.get(built.email.toLowerCase()) : undefined;
+
+    if (existing) {
+      await prisma.contact.update({
+        where: { id: existing.id },
+        data: {
+          agoraType: built.agoraType,
+          primaryLocation: built.primaryLocation,
+          staffNames: built.staffNames,
+          commitmentLow: built.commitmentLow,
+          commitmentHigh: built.commitmentHigh,
+          emailTier: built.emailTier,
+          agoraRaw: built.agoraRaw,
+          tags: Array.from(new Set([...(existing.tags ?? []), ...built.tags])),
+          ownerId: existing.ownerId ?? built.ownerId,
+        },
+      });
+      updated++;
+    } else {
+      await prisma.contact.create({
+        data: { ...built, agoraExportedAt: importedAt },
+      });
+      created++;
+    }
   }
 
-  if (contactsData.length === 0) {
-    return NextResponse.json({ error: "No contacts with a name were found in that file." }, { status: 400 });
-  }
-
-  // These contacts are coming straight from Agora, so they're already
-  // current there by definition — mark them as exported so "Export new for
-  // Agora" only ever surfaces contacts that originated on our side (e.g.
-  // confirmed from a Teams message) and haven't made it back into Agora yet.
-  const importedAt = new Date();
-  const contactsToCreate = contactsData.map((c) => ({ ...c, agoraExportedAt: importedAt }));
-
-  await prisma.$transaction([
-    prisma.contact.deleteMany({}),
-    prisma.contact.createMany({ data: contactsToCreate }),
-  ]);
-
-  // Static mailing lists can only reference contacts that still exist —
-  // every old id is gone now, so drop them rather than leave dead references.
-  const lists = await prisma.mailingList.findMany({ where: { mode: "STATIC" } });
-  await Promise.all(
-    lists
-      .filter((l) => l.contactIds.length > 0)
-      .map((l) => prisma.mailingList.update({ where: { id: l.id }, data: { contactIds: [] } }))
-  );
-
-  return NextResponse.json({
-    imported: contactsData.length,
-    skipped,
-    listsCleared: lists.filter((l) => l.contactIds.length > 0).length,
-  });
+  return NextResponse.json({ created, updated, skipped });
 }

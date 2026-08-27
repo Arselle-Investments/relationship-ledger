@@ -1,8 +1,67 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Contact, Correspondence } from "@prisma/client";
 import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+
+function EmlImportSection({ canEdit }: { canEdit: boolean }) {
+  const [importing, setImporting] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleFiles(files: FileList) {
+    setImporting(true);
+    setMsg(null);
+    setError(null);
+    const form = new FormData();
+    Array.from(files).forEach((f) => form.append("files", f));
+    const res = await fetch("/api/correspondence/import-eml", { method: "POST", body: form });
+    const json = await res.json();
+    setImporting(false);
+    if (!res.ok) {
+      setError(json.error ?? "Import failed.");
+      return;
+    }
+    setMsg(
+      `Processed ${files.length} file${files.length === 1 ? "" : "s"}: ${json.matched} matched to existing contacts, ${json.suggested} suggested as new, ${json.duplicates} already imported${json.failed.length ? `, ${json.failed.length} failed to parse` : ""}.`
+    );
+    window.location.reload();
+  }
+
+  if (!canEdit) return null;
+
+  return (
+    <div className="card" style={{ padding: 16, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontWeight: 600, fontSize: 13.5 }}>Import historical emails</div>
+          <div className="helptext" style={{ marginTop: 2 }}>
+            Upload saved .eml files from before the Teams channel was connected — each one runs through the same
+            contact-matching pipeline as a live message.
+          </div>
+        </div>
+        <div className="spacer" />
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".eml"
+          multiple
+          style={{ display: "none" }}
+          onChange={(e) => {
+            if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
+            e.target.value = "";
+          }}
+        />
+        <button className="btn" onClick={() => fileInputRef.current?.click()} disabled={importing}>
+          {importing ? "Importing…" : "Upload .eml files"}
+        </button>
+      </div>
+      {msg && <div className="helptext" style={{ marginTop: 10 }}>{msg}</div>}
+      {error && <div className="error-text" style={{ marginTop: 10 }}>{error}</div>}
+    </div>
+  );
+}
 
 type CorrespondenceWithContact = Correspondence & { contact: Contact | null };
 
@@ -231,6 +290,8 @@ export function InboxClient({
 
   return (
     <div>
+      <EmlImportSection canEdit={canEdit} />
+
       <h3 style={{ marginBottom: 10 }}>Suggested stage changes</h3>
       <div className="eyebrow" style={{ marginBottom: 14 }}>
         Correspondence that looks like it signals a pipeline move — review before anything on the contact changes

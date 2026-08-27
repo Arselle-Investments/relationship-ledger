@@ -18,6 +18,7 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@prisma/client": "^5.22.0",
     "exceljs": "^4.4.0",
+    "mailparser": "^3.9.17",
     "next": "^15.0.3",
     "next-auth": "5.0.0-beta.32",
     "react": "^18.3.1",
@@ -25,6 +26,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20.16.11",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",

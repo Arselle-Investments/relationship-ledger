@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
@@ -12,8 +12,12 @@ import { safeCell } from "@/lib/excel-safety";
  * later only ever picks up what's genuinely new — never re-sends the same
  * contact twice. Column headers are a placeholder using our own field names;
  * expect to adjust these once we see Agora's actual expected import format.
+ *
+ * Optional ?days=N narrows this to contacts added in the last N days —
+ * useful for sending Agora a manageable, recent batch rather than
+ * everything that's ever accumulated since the last export.
  */
-export async function POST() {
+export async function POST(req: NextRequest) {
   try {
     await requireEditor();
   } catch (e) {
@@ -21,14 +25,21 @@ export async function POST() {
     throw e;
   }
 
+  const daysParam = req.nextUrl.searchParams.get("days");
+  const days = daysParam ? Number(daysParam) : null;
+  const since = days && Number.isFinite(days) && days > 0 ? new Date(Date.now() - days * 86_400_000) : null;
+
   const contacts = await prisma.contact.findMany({
-    where: { agoraExportedAt: null },
+    where: { agoraExportedAt: null, ...(since ? { createdAt: { gte: since } } : {}) },
     include: { owner: true, warmPath: true },
     orderBy: { createdAt: "asc" },
   });
 
   if (contacts.length === 0) {
-    return NextResponse.json({ error: "No new contacts since the last Agora export." }, { status: 400 });
+    return NextResponse.json(
+      { error: since ? "No new contacts in that window." : "No new contacts since the last Agora export." },
+      { status: 400 }
+    );
   }
 
   const workbook = new ExcelJS.Workbook();

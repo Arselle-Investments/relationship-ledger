@@ -31,6 +31,7 @@ export function ContactsClient({
   const [agoraImportMsg, setAgoraImportMsg] = useState<string | null>(null);
   const [agoraExporting, setAgoraExporting] = useState(false);
   const [agoraMsg, setAgoraMsg] = useState<string | null>(null);
+  const [agoraExportDays, setAgoraExportDays] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const agoraFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -119,13 +120,6 @@ export function ContactsClient({
   }
 
   async function handleAgoraImportFile(file: File) {
-    if (
-      !confirm(
-        `This will REPLACE all ${contacts.length} contacts currently in the ledger with what's in "${file.name}". This can't be undone. Continue?`
-      )
-    ) {
-      return;
-    }
     setAgoraImporting(true);
     setAgoraImportMsg(null);
     const form = new FormData();
@@ -138,7 +132,7 @@ export function ContactsClient({
       return;
     }
     setAgoraImportMsg(
-      `Replaced the roster with ${json.imported} contacts from Agora${json.skipped ? ` (${json.skipped} rows had no name and were skipped)` : ""}${json.listsCleared ? ` — ${json.listsCleared} mailing list(s) were cleared since their contacts no longer exist` : ""}.`
+      `Agora sync: ${json.created} new contact${json.created === 1 ? "" : "s"} added, ${json.updated} refreshed${json.skipped ? `, ${json.skipped} rows skipped` : ""}.`
     );
     const refreshed = await fetch("/api/contacts").then((r) => r.json());
     setContacts(refreshed.contacts);
@@ -147,7 +141,10 @@ export function ContactsClient({
   async function handleAgoraExport() {
     setAgoraExporting(true);
     setAgoraMsg(null);
-    const res = await fetch("/api/contacts/export-new-for-agora", { method: "POST" });
+    const url = agoraExportDays
+      ? `/api/contacts/export-new-for-agora?days=${agoraExportDays}`
+      : "/api/contacts/export-new-for-agora";
+    const res = await fetch(url, { method: "POST" });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
       setAgoraExporting(false);
@@ -155,16 +152,16 @@ export function ContactsClient({
       return;
     }
     const blob = await res.blob();
-    const url = URL.createObjectURL(blob);
+    const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
-    a.href = url;
+    a.href = objectUrl;
     a.download = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
-    URL.revokeObjectURL(url);
+    URL.revokeObjectURL(objectUrl);
     setAgoraExporting(false);
-    setAgoraMsg(`Exported ${pendingAgoraCount} contact${pendingAgoraCount === 1 ? "" : "s"} — marked as sent to Agora.`);
+    setAgoraMsg(`Exported and marked as sent to Agora.`);
     const refreshed = await fetch("/api/contacts").then((r) => r.json());
     setContacts(refreshed.contacts);
   }
@@ -215,9 +212,16 @@ export function ContactsClient({
         </button>
         <div className="spacer" />
         {canEdit && pendingAgoraCount > 0 && (
-          <button className="btn" onClick={handleAgoraExport} disabled={agoraExporting}>
-            {agoraExporting ? "Exporting…" : `Export new for Agora (${pendingAgoraCount})`}
-          </button>
+          <>
+            <select value={agoraExportDays} onChange={(e) => setAgoraExportDays(e.target.value)}>
+              <option value="">All pending ({pendingAgoraCount})</option>
+              <option value="15">Added in last 15 days</option>
+              <option value="30">Added in last 30 days</option>
+            </select>
+            <button className="btn" onClick={handleAgoraExport} disabled={agoraExporting}>
+              {agoraExporting ? "Exporting…" : "Export new for Agora"}
+            </button>
+          </>
         )}
         <a className="btn" href={exportUrl()}>
           Export to Excel
@@ -250,7 +254,7 @@ export function ContactsClient({
               }}
             />
             <button className="btn" onClick={() => agoraFileInputRef.current?.click()} disabled={agoraImporting}>
-              {agoraImporting ? "Replacing…" : "Import from Agora (replace all)"}
+              {agoraImporting ? "Syncing…" : "Import from Agora"}
             </button>
             <button className="btn primary" onClick={() => setEditing("new")}>
               Add contact
