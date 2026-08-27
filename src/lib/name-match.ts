@@ -83,7 +83,13 @@ function firstNamesEquivalent(a: string, b: string): boolean {
   return groupA !== undefined && groupA === groupB;
 }
 
-function splitName(fullName: string): { first: string; last: string } | null {
+/** All names in the same nickname group as `first` (e.g. "ron" -> ["ronald", "ron", "ronnie"]), or just `[first]` if it isn't in any group. */
+export function nicknameVariants(first: string): string[] {
+  const groupIndex = nicknameLookup.get(first);
+  return groupIndex === undefined ? [first] : NICKNAME_GROUPS[groupIndex];
+}
+
+export function splitName(fullName: string): { first: string; last: string } | null {
   const tokens = fullName
     .trim()
     .toLowerCase()

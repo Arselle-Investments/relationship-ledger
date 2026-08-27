@@ -5,7 +5,7 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
-import { findContactByNameFallback } from "@/lib/contact-match";
+import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { CorrespondenceStatus } from "@prisma/client";
 import type { AddressObject } from "mailparser";
 
@@ -90,6 +90,9 @@ export async function POST(req: NextRequest) {
       }
       if (!contactId && headerName) {
         contactId = await findContactByNameFallback(headerName);
+      }
+      if (!contactId) {
+        contactId = await findContactBySubjectFallback(subject);
       }
 
       let extractedEmail = headerEmail;
