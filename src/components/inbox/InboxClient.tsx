@@ -203,25 +203,37 @@ function CorrespondenceCard({
 
   async function linkExisting() {
     if (!existingContactId) return;
+    setError(null);
     setBusy(true);
     const res = await fetch(`/api/correspondence/${item.id}/link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mode: "existing", contactId: existingContactId }),
     });
+    const json = await res.json().catch(() => ({}));
     setBusy(false);
-    if (res.ok) onResolved(item.id);
+    if (!res.ok) {
+      setError(json.error ?? "Something went wrong.");
+      return;
+    }
+    onResolved(item.id);
   }
 
   async function ignore() {
+    setError(null);
     setBusy(true);
     const res = await fetch(`/api/correspondence/${item.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: "IGNORED" }),
     });
+    const json = await res.json().catch(() => ({}));
     setBusy(false);
-    if (res.ok) onResolved(item.id);
+    if (!res.ok) {
+      setError(json.error ?? "Something went wrong.");
+      return;
+    }
+    onResolved(item.id);
   }
 
   return (
@@ -259,6 +271,7 @@ function CorrespondenceCard({
               </select>
             </div>
           </div>
+          {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8 }}>
             <button className="btn small primary" onClick={linkExisting} disabled={!existingContactId || busy}>
               Link

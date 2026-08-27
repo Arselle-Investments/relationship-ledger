@@ -21,12 +21,21 @@ export async function maybeCreateStageSuggestion(params: {
   if (!contact) return null;
 
   const recentHistory = await getRecentStageHistorySummary(params.contactId);
-  const signal = await classifyStageSignal({
-    currentStatus: contact.status,
-    recentHistory,
-    subject: params.subject,
-    bodyText: params.bodyText,
-  });
+  let signal;
+  try {
+    signal = await classifyStageSignal({
+      currentStatus: contact.status,
+      recentHistory,
+      subject: params.subject,
+      bodyText: params.bodyText,
+    });
+  } catch (e) {
+    // Stage classification is a nice-to-have on top of a link/match that has
+    // already been saved — an AI outage (rate limit, exhausted credits)
+    // shouldn't take down the action that triggered it.
+    console.error("Stage classification failed, skipping suggestion", e);
+    return null;
+  }
 
   if (!signal.suggestedStatus) return null;
 
