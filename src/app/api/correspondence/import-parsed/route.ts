@@ -5,6 +5,7 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
+import { findContactByNameFallback } from "@/lib/contact-match";
 import { CorrespondenceStatus } from "@prisma/client";
 
 const messageSchema = z.object({
@@ -72,6 +73,9 @@ export async function POST(req: NextRequest) {
         });
         if (match) contactId = match.id;
       }
+      if (!contactId && headerName) {
+        contactId = await findContactByNameFallback(headerName);
+      }
 
       let extractedEmail = headerEmail;
       let extractedName = headerName;
@@ -91,6 +95,9 @@ export async function POST(req: NextRequest) {
             where: { email: { equals: extractedEmail, mode: "insensitive" } },
           });
           if (match) contactId = match.id;
+        }
+        if (!contactId && extractedName && extractedName !== headerName) {
+          contactId = await findContactByNameFallback(extractedName);
         }
       }
 

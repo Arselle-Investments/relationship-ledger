@@ -4,6 +4,7 @@ import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
 import { isStaffEmail } from "@/lib/staff-emails";
+import { findContactByNameFallback } from "@/lib/contact-match";
 import { CorrespondenceStatus } from "@prisma/client";
 
 /**
@@ -50,6 +51,9 @@ export async function POST(req: NextRequest) {
       where: { email: { equals: extracted.email, mode: "insensitive" } },
     });
     if (match) contactId = match.id;
+  }
+  if (!contactId && extracted.name) {
+    contactId = await findContactByNameFallback(extracted.name);
   }
 
   const correspondence = await prisma.correspondence.create({
