@@ -27,7 +27,7 @@ export function DevLoginButtons({ callbackUrl }: { callbackUrl: string }) {
       <div className="eyebrow" style={{ marginBottom: 10 }}>
         Dev preview — sign in as
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
         {DEV_TEAM.map((member) => (
           <button
             key={member.name}
