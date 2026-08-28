@@ -35,7 +35,18 @@ export async function POST(req: NextRequest) {
     if (existing) return NextResponse.json({ correspondence: existing, deduped: true });
   }
 
-  const extracted = await extractContactFromMessage(data.subject ?? "", data.bodyText);
+  let extracted: { name: string | null; email: string | null; org: string | null } = {
+    name: null,
+    email: null,
+    org: null,
+  };
+  try {
+    extracted = await extractContactFromMessage(data.subject ?? "", data.bodyText);
+  } catch (e) {
+    // An AI outage (rate limit, exhausted credits) shouldn't drop the message —
+    // fall back to whatever the subject-line matcher below can find on its own.
+    console.error("AI contact extraction failed, falling back to subject-only matching", e);
+  }
   // A message that's genuinely internal-only (a teammate's note about a call,
   // no external party actually on the thread) can lead the model to return
   // the internal author since there's nothing external to find — never treat

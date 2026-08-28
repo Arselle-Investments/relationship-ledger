@@ -19,6 +19,29 @@ export async function findContactByNameFallback(name: string | null): Promise<st
 
 const STAFF_NAMES = new Set(DEV_TEAM.map((m) => m.name.trim().toLowerCase()));
 
+// Generic words that occasionally show up as a contact's "first name" on
+// junk/placeholder rows (e.g. a literal "Test Investor" test contact) rather
+// than an actual given name — matching on these would false-positive on any
+// subject that happens to contain the word itself.
+const NON_NAME_FIRST_WORDS = new Set([
+  "test",
+  "info",
+  "admin",
+  "investor",
+  "investors",
+  "team",
+  "group",
+  "office",
+  "support",
+  "sales",
+  "marketing",
+  "communications",
+  "relations",
+  "shared",
+  "mailbox",
+  "noreply",
+]);
+
 function wordPresent(text: string, word: string): boolean {
   if (!word) return false;
   const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -46,6 +69,7 @@ export async function findContactBySubjectFallback(subject: string | null): Prom
     if (c.email?.toLowerCase().endsWith("@arselleinvestments.com")) continue; // our own shared mailboxes (e.g. "Investor Relations"), not an external investor
     const split = splitName(c.name);
     if (!split) continue;
+    if (NON_NAME_FIRST_WORDS.has(split.first)) continue; // junk/placeholder contact (e.g. "Test Investor"), not a real person
     splitByContact.set(c.id, split);
     for (const variant of nicknameVariants(split.first)) {
       const set = byFirstNameVariant.get(variant) ?? new Set<string>();
