@@ -28,19 +28,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const endDate = trip.endDate.toISOString().slice(0, 10);
   const travelerName = trip.user.name || trip.user.email || "the team";
 
-  const drafts = await Promise.all(
-    contacts.map(async (c) => ({
-      contactId: c.id,
-      draft: await draftTravelOutreachEmail({
-        contactName: c.name,
-        contactOrg: c.org,
-        travelerName,
-        city: trip.city,
-        startDate,
-        endDate,
-      }),
-    }))
-  );
-
-  return NextResponse.json({ drafts });
+  try {
+    const drafts = await Promise.all(
+      contacts.map(async (c) => ({
+        contactId: c.id,
+        draft: await draftTravelOutreachEmail({
+          contactName: c.name,
+          contactOrg: c.org,
+          travelerName,
+          city: trip.city,
+          startDate,
+          endDate,
+        }),
+      }))
+    );
+    return NextResponse.json({ drafts });
+  } catch (e) {
+    console.error("Failed to draft travel outreach", e);
+    return NextResponse.json({ error: "Couldn't reach the AI drafting service. Check the Anthropic account's credit balance and try again." }, { status: 502 });
+  }
 }

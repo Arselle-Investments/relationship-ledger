@@ -26,6 +26,7 @@ export function TripCard({
   const [drafting, setDrafting] = useState(false);
   const [listName, setListName] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   async function toggleExpand() {
     const next = !expanded;
@@ -48,15 +49,19 @@ export function TripCard({
 
   async function generateDrafts() {
     if (selected.size === 0) return;
+    setDraftError(null);
     setDrafting(true);
     const res = await fetch(`/api/travel/${trip.id}/draft`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contactIds: Array.from(selected) }),
     });
+    const json = await res.json().catch(() => ({}));
     setDrafting(false);
-    if (!res.ok) return;
-    const json = await res.json();
+    if (!res.ok) {
+      setDraftError(json.error ?? "Something went wrong drafting outreach.");
+      return;
+    }
     setDrafts((prev) => {
       const next = { ...prev };
       for (const d of json.drafts) next[d.contactId] = d.draft;
@@ -162,6 +167,7 @@ export function TripCard({
                 </div>
               )}
               {msg && <div className="helptext" style={{ marginTop: 8 }}>{msg}</div>}
+              {draftError && <div className="error-text" style={{ marginTop: 8 }}>{draftError}</div>}
 
               {Object.keys(drafts).length > 0 && (
                 <div style={{ marginTop: 14 }}>

@@ -21,24 +21,28 @@ export async function POST(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({ where: { id: { in: parsed.data.contactIds } } });
 
-  const drafts = await Promise.all(
-    contacts.map(async (c) => {
-      const latestChange = await prisma.contactStatusChange.findFirst({
-        where: { contactId: c.id },
-        orderBy: { createdAt: "desc" },
-      });
-      const enteredAt = latestChange?.createdAt ?? c.createdAt;
-      const daysInStage = Math.round((Date.now() - enteredAt.getTime()) / 86_400_000);
-      const draft = await draftCheckInEmail({
-        name: c.name,
-        org: c.org,
-        status: c.status,
-        daysInStage,
-        notes: c.notes,
-      });
-      return { contactId: c.id, draft };
-    })
-  );
-
-  return NextResponse.json({ drafts });
+  try {
+    const drafts = await Promise.all(
+      contacts.map(async (c) => {
+        const latestChange = await prisma.contactStatusChange.findFirst({
+          where: { contactId: c.id },
+          orderBy: { createdAt: "desc" },
+        });
+        const enteredAt = latestChange?.createdAt ?? c.createdAt;
+        const daysInStage = Math.round((Date.now() - enteredAt.getTime()) / 86_400_000);
+        const draft = await draftCheckInEmail({
+          name: c.name,
+          org: c.org,
+          status: c.status,
+          daysInStage,
+          notes: c.notes,
+        });
+        return { contactId: c.id, draft };
+      })
+    );
+    return NextResponse.json({ drafts });
+  } catch (e) {
+    console.error("Failed to draft check-ins", e);
+    return NextResponse.json({ error: "Couldn't reach the AI drafting service. Check the Anthropic account's credit balance and try again." }, { status: 502 });
+  }
 }

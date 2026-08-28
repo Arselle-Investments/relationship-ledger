@@ -15,7 +15,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const existing = await prisma.contact.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
 
-  const research = await researchContact({ name: existing.name, org: existing.org, city: existing.city });
+  let research;
+  try {
+    research = await researchContact({ name: existing.name, org: existing.org, city: existing.city });
+  } catch (e) {
+    console.error("Failed to research contact", e);
+    return NextResponse.json({ error: "Couldn't reach the AI research service. Check the Anthropic account's credit balance and try again." }, { status: 502 });
+  }
 
   const contact = await prisma.contact.update({
     where: { id },

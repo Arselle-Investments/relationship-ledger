@@ -19,6 +19,7 @@ export function StuckContactsClient({
   const [drafting, setDrafting] = useState(false);
   const [listName, setListName] = useState("");
   const [listMsg, setListMsg] = useState<string | null>(null);
+  const [draftError, setDraftError] = useState<string | null>(null);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -31,15 +32,19 @@ export function StuckContactsClient({
 
   async function generateDrafts() {
     if (selected.size === 0) return;
+    setDraftError(null);
     setDrafting(true);
     const res = await fetch("/api/stuck-contacts/draft", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ contactIds: Array.from(selected) }),
     });
+    const json = await res.json().catch(() => ({}));
     setDrafting(false);
-    if (!res.ok) return;
-    const json = await res.json();
+    if (!res.ok) {
+      setDraftError(json.error ?? "Something went wrong drafting check-ins.");
+      return;
+    }
     setDrafts((prev) => {
       const next = { ...prev };
       for (const d of json.drafts) next[d.contactId] = d.draft;
@@ -129,6 +134,7 @@ export function StuckContactsClient({
                 </button>
               </div>
               {listMsg && <div className="helptext" style={{ marginTop: 8 }}>{listMsg}</div>}
+              {draftError && <div className="error-text" style={{ marginTop: 8 }}>{draftError}</div>}
             </div>
           )}
 
