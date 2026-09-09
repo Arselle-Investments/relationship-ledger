@@ -21,6 +21,7 @@ export function TaskCard({
 
   const isOverdue =
     task.status !== "DONE" && task.dueDate && new Date(task.dueDate) < new Date(new Date().toDateString());
+  const priorityClass = task.priority === "HIGH" ? "High" : task.priority === "LOW" ? "Low" : "Medium";
 
   const style: React.CSSProperties = transform
     ? { transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 10 }
@@ -32,7 +33,7 @@ export function TaskCard({
       style={style}
       {...listeners}
       {...attributes}
-      className={`task-card ${isOverdue ? "overdue" : ""} ${isDragging ? "dragging" : ""}`}
+      className={`task-card pri-${priorityClass} ${isDragging ? "dragging" : ""}`}
       onClick={onClick}
     >
       <div className="t">
@@ -41,10 +42,12 @@ export function TaskCard({
       </div>
       <div className="meta">
         <span>
-          <span className={`pri-dot pri-${task.priority === "HIGH" ? "High" : task.priority === "LOW" ? "Low" : "Medium"}`} />
+          <span className={`pri-dot pri-${priorityClass}`} />
           {task.assigneeLabel || task.owner?.name || "Unassigned"}
         </span>
-        <span>{task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""}</span>
+        <span className={isOverdue ? "overdue-text" : undefined}>
+          {task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""}
+        </span>
       </div>
       {task.contact && (
         <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>

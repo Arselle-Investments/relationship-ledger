@@ -140,11 +140,14 @@ table tbody tr{cursor:pointer;}
 .task-card.dragging{opacity:0.4;}
 .task-card .t{font-weight:600;font-size:13px;margin-bottom:5px;}
 .task-card .meta{font-size:11.5px;color:var(--ink-soft);display:flex;justify-content:space-between;align-items:center;}
-.task-card.overdue{border-left:3px solid var(--rust);}
+.task-card.pri-High{border-left:3px solid var(--rust);}
+.task-card.pri-Medium{border-left:3px solid var(--brass);}
+.task-card.pri-Low{border-left:3px solid var(--slate);}
 .pri-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px;}
-.pri-High{background:var(--rust);}
-.pri-Medium{background:var(--brass);}
-.pri-Low{background:var(--slate);}
+.pri-dot.pri-High{background:var(--rust);}
+.pri-dot.pri-Medium{background:var(--brass);}
+.pri-dot.pri-Low{background:var(--slate);}
+.overdue-text{color:var(--rust);font-weight:700;}
 
 /* Conferences */
 #conferences-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
