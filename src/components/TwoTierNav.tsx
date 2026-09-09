@@ -78,6 +78,9 @@ export function TwoTierNav({
   return (
     <>
       <div id="section-row">
+        <Link href="/" className={`settings-link ${activeHref === "/" ? "active" : ""}`} style={{ marginRight: 4 }}>
+          Home
+        </Link>
         {SECTIONS.map((s) => (
           <button
             key={s.key}

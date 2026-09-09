@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { signOut } from "@/lib/auth";
 import { Role } from "@prisma/client";
 import { TwoTierNav } from "@/components/TwoTierNav";
@@ -22,7 +23,7 @@ export function AppShell({
   return (
     <div id="app">
       <div id="topbar">
-        <div id="brand-block">
+        <Link href="/" id="brand-block" style={{ textDecoration: "none", color: "inherit" }}>
           <div id="brand-mark">
             <svg viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M14 2L23 22H5L14 2Z" stroke="#F5F7F7" strokeWidth="2.6" strokeLinejoin="round" />
@@ -33,7 +34,7 @@ export function AppShell({
             <h1>Arselle Relationship Ledger</h1>
             <div className="sub">Relationships &middot; Outreach &middot; Diligence &middot; Connectors</div>
           </div>
-        </div>
+        </Link>
         <div id="identity-bar">
           <span className="muted" style={{ fontSize: 13 }}>
             {user.name || user.email}
