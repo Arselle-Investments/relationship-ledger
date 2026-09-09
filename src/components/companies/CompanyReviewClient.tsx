@@ -16,16 +16,18 @@ function defaultPrimary(cluster: CompanyWithCounts[]): string {
   return cluster.reduce((best, c) => (activity(c) > activity(best) ? c : best), cluster[0]).id;
 }
 
+type ClusterEntry = { cluster: CompanyWithCounts[]; looseMatch: boolean };
+
 export function CompanyReviewClient({
   initialClusters,
   canEdit,
 }: {
-  initialClusters: CompanyWithCounts[][];
+  initialClusters: ClusterEntry[];
   canEdit: boolean;
 }) {
   const [clusters, setClusters] = useState(initialClusters);
   const [primaryByCluster, setPrimaryByCluster] = useState<Record<number, string>>(
-    Object.fromEntries(initialClusters.map((cluster, i) => [i, defaultPrimary(cluster)]))
+    Object.fromEntries(initialClusters.map((entry, i) => [i, defaultPrimary(entry.cluster)]))
   );
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -88,13 +90,22 @@ export function CompanyReviewClient({
           <div>No name-alike company clusters waiting on a decision.</div>
         </div>
       ) : (
-        clusters.map((cluster, index) => {
+        clusters.map(({ cluster, looseMatch }, index) => {
           const key = cluster.map((c) => c.id).join(",");
           const primaryId = primaryByCluster[index];
           const busy = busyIndex === index;
           const agoraCount = cluster.filter((c) => c.fromAgora).length;
           return (
             <div key={key} className="card" style={{ padding: 16, marginBottom: 14 }}>
+              {looseMatch && (
+                <div style={{ marginBottom: 10 }}>
+                  <span className="tag brass">Possible match</span>{" "}
+                  <span className="helptext" style={{ marginLeft: 4 }}>
+                    Names share the same core once generic words (Capital, Partners, Group, etc.) are set aside —
+                    double check these are really the same firm before merging.
+                  </span>
+                </div>
+              )}
               {agoraCount === 0 && (
                 <div className="helptext" style={{ marginBottom: 10, color: "var(--rust)" }}>
                   None of these match an existing Agora record — pick the name to keep manually.

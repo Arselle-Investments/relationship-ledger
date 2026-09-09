@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { prisma } from "@/lib/prisma";
 import { CompanyReviewClient } from "@/components/companies/CompanyReviewClient";
-import { clusterByNormalizedName, groupKeyFor } from "@/lib/company-match";
+import { clusterByNormalizedName, clusterByLooseNormalizedName, groupKeyFor } from "@/lib/company-match";
 import { Role } from "@prisma/client";
 
 export default async function CompanyReviewPage() {
@@ -30,9 +30,17 @@ export default async function CompanyReviewPage() {
     fromAgora: contacts.some((c) => c.agoraRaw != null),
   }));
   const dismissedKeys = new Set(dismissals.map((d) => d.groupKey));
-  const clusters = clusterByNormalizedName(companies).filter(
+  const strictClusters = clusterByNormalizedName(companies).filter(
     (cluster) => !dismissedKeys.has(groupKeyFor(cluster.map((c) => c.id)))
   );
+  const strictIds = new Set(strictClusters.flatMap((cluster) => cluster.map((c) => c.id)));
+  const looseClusters = clusterByLooseNormalizedName(companies, strictIds).filter(
+    (cluster) => !dismissedKeys.has(groupKeyFor(cluster.map((c) => c.id)))
+  );
+  const clusters = [
+    ...strictClusters.map((cluster) => ({ cluster, looseMatch: false })),
+    ...looseClusters.map((cluster) => ({ cluster, looseMatch: true })),
+  ];
 
   return (
     <AppShell activeHref="/companies/review" user={user} companyReviewCount={clusters.length}>
