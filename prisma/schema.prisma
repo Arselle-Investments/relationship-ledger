@@ -177,6 +177,7 @@ model Company {
   name String @unique
   type ContactType  @default(OTHER)
   tier ContactTier?
+  priorityQuarter String? // e.g. "2026-Q3" — same Priorities matrix as Contact
   city String?
   tags String[] @default([])
   notes String? @default("")

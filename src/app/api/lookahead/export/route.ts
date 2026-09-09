@@ -8,9 +8,11 @@ import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequ
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { conferenceOverlapsWindow } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
+import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { safeCell } from "@/lib/excel-safety";
+import { DealStatus, FundraisingStage } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -23,12 +25,15 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const days = searchParams.get("days") === "30" ? 30 : 14;
 
-  const [contacts, tasks, conferences, travel, settings] = await Promise.all([
+  const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     prisma.task.findMany({ include: { owner: true, contact: true } }),
     prisma.conference.findMany(),
     prisma.travel.findMany({ include: { user: true } }),
     getSettings(),
+    prisma.deal.findMany({ where: { status: { in: [DealStatus.ACTIVE, DealStatus.UNDER_CONTRACT] } }, orderBy: { updatedAt: "desc" } }),
+    prisma.consultant.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
+    prisma.capitalSource.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
   ]);
 
   const bounds = windowBounds(days);
@@ -156,6 +161,31 @@ export async function GET(req: NextRequest) {
       traveler: safeCell(t.user.name ?? t.user.email ?? ""),
       matches: matchCount,
     });
+  }
+
+  const dealsSheet = workbook.addWorksheet("Active Deals");
+  dealsSheet.columns = [
+    { header: "Name", key: "name", width: 30 },
+    { header: "Asset Class", key: "assetClass", width: 18 },
+    { header: "Status", key: "status", width: 16 },
+  ];
+  dealsSheet.getRow(1).font = { bold: true };
+  for (const d of activeDeals) {
+    dealsSheet.addRow({ name: safeCell(d.name), assetClass: safeCell(d.assetClass ?? ""), status: DEAL_STATUS_LABELS[d.status] });
+  }
+
+  const emSheet = workbook.addWorksheet("EM Needing Follow-up");
+  emSheet.columns = [
+    { header: "Name", key: "name", width: 30 },
+    { header: "Type", key: "type", width: 16 },
+    { header: "Next Step", key: "nextStep", width: 40 },
+  ];
+  emSheet.getRow(1).font = { bold: true };
+  for (const c of stalledConsultants) {
+    emSheet.addRow({ name: safeCell(c.name), type: "Consultant", nextStep: safeCell(c.nextStep ?? "") });
+  }
+  for (const cs of stalledCapitalSources) {
+    emSheet.addRow({ name: safeCell(cs.name), type: "Capital source", nextStep: safeCell(cs.nextStep ?? "") });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

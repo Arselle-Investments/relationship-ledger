@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
-import { CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { Company, ContactTier, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
+import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
@@ -21,7 +21,7 @@ type CompanyGroup = {
 export function CompaniesClient({
   contacts: initialContacts,
   team,
-  companies,
+  companies: initialCompanies,
   canEdit,
 }: {
   contacts: ContactWithRelations[];
@@ -30,6 +30,7 @@ export function CompaniesClient({
   canEdit: boolean;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
+  const [companies, setCompanies] = useState(initialCompanies);
   const [search, setSearch] = useState("");
   const [assetClassFilter, setAssetClassFilter] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -37,6 +38,17 @@ export function CompaniesClient({
 
   const companyById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
   const companyByName = useMemo(() => new Map(companies.map((c) => [c.name, c])), [companies]);
+
+  async function patchCompany(id: string, data: { tier?: ContactTier | null; priorityQuarter?: string | null }) {
+    const res = await fetch(`/api/companies/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return;
+    const json = await res.json();
+    setCompanies((prev) => prev.map((c) => (c.id === id ? { ...c, ...json.company } : c)));
+  }
 
   const assetClasses = useMemo(
     () => Array.from(new Set(companies.flatMap((c) => c.targetAssetClasses))).sort(),
@@ -155,6 +167,38 @@ export function CompaniesClient({
               </button>
             </div>
             <div className="modal-body">
+              {activeCompany ? (
+                <div className="field-row" style={{ marginBottom: 16 }}>
+                  <div className="field">
+                    <label>Tier</label>
+                    <select
+                      value={activeCompany.tier ?? ""}
+                      disabled={!canEdit}
+                      onChange={(e) => patchCompany(activeCompany.id, { tier: (e.target.value as ContactTier) || null })}
+                    >
+                      <option value="">No tier</option>
+                      {Object.values(ContactTier).map((t) => (
+                        <option key={t} value={t}>
+                          {CONTACT_TIER_LABELS[t]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Priority quarter</label>
+                    <input
+                      placeholder="e.g. 2026-Q4"
+                      defaultValue={activeCompany.priorityQuarter ?? ""}
+                      disabled={!canEdit}
+                      onBlur={(e) => patchCompany(activeCompany.id, { priorityQuarter: e.target.value.trim() || null })}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="helptext" style={{ marginBottom: 16 }}>
+                  No company record on file yet for this organization — tier and priority quarter aren&rsquo;t set-able until one exists.
+                </div>
+              )}
               {activeCompany && (
                 (activeCompany.targetAssetClasses.length > 0 ||
                   activeCompany.investmentStructures.length > 0 ||

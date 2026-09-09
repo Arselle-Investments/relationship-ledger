@@ -1,12 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ContactTier } from "@prisma/client";
+import { Company, ContactTier } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
 import { nextNQuarters } from "@/lib/quarters";
 import { ContactWithRelations } from "@/types/contact";
 
 const TIERS = [ContactTier.TIER_1, ContactTier.TIER_2, ContactTier.TIER_3];
+
+type PriorityItem =
+  | { kind: "contact"; id: string; name: string; sub: string; tier: ContactTier | null; quarter: string | null; status: string; owner: string }
+  | { kind: "company"; id: string; name: string; sub: string; tier: ContactTier | null; quarter: string | null; status: string; owner: string };
 
 function cellStyle(n: number): { background: string; color: string } {
   if (n === 0) return { background: "transparent", color: "var(--ink)" };
@@ -15,20 +19,50 @@ function cellStyle(n: number): { background: string; color: string } {
   return { background: "var(--brass)", color: "#fff" };
 }
 
-export function PrioritiesClient({ contacts }: { contacts: ContactWithRelations[] }) {
+export function PrioritiesClient({ contacts, companies }: { contacts: ContactWithRelations[]; companies: Company[] }) {
   const quarters = useMemo(() => nextNQuarters(4), []);
   const [selected, setSelected] = useState<{ tier: ContactTier; quarter: string } | null>(null);
 
+  const items = useMemo<PriorityItem[]>(
+    () => [
+      ...contacts.map(
+        (c): PriorityItem => ({
+          kind: "contact",
+          id: c.id,
+          name: c.name,
+          sub: c.org || "—",
+          tier: c.tier,
+          quarter: c.priorityQuarter,
+          status: FUNDRAISING_STAGE_LABELS[c.status],
+          owner: c.owner?.name || "—",
+        })
+      ),
+      ...companies.map(
+        (co): PriorityItem => ({
+          kind: "company",
+          id: co.id,
+          name: co.name,
+          sub: co.city || "—",
+          tier: co.tier,
+          quarter: co.priorityQuarter,
+          status: "—",
+          owner: "—",
+        })
+      ),
+    ],
+    [contacts, companies]
+  );
+
   const matches = useMemo(() => {
     if (!selected) return [];
-    return contacts.filter((c) => c.tier === selected.tier && c.priorityQuarter === selected.quarter);
-  }, [contacts, selected]);
+    return items.filter((i) => i.tier === selected.tier && i.quarter === selected.quarter);
+  }, [items, selected]);
 
   return (
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          Click a cell to see which contacts sit in that tier and quarter
+          Click a cell to see which contacts and companies sit in that tier and quarter
         </div>
       </div>
 
@@ -44,7 +78,7 @@ export function PrioritiesClient({ contacts }: { contacts: ContactWithRelations[
             <div key={tier} className="pri-row">
               <div className="row-label">{CONTACT_TIER_LABELS[tier]}</div>
               {quarters.map((q) => {
-                const n = contacts.filter((c) => c.tier === tier && c.priorityQuarter === q).length;
+                const n = items.filter((i) => i.tier === tier && i.quarter === q).length;
                 const style = cellStyle(n);
                 return (
                   <div
@@ -54,7 +88,7 @@ export function PrioritiesClient({ contacts }: { contacts: ContactWithRelations[
                     onClick={() => setSelected({ tier, quarter: q })}
                   >
                     <div className="pri-count">{n}</div>
-                    <div className="clabel">contact{n === 1 ? "" : "s"}</div>
+                    <div className="clabel">item{n === 1 ? "" : "s"}</div>
                   </div>
                 );
               })}
@@ -76,24 +110,30 @@ export function PrioritiesClient({ contacts }: { contacts: ContactWithRelations[
             </div>
             <div className="modal-body">
               {matches.length === 0 ? (
-                <div className="muted">No contacts flagged for this tier and quarter.</div>
+                <div className="muted">Nothing flagged for this tier and quarter.</div>
               ) : (
                 <table>
                   <thead>
                     <tr>
                       <th>Name</th>
-                      <th>Organization</th>
+                      <th>Type</th>
+                      <th>Organization / City</th>
                       <th>Status</th>
                       <th>Owner</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {matches.map((c) => (
-                      <tr key={c.id}>
-                        <td className="name-cell">{c.name}</td>
-                        <td>{c.org || <span className="muted">—</span>}</td>
-                        <td>{FUNDRAISING_STAGE_LABELS[c.status]}</td>
-                        <td className="muted">{c.owner?.name || "—"}</td>
+                    {matches.map((i) => (
+                      <tr key={`${i.kind}-${i.id}`}>
+                        <td className="name-cell">{i.name}</td>
+                        <td>
+                          <span className={`tag ${i.kind === "contact" ? "brass" : "forest"}`}>
+                            {i.kind === "contact" ? "Contact" : "Company"}
+                          </span>
+                        </td>
+                        <td>{i.sub}</td>
+                        <td className="muted">{i.status}</td>
+                        <td className="muted">{i.owner}</td>
                       </tr>
                     ))}
                   </tbody>

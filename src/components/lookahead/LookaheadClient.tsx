@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Settings } from "@prisma/client";
+import Link from "next/link";
+import { Settings, Deal, Consultant, CapitalSource } from "@prisma/client";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { conferenceOverlapsWindow } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
+import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { TravelWithUser } from "@/lib/travel";
@@ -24,12 +26,18 @@ export function LookaheadClient({
   conferences,
   travel,
   settings,
+  activeDeals,
+  stalledConsultants,
+  stalledCapitalSources,
 }: {
   contacts: ContactWithRelations[];
   tasks: TaskWithRelations[];
   conferences: ConferenceModel[];
   travel: TravelWithUser[];
   settings: Settings;
+  activeDeals: Deal[];
+  stalledConsultants: Consultant[];
+  stalledCapitalSources: CapitalSource[];
 }) {
   const [windowDays, setWindowDays] = useState<14 | 30>(14);
 
@@ -231,6 +239,57 @@ export function LookaheadClient({
                       <span className="muted">No matching contacts</span>
                     )}
                   </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      <Section title="Active deals" count={activeDeals.length} emptyMsg="No deals currently active or under contract.">
+        {activeDeals.length > 0 && (
+          <table>
+            <tbody>
+              {activeDeals.map((d) => (
+                <tr key={d.id}>
+                  <td className="name-cell">
+                    <Link href={`/deals/${d.id}`}>{d.name}</Link>
+                  </td>
+                  <td className="muted">{d.assetClass || "—"}</td>
+                  <td>
+                    <span className="tag brass">{DEAL_STATUS_LABELS[d.status]}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      <Section
+        title="Emerging Managers needing follow-up"
+        count={stalledConsultants.length + stalledCapitalSources.length}
+        emptyMsg="No Emerging Managers outreach stalled at 'outreach sent' right now."
+      >
+        {stalledConsultants.length + stalledCapitalSources.length > 0 && (
+          <table>
+            <tbody>
+              {stalledConsultants.map((c) => (
+                <tr key={`consultant-${c.id}`}>
+                  <td className="name-cell">
+                    <Link href={`/consultants/${c.id}`}>{c.name}</Link>
+                  </td>
+                  <td className="muted">Consultant</td>
+                  <td className="muted">{c.nextStep || "—"}</td>
+                </tr>
+              ))}
+              {stalledCapitalSources.map((cs) => (
+                <tr key={`capital-source-${cs.id}`}>
+                  <td className="name-cell">
+                    <Link href={`/capital-sources/${cs.id}`}>{cs.name}</Link>
+                  </td>
+                  <td className="muted">Capital source</td>
+                  <td className="muted">{cs.nextStep || "—"}</td>
                 </tr>
               ))}
             </tbody>
