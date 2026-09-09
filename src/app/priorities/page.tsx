@@ -10,14 +10,20 @@ export default async function PrioritiesPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, companies] = await Promise.all([
+  const [contacts, companies, team] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     prisma.company.findMany(),
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
     <AppShell activeHref="/priorities" user={user}>
-      <PrioritiesClient contacts={contacts} companies={companies} />
+      <PrioritiesClient
+        contacts={contacts}
+        companies={companies}
+        team={team}
+        canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
+      />
     </AppShell>
   );
 }

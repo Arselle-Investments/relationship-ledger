@@ -1,147 +1,159 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Company, ContactTier } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
-import { nextNQuarters } from "@/lib/quarters";
+import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
+import { Company, ContactTier, User } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
+import { ContactModal } from "@/components/contacts/ContactModal";
+import { TierColumn } from "./TierColumn";
+import { TierCard } from "./TierCard";
 
 const TIERS = [ContactTier.TIER_1, ContactTier.TIER_2, ContactTier.TIER_3];
 
-type PriorityItem =
-  | { kind: "contact"; id: string; name: string; sub: string; tier: ContactTier | null; quarter: string | null; status: string; owner: string }
-  | { kind: "company"; id: string; name: string; sub: string; tier: ContactTier | null; quarter: string | null; status: string; owner: string };
+export function PrioritiesClient({
+  contacts: initialContacts,
+  companies: initialCompanies,
+  team,
+  canEdit,
+}: {
+  contacts: ContactWithRelations[];
+  companies: Company[];
+  team: User[];
+  canEdit: boolean;
+}) {
+  const [contacts, setContacts] = useState(initialContacts);
+  const [companies, setCompanies] = useState(initialCompanies);
+  const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-function cellStyle(n: number): { background: string; color: string } {
-  if (n === 0) return { background: "transparent", color: "var(--ink)" };
-  if (n < 2) return { background: "var(--brass-bg)", color: "var(--ink)" };
-  if (n < 4) return { background: "#E7D3A6", color: "var(--ink)" };
-  return { background: "var(--brass)", color: "#fff" };
-}
+  const companiesByTier = useMemo(() => {
+    const map = new Map<ContactTier, Company[]>();
+    for (const t of TIERS) map.set(t, []);
+    for (const c of companies) if (c.tier) map.get(c.tier)?.push(c);
+    return map;
+  }, [companies]);
 
-export function PrioritiesClient({ contacts, companies }: { contacts: ContactWithRelations[]; companies: Company[] }) {
-  const quarters = useMemo(() => nextNQuarters(4), []);
-  const [selected, setSelected] = useState<{ tier: ContactTier; quarter: string } | null>(null);
+  const contactsByTier = useMemo(() => {
+    const map = new Map<ContactTier, ContactWithRelations[]>();
+    for (const t of TIERS) map.set(t, []);
+    for (const c of contacts) map.get(c.tier)?.push(c);
+    return map;
+  }, [contacts]);
 
-  const items = useMemo<PriorityItem[]>(
-    () => [
-      ...contacts.map(
-        (c): PriorityItem => ({
-          kind: "contact",
-          id: c.id,
-          name: c.name,
-          sub: c.org || "—",
-          tier: c.tier,
-          quarter: c.priorityQuarter,
-          status: FUNDRAISING_STAGE_LABELS[c.status],
-          owner: c.owner?.name || "—",
-        })
-      ),
-      ...companies.map(
-        (co): PriorityItem => ({
-          kind: "company",
-          id: co.id,
-          name: co.name,
-          sub: co.city || "—",
-          tier: co.tier,
-          quarter: co.priorityQuarter,
-          status: "—",
-          owner: "—",
-        })
-      ),
-    ],
-    [contacts, companies]
-  );
+  const untieredCompanyCount = companies.filter((c) => !c.tier).length;
 
-  const matches = useMemo(() => {
-    if (!selected) return [];
-    return items.filter((i) => i.tier === selected.tier && i.quarter === selected.quarter);
-  }, [items, selected]);
+  async function handleCompanyDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const companyId = active.id as string;
+    const newTier = over.id as ContactTier;
+    const company = companies.find((c) => c.id === companyId);
+    if (!company || company.tier === newTier) return;
+
+    setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier: newTier } : c)));
+    const res = await fetch(`/api/companies/${companyId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier: newTier }),
+    });
+    if (!res.ok) {
+      setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier: company.tier } : c)));
+    }
+  }
+
+  async function handleContactDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    const contactId = active.id as string;
+    const newTier = over.id as ContactTier;
+    const contact = contacts.find((c) => c.id === contactId);
+    if (!contact || contact.tier === newTier) return;
+
+    setContacts((prev) => prev.map((c) => (c.id === contactId ? { ...c, tier: newTier } : c)));
+    const res = await fetch(`/api/contacts/${contactId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tier: newTier }),
+    });
+    if (!res.ok) {
+      setContacts((prev) => prev.map((c) => (c.id === contactId ? { ...c, tier: contact.tier } : c)));
+    }
+  }
+
+  function handleContactSaved(contact: ContactWithRelations) {
+    setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)));
+    setEditingContact(null);
+  }
+
+  function handleContactDeleted(id: string) {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    setEditingContact(null);
+  }
 
   return (
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          Click a cell to see which contacts and companies sit in that tier and quarter
+          Drag a card to move it between tiers
         </div>
       </div>
 
-      <div id="pri-grid-wrap">
-        <div id="pri-grid">
-          <div className="pri-header-row">
-            <div>Tier</div>
-            {quarters.map((q) => (
-              <div key={q}>{q}</div>
-            ))}
-          </div>
+      <h3 style={{ marginBottom: 12, fontSize: 14 }}>Companies by tier</h3>
+      {untieredCompanyCount > 0 && (
+        <div className="helptext" style={{ marginBottom: 10 }}>
+          {untieredCompanyCount} compan{untieredCompanyCount === 1 ? "y has" : "ies have"} no tier set yet and
+          aren&rsquo;t shown here — set a tier from the Companies page to bring one onto this board.
+        </div>
+      )}
+      <DndContext id="companies-tier-board" sensors={sensors} onDragEnd={handleCompanyDragEnd}>
+        <div className="tier-board">
           {TIERS.map((tier) => (
-            <div key={tier} className="pri-row">
-              <div className="row-label">{CONTACT_TIER_LABELS[tier]}</div>
-              {quarters.map((q) => {
-                const n = items.filter((i) => i.tier === tier && i.quarter === q).length;
-                const style = cellStyle(n);
-                return (
-                  <div
-                    key={q}
-                    className="pri-cell"
-                    style={style}
-                    onClick={() => setSelected({ tier, quarter: q })}
-                  >
-                    <div className="pri-count">{n}</div>
-                    <div className="clabel">item{n === 1 ? "" : "s"}</div>
-                  </div>
-                );
-              })}
-            </div>
+            <TierColumn key={tier} dropId={tier} tier={tier} count={companiesByTier.get(tier)?.length ?? 0}>
+              {(companiesByTier.get(tier) ?? []).map((c) => (
+                <TierCard
+                  key={c.id}
+                  dragId={c.id}
+                  canEdit={canEdit}
+                  title={c.name}
+                  subtitle={c.city}
+                />
+              ))}
+            </TierColumn>
           ))}
         </div>
-      </div>
+      </DndContext>
 
-      {selected && (
-        <div className="overlay open" onClick={() => setSelected(null)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-head">
-              <h2>
-                {CONTACT_TIER_LABELS[selected.tier]} &middot; {selected.quarter}
-              </h2>
-              <button className="close-x" onClick={() => setSelected(null)}>
-                &times;
-              </button>
-            </div>
-            <div className="modal-body">
-              {matches.length === 0 ? (
-                <div className="muted">Nothing flagged for this tier and quarter.</div>
-              ) : (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Organization / City</th>
-                      <th>Status</th>
-                      <th>Owner</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matches.map((i) => (
-                      <tr key={`${i.kind}-${i.id}`}>
-                        <td className="name-cell">{i.name}</td>
-                        <td>
-                          <span className={`tag ${i.kind === "contact" ? "brass" : "forest"}`}>
-                            {i.kind === "contact" ? "Contact" : "Company"}
-                          </span>
-                        </td>
-                        <td>{i.sub}</td>
-                        <td className="muted">{i.status}</td>
-                        <td className="muted">{i.owner}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
+      <h3 style={{ marginBottom: 12, fontSize: 14 }}>Contacts by tier</h3>
+      <DndContext id="contacts-tier-board" sensors={sensors} onDragEnd={handleContactDragEnd}>
+        <div className="tier-board">
+          {TIERS.map((tier) => (
+            <TierColumn key={tier} dropId={tier} tier={tier} count={contactsByTier.get(tier)?.length ?? 0}>
+              {(contactsByTier.get(tier) ?? []).map((c) => (
+                <TierCard
+                  key={c.id}
+                  dragId={c.id}
+                  canEdit={canEdit}
+                  title={c.name}
+                  subtitle={c.org}
+                  badge={FUNDRAISING_STAGE_LABELS[c.status]}
+                  onClick={() => setEditingContact(c)}
+                />
+              ))}
+            </TierColumn>
+          ))}
         </div>
+      </DndContext>
+
+      {editingContact && (
+        <ContactModal
+          contact={editingContact}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setEditingContact(null)}
+          onSaved={handleContactSaved}
+          onDeleted={handleContactDeleted}
+        />
       )}
     </div>
   );
