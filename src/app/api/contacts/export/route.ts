@@ -3,7 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
 import { buildContactWhere } from "@/lib/contact-query";
-import { CONTACT_STATUS_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
       org: safeCell(c.org ?? ""),
       type: CONTACT_TYPE_LABELS[c.type],
       tier: CONTACT_TIER_LABELS[c.tier],
-      status: CONTACT_STATUS_LABELS[c.status],
+      status: FUNDRAISING_STAGE_LABELS[c.status],
       owner: safeCell(c.owner?.name ?? ""),
       warmPath: safeCell(c.warmPath?.name ?? ""),
       email: safeCell(c.email ?? ""),

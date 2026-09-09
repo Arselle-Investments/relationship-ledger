@@ -99,7 +99,9 @@ export function LookaheadClient({
                   <td>{c.org || <span className="muted">—</span>}</td>
                   <td className="muted">{c.owner?.name || "—"}</td>
                   <td>
-                    <span className="overdue-badge">{c.daysOverdue + c.cadence}d since contact, overdue on cadence</span>
+                    <span className="overdue-badge">
+                      {Number.isFinite(c.daysOverdue) ? `${c.daysOverdue + c.cadence}d since contact, overdue on cadence` : "no contact on file, overdue on cadence"}
+                    </span>
                   </td>
                 </tr>
               ))}

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
-import { CONTACT_STATUS_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 /**
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       org: safeCell(c.org ?? ""),
       type: CONTACT_TYPE_LABELS[c.type],
       tier: CONTACT_TIER_LABELS[c.tier],
-      status: CONTACT_STATUS_LABELS[c.status],
+      status: FUNDRAISING_STAGE_LABELS[c.status],
       owner: safeCell(c.owner?.name ?? ""),
       email: safeCell(c.email ?? ""),
       phone: safeCell(c.phone ?? ""),

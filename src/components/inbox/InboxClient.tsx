@@ -1,11 +1,11 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Contact, ContactStatus, Correspondence } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { Contact, FundraisingStage, Correspondence } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { parseSignature } from "@/lib/signature-parse";
 
-const STATUS_OPTIONS = Object.values(ContactStatus);
+const STATUS_OPTIONS = Object.values(FundraisingStage);
 
 function EmlImportSection({ canEdit }: { canEdit: boolean }) {
   const [importing, setImporting] = useState(false);
@@ -81,8 +81,8 @@ function StageSuggestionCard({
   canEdit: boolean;
   selected: boolean;
   onToggleSelect: (checked: boolean) => void;
-  statusChoice: ContactStatus;
-  onStatusChoiceChange: (status: ContactStatus) => void;
+  statusChoice: FundraisingStage;
+  onStatusChoiceChange: (status: FundraisingStage) => void;
   onResolved: (id: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -129,7 +129,7 @@ function StageSuggestionCard({
       </div>
       {item.suggestedStatus && (
         <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--forest-bg)", borderRadius: 6, fontSize: 12.5 }}>
-          AI suggests <strong>{CONTACT_STATUS_LABELS[item.suggestedStatus]}</strong>
+          AI suggests <strong>{FUNDRAISING_STAGE_LABELS[item.suggestedStatus]}</strong>
           {item.suggestionRationale ? ` — ${item.suggestionRationale}` : ""}
         </div>
       )}
@@ -137,17 +137,17 @@ function StageSuggestionCard({
         <div style={{ display: "flex", gap: 8, marginTop: 10, alignItems: "center", flexWrap: "wrap" }}>
           <select
             value={statusChoice}
-            onChange={(e) => onStatusChoiceChange(e.target.value as ContactStatus)}
+            onChange={(e) => onStatusChoiceChange(e.target.value as FundraisingStage)}
             style={{ fontSize: 12.5 }}
           >
             {STATUS_OPTIONS.map((s) => (
               <option key={s} value={s}>
-                {CONTACT_STATUS_LABELS[s]}
+                {FUNDRAISING_STAGE_LABELS[s]}
               </option>
             ))}
           </select>
           <button className="btn small primary" onClick={confirm} disabled={busy}>
-            {overridden ? `Confirm as ${CONTACT_STATUS_LABELS[statusChoice]}` : "Confirm"}
+            {overridden ? `Confirm as ${FUNDRAISING_STAGE_LABELS[statusChoice]}` : "Confirm"}
           </button>
           <button className="btn small ghost" onClick={dismiss} disabled={busy}>
             Dismiss
@@ -381,7 +381,7 @@ export function InboxClient({
   const [undoingId, setUndoingId] = useState<string | null>(null);
   const [stageSuggestions, setStageSuggestions] = useState(initialPendingStageChanges);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [statusChoices, setStatusChoices] = useState<Record<string, ContactStatus>>({});
+  const [statusChoices, setStatusChoices] = useState<Record<string, FundraisingStage>>({});
   const [bulkBusy, setBulkBusy] = useState(false);
 
   function resolve(id: string) {
@@ -415,8 +415,8 @@ export function InboxClient({
     });
   }
 
-  function statusChoiceFor(item: CorrespondenceWithContact): ContactStatus {
-    return statusChoices[item.id] ?? item.suggestedStatus ?? ContactStatus.NOT_STARTED;
+  function statusChoiceFor(item: CorrespondenceWithContact): FundraisingStage {
+    return statusChoices[item.id] ?? item.suggestedStatus ?? FundraisingStage.NOT_STARTED;
   }
 
   function toggleSelect(id: string, checked: boolean) {

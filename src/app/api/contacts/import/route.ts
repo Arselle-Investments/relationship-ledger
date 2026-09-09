@@ -3,11 +3,11 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { getField, normalizeDate, parseFirstSheet } from "@/lib/excel-import";
 import {
-  CONTACT_STATUS_BY_LABEL,
+  FUNDRAISING_STAGE_BY_LABEL,
   CONTACT_TIER_BY_LABEL,
   CONTACT_TYPE_BY_LABEL,
 } from "@/lib/contact-constants";
-import { ContactStatus, ContactTier, ContactType } from "@prisma/client";
+import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 
 export async function POST(req: NextRequest) {
   let actingUser;
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
     const ownerId = ownerRaw ? userByName.get(ownerRaw.toLowerCase())?.id ?? actingUser.id : actingUser.id;
     const lastContact = normalizeDate(getField(row, ["LAST CONTACT", "LAST CONTACT DATE"])) ?? undefined;
     const statusRaw = getField(row, ["STATUS"]);
-    const status: ContactStatus = CONTACT_STATUS_BY_LABEL[statusRaw.toLowerCase()] ?? ContactStatus.NOT_STARTED;
+    const status: FundraisingStage = FUNDRAISING_STAGE_BY_LABEL[statusRaw.toLowerCase()] ?? FundraisingStage.NOT_STARTED;
     const tags = getField(row, ["TAGS"])
       .split(/[,;]/)
       .map((s) => s.trim())

@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { recordStageChange } from "@/lib/stage-history";
 import { validateStatusNoteRule } from "@/lib/contact-schema";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
-import { ContactStatus, SuggestionState, StageChangeSource } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { FundraisingStage, SuggestionState, StageChangeSource } from "@prisma/client";
 
 /**
  * Applies a stage change from a pending suggestion: a human is explicitly
@@ -28,8 +28,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const body = await req.json().catch(() => ({}));
-  const overrideStatus: ContactStatus | undefined =
-    body.status && Object.values(ContactStatus).includes(body.status) ? body.status : undefined;
+  const overrideStatus: FundraisingStage | undefined =
+    body.status && Object.values(FundraisingStage).includes(body.status) ? body.status : undefined;
   const nextStatus = overrideStatus || correspondence.suggestedStatus;
 
   const contact = await prisma.contact.findUnique({ where: { id: correspondence.contactId } });
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const note =
     overrideStatus && overrideStatus !== correspondence.suggestedStatus
-      ? `Set to ${CONTACT_STATUS_LABELS[overrideStatus]} when reviewing this correspondence (AI had suggested ${CONTACT_STATUS_LABELS[correspondence.suggestedStatus]}). ${correspondence.suggestionRationale ?? ""}`.trim()
+      ? `Set to ${FUNDRAISING_STAGE_LABELS[overrideStatus]} when reviewing this correspondence (AI had suggested ${FUNDRAISING_STAGE_LABELS[correspondence.suggestedStatus]}). ${correspondence.suggestionRationale ?? ""}`.trim()
       : correspondence.suggestionRationale || "Confirmed from AI-suggested correspondence.";
   const noteError = validateStatusNoteRule({
     previousStatus: contact.status,

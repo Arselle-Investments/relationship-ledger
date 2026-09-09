@@ -6,7 +6,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Preview build: the real xlsx library isn't loadable here, so Export/Import
+// buttons show a friendly message instead of silently failing.
+window.XLSX = {
+  utils: { book_new: () => ({}), book_append_sheet: () => {}, json_to_sheet: () => ({}), sheet_to_json: () => [] },
+  writeFile: () => { showToast("Export isn't available in this shared preview."); },
+  read: () => { showToast("Import isn't available in this shared preview."); return { SheetNames: [], Sheets: {} }; },
+};
+</script>
 <style>
 :root{
   --ink:#1E2E36;
@@ -49,8 +57,19 @@ h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:600;margin:0;color:var(--i
 .mode-pill.off{color:var(--ink-soft);}
 
 /* Tabs */
-#tabs{display:flex;gap:2px;margin-top:22px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
-.tab-btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:11px 16px;cursor:pointer;position:relative;top:1px;border-bottom:2px solid transparent;}
+/* Section pills (tier 1) */
+#section-row{display:flex;align-items:center;gap:6px;margin-top:22px;flex-wrap:wrap;}
+.section-pill{font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:700;letter-spacing:.02em;padding:9px 16px;border-radius:8px;border:1px solid transparent;background:none;color:var(--ink-soft);cursor:pointer;transition:background .12s, color .12s;}
+.section-pill:hover{background:var(--slate-bg);color:var(--ink);}
+.section-pill.active{background:var(--ink);color:var(--paper);}
+.section-spacer{flex:1;}
+.settings-link{font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:700;color:var(--ink-soft);padding:9px 14px;border-radius:8px;text-decoration:none;}
+.settings-link:hover{color:var(--ink);background:var(--slate-bg);}
+.settings-link.active{color:var(--ink);background:var(--slate-bg);}
+
+/* Tabs (tier 2, within the active section) */
+#tabs{display:flex;gap:2px;margin-top:2px;padding-top:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-wrap:wrap;min-height:41px;}
+.tab-btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:11px 16px;cursor:pointer;position:relative;top:1px;border-bottom:2px solid transparent;text-decoration:none;display:inline-block;}
 .tab-btn .n{font-family:'Work Sans',sans-serif;font-size:10px;color:var(--brass-dark);margin-left:5px;}
 .tab-btn.active{color:var(--ink);border-bottom-color:var(--brass);}
 .tab-btn:hover{color:var(--ink);}
@@ -213,7 +232,7 @@ table tbody tr{cursor:pointer;}
       <div id="brand-mark"><svg viewBox="0 0 40 32" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M14 2L23 22H5L14 2Z" stroke="#F5F7F7" stroke-width="2.6" stroke-linejoin="round"/><path d="M26 10L35 28H17L26 10Z" fill="#F5F7F7"/></svg></div>
       <div>
         <h1>Arselle Relationship Ledger</h1>
-        <div class="sub">Contacts &middot; mailing lists &middot; outreach &middot; tasks &middot; events &middot; priorities</div>
+        <div class="sub">Relationships &middot; Outreach &middot; Diligence &middot; Connectors</div>
       </div>
     </div>
     <div id="identity-bar">
@@ -222,16 +241,20 @@ table tbody tr{cursor:pointer;}
     </div>
   </div>
 
-  <div id="tabs">
-    <button class="tab-btn active" data-view="contacts">Contacts <span class="n" id="tab-n-contacts"></span></button>
-    <button class="tab-btn" data-view="followups">Needs follow-up <span class="n" id="tab-n-followups"></span></button>
-    <button class="tab-btn" data-view="lists">Mailing lists <span class="n" id="tab-n-lists"></span></button>
-    <button class="tab-btn" data-view="tasks">Tasks <span class="n" id="tab-n-tasks"></span></button>
-    <button class="tab-btn" data-view="events">Conferences &amp; events <span class="n" id="tab-n-events"></span></button>
-    <button class="tab-btn" data-view="priorities">Priorities</button>
-    <button class="tab-btn" data-view="lookahead">Look ahead</button>
-    <button class="tab-btn" data-view="settings">Settings</button>
+  <div style="background:var(--forest-bg);border-radius:8px;padding:10px 14px;margin-top:16px;font-size:12.5px;color:var(--ink);">
+    Preview build with sample data. Nothing here is a real contact, and nothing typed in gets saved anywhere permanent.
   </div>
+
+  <div id="section-row">
+    <button class="section-pill active" data-section="relationships">Relationships</button>
+    <button class="section-pill" data-section="outreach">Outreach</button>
+    <button class="section-pill" data-section="diligence">Diligence</button>
+    <button class="section-pill" data-section="connectors">Connectors</button>
+    <div class="section-spacer"></div>
+    <a href="#" class="settings-link" data-view="settings">Settings</a>
+  </div>
+
+  <div id="tabs"></div>
 
   <div class="locked-msg" id="locked-msg">You're in view mode. Switch to edit mode above to add or change records. Everyone can browse; only whoever is in edit mode can modify data, so changes stay intentional.</div>
 
@@ -248,6 +271,26 @@ table tbody tr{cursor:pointer;}
       <button class="btn primary" id="contact-add-btn">Add contact</button>
     </div>
     <div id="contacts-table-wrap"></div>
+  </div>
+
+  <!-- COMPANIES -->
+  <div class="view" id="view-companies">
+    <div class="toolbar">
+      <input type="text" id="company-search" placeholder="Search company name...">
+      <div class="spacer"></div>
+    </div>
+    <div id="companies-wrap"></div>
+  </div>
+
+  <!-- INBOX -->
+  <div class="view" id="view-inbox">
+    <h3 style="margin-bottom:10px;">Suggested stage changes</h3>
+    <div class="eyebrow" style="margin-bottom:14px;">Correspondence that looks like it signals a pipeline move</div>
+    <div id="inbox-stage-wrap" style="margin-bottom:28px;"></div>
+
+    <h3 style="margin-bottom:10px;">Suggested contacts</h3>
+    <div class="eyebrow" style="margin-bottom:14px;">Messages that didn't match an existing contact</div>
+    <div id="inbox-suggested-wrap"></div>
   </div>
 
   <!-- FOLLOW UPS -->
@@ -312,12 +355,38 @@ table tbody tr{cursor:pointer;}
     <div id="cal-grid" class="quarter" style="display:none;"></div>
   </div>
 
+  <!-- TRAVEL -->
+  <div class="view" id="view-travel">
+    <div class="toolbar">
+      <div class="eyebrow" style="font-size:11.5px;">Team travel plans, matched against contacts' city on file</div>
+      <div class="spacer"></div>
+      <button class="btn primary" id="travel-add-btn">Add trip</button>
+    </div>
+    <div id="travel-wrap"></div>
+  </div>
+
+  <!-- FUNNEL -->
+  <div class="view" id="view-funnel">
+    <div class="eyebrow" style="font-size:11.5px;margin-bottom:14px;">Contacts by pipeline stage, across the active roster</div>
+    <div id="funnel-wrap"></div>
+  </div>
+
   <!-- PRIORITIES -->
   <div class="view" id="view-priorities">
     <div class="toolbar">
       <div class="eyebrow" style="font-size:11.5px;">Click a cell to see which contacts sit in that tier and quarter</div>
     </div>
     <div id="pri-grid-wrap"></div>
+  </div>
+
+  <!-- GOING COLD -->
+  <div class="view" id="view-stuck">
+    <div class="toolbar">
+      <div class="eyebrow" style="font-size:11.5px;" id="stuck-eyebrow">No contact logged in 30+ days &middot; select contacts to draft check-ins or build a mailing list</div>
+      <div class="spacer"></div>
+      <button class="btn" id="stuck-export">Export to Excel</button>
+    </div>
+    <div id="stuck-wrap"></div>
   </div>
 
   <!-- LOOK AHEAD -->
@@ -393,6 +462,8 @@ const CONFERENCE_TRACKER_ROWS = [{"START DATE": "2026-01-21", "END DATE": "2026-
 
 let state = {
   contacts: [],
+  correspondence: [],
+  travel: [],
   lists: [],
   tasks: [],
   events: [],
@@ -401,6 +472,7 @@ let state = {
   currentUser: DEFAULT_TEAM[0],
   editMode: false,
   activeView: "contacts",
+  activeSection: "relationships",
   filters: { contactSearch:"", contactType:"", contactTier:"", contactOwner:"", taskOwner:"" },
   eventsView: "cards",
   eventsFilter: "all",
@@ -499,6 +571,7 @@ async function loadAll(){
   }catch(e){ state.sequenceTemplates = seedSequenceTemplates(); try{ await window.storage.set('sequenceTemplates', JSON.stringify(state.sequenceTemplates), true);}catch(e2){} }
 }
 async function persist(key){
+  if(!window.storage) return; // preview build: changes live in memory only, nothing permanent to save
   try{ await window.storage.set(key, JSON.stringify(state[key]), true); }
   catch(e){ showToast('Could not save just now \u2014 your change is kept on screen but retry saving.'); }
 }
@@ -511,8 +584,10 @@ function seedContacts(){
     {id:uid('ct'), name:"Helen Marchetti", org:"Northlight Family Office", type:"Family Office", tier:"Tier 1", tags:["West Coast","Multifamily"], owner:"Ariela", email:"h.marchetti@example.com", phone:"", city:"San Francisco, CA", lastContact:back(21), cadenceOverrideDays:null, status:"Awaiting reply", notes:"Warm intro via Kev. Interested in AREF I seed portfolio.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
     {id:uid('ct'), name:"David Okafor", org:"Beacon Hill Capital Partners", type:"LP / Institutional", tier:"Tier 1", tags:["Emerging Manager Program"], owner:"Bianca Tomkoria", email:"dokafor@example.com", phone:"", city:"Boston, MA", lastContact:back(9), cadenceOverrideDays:21, status:"Outreach sent", notes:"Requested deck after AFIRE panel.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
     {id:uid('ct'), name:"Priya Shenoy", org:"Cascade Advisors (Placement)", type:"Placement Agent", tier:"Tier 2", tags:["Placement","Introductions"], owner:"Gwyneth Leung", email:"priya@example.com", phone:"", city:"Chicago, IL", lastContact:back(40), cadenceOverrideDays:null, status:"Outreach sent", notes:"", priorityQuarter: currentQuarterKey(1), sample:true, createdAt:t0},
-    {id:uid('ct'), name:"Marcus Feld", org:"Whitcombe Endowment", type:"LP / Institutional", tier:"Tier 2", tags:["Endowment"], owner:"Mark Julius Mangao", email:"mfeld@example.com", phone:"", city:"Seattle, WA", lastContact:back(3), cadenceOverrideDays:null, status:"Meeting scheduled", notes:"Call booked to review 999 Hiawatha.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
-    {id:uid('ct'), name:"Renata Souza", org:"Ironbark Family Office", type:"Family Office", tier:"Tier 3", tags:["Self Storage"], owner:"Ariela", email:"rsouza@example.com", phone:"", city:"Miami, FL", lastContact:back(60), cadenceOverrideDays:null, status:"Not started", notes:"Flagged for self storage thesis outreach.", priorityQuarter: currentQuarterKey(2), sample:true, createdAt:t0}
+    {id:uid('ct'), name:"Marcus Feld", org:"Whitcombe Endowment", type:"LP / Institutional", tier:"Tier 2", tags:["Endowment"], owner:"Mark Julius Mangao", email:"mfeld@example.com", phone:"", city:"Seattle, WA", lastContact:back(3), cadenceOverrideDays:null, status:"Awaiting reply", notes:"Requested a call to review 999 Hiawatha.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Renata Souza", org:"Ironbark Family Office", type:"Family Office", tier:"Tier 3", tags:["Self Storage"], owner:"Ariela", email:"rsouza@example.com", phone:"", city:"Miami, FL", lastContact:back(60), cadenceOverrideDays:null, status:"Not started", notes:"Flagged for self storage thesis outreach.", priorityQuarter: currentQuarterKey(2), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Owen Bricknell", org:"Beacon Hill Capital Partners", type:"LP / Institutional", tier:"Tier 2", tags:["Emerging Manager Program"], owner:"Bianca Tomkoria", email:"obricknell@example.com", phone:"", city:"Boston, MA", lastContact:back(15), cadenceOverrideDays:null, status:"Not started", notes:"Colleague of David Okafor, copied on the deck request.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0},
+    {id:uid('ct'), name:"Talia Bloom", org:"Northlight Family Office", type:"Family Office", tier:"Tier 1", tags:["West Coast"], owner:"Ariela", email:"tbloom@example.com", phone:"", city:"San Francisco, CA", lastContact:back(21), cadenceOverrideDays:null, status:"Awaiting reply", notes:"Investment committee lead alongside Helen.", priorityQuarter: currentQuarterKey(0), sample:true, createdAt:t0}
   ];
 }
 function seedLists(){
@@ -544,6 +619,32 @@ function seedSequenceTemplates(){
       {type:"Call", title:"Intro call", waitDays:4},
       {type:"Email", title:"Send materials", waitDays:3}
     ]}
+  ];
+}
+function seedCorrespondence(){
+  const back = (n)=>{ const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString(); };
+  return [
+    {id:uid('cr'), kind:'stage', contactName:"Marcus Feld", subject:"Re: Whitcombe follow-up", receivedAt:back(1),
+      suggestedStatus:"Meeting scheduled", rationale:"The message references booking a call next Thursday, indicating a meeting is being scheduled.",
+      status:"pending"},
+    {id:uid('cr'), kind:'stage', contactName:"Helen Marchetti", subject:"Northlight — great catching up", receivedAt:back(3),
+      suggestedStatus:"Responded", rationale:"“Great catching up with you” and a prior discussion suggest the contact has moved beyond outreach into active engagement.",
+      status:"pending"},
+    {id:uid('cr'), kind:'suggested', name:"Nadia Kessler", email:"nkessler@example.com", subject:"Fw: Introduction — Nadia Kessler <> Ariela",
+      receivedAt:back(2),
+      bodyText:"Hi Ariela,\n\nGreat to connect. Following up per our call.\n\nBest,\nNadia Kessler\nDirector, Fielding Capital Partners\n(312) 555-0148\nChicago, IL",
+      status:"pending"},
+    {id:uid('cr'), kind:'suggested', name:"Theo Marsh", email:"tmarsh@example.com", subject:"Bellwether — self storage thesis",
+      receivedAt:back(5),
+      bodyText:"Hi team,\n\nSharing notes from our call on the self storage thesis.\n\nTheo Marsh\nPrincipal, Bellwether Ventures\nMiami, FL",
+      status:"pending"}
+  ];
+}
+function seedTravel(){
+  const fwd = (n)=>{ const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+  return [
+    {id:uid('tr'), city:"San Francisco, CA", startDate:fwd(12), endDate:fwd(14), notes:"West Coast family office swing.", owner:"Ariela", sample:true},
+    {id:uid('tr'), city:"Boston, MA", startDate:fwd(25), endDate:fwd(27), notes:"Emerging manager program check-ins.", owner:"Bianca Tomkoria", sample:true}
   ];
 }
 function seedEvents(){
@@ -582,9 +683,54 @@ function guardEdit(){
   return true;
 }
 
+/* Two-tier nav, matching the real app's section/tab structure exactly. */
+const SECTIONS = [
+  { key:'relationships', label:'Relationships', tabs:[
+    {view:'contacts', label:'Contacts'},
+    {view:'companies', label:'Companies'},
+    {view:'lists', label:'Mailing Lists'},
+  ]},
+  { key:'outreach', label:'Outreach', tabs:[
+    {view:'followups', label:'Follow-ups'},
+    {view:'tasks', label:'Tasks'},
+    {view:'events', label:'Events'},
+    {view:'travel', label:'Travel'},
+    {view:'lookahead', label:'Look Ahead'},
+  ]},
+  { key:'diligence', label:'Diligence', tabs:[
+    {view:'funnel', label:'Funnel'},
+    {view:'priorities', label:'Priorities'},
+    {view:'stuck', label:'Going Cold'},
+  ]},
+  { key:'connectors', label:'Connectors', tabs:[
+    {view:'inbox', label:'Inbox'},
+  ]},
+];
+function sectionForView(v){
+  return SECTIONS.find(s=>s.tabs.some(t=>t.view===v)) || SECTIONS[0];
+}
+function renderTabsRow(){
+  const section = SECTIONS.find(s=>s.key===state.activeSection) || SECTIONS[0];
+  document.getElementById('tabs').innerHTML = section.tabs.map(t=>`
+    <button class="tab-btn ${state.activeView===t.view?'active':''}" data-view="${t.view}">${escapeHtml(t.label)}${t.view==='inbox' ? ' <span class="n" id="tab-n-inbox"></span>' : ''}</button>
+  `).join('');
+}
+function switchSection(key){
+  state.activeSection = key;
+  document.querySelectorAll('.section-pill').forEach(b=>b.classList.toggle('active', b.dataset.section===key));
+  document.querySelector('.settings-link').classList.remove('active');
+  const section = SECTIONS.find(s=>s.key===key);
+  switchView(section.tabs[0].view);
+}
 function switchView(v){
   state.activeView = v;
-  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+  const section = sectionForView(v);
+  if(v!=='settings' && state.activeSection!==section.key){
+    state.activeSection = section.key;
+    document.querySelectorAll('.section-pill').forEach(b=>b.classList.toggle('active', b.dataset.section===section.key));
+  }
+  document.querySelector('.settings-link').classList.toggle('active', v==='settings');
+  renderTabsRow();
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('active', el.id==='view-'+v));
   renderActiveView();
 }
@@ -592,21 +738,23 @@ function renderActiveView(){
   updateTabCounts();
   switch(state.activeView){
     case 'contacts': renderContacts(); break;
+    case 'companies': renderCompanies(); break;
+    case 'inbox': renderInbox(); break;
     case 'followups': renderFollowups(); break;
     case 'lists': renderLists(); break;
     case 'tasks': renderTasks(); break;
     case 'events': renderEvents(); break;
+    case 'travel': renderTravel(); break;
+    case 'funnel': renderFunnel(); break;
     case 'priorities': renderPriorities(); break;
+    case 'stuck': renderStuck(); break;
     case 'lookahead': renderLookahead(); break;
     case 'settings': renderSettings(); break;
   }
 }
 function updateTabCounts(){
-  document.getElementById('tab-n-contacts').textContent = state.contacts.length || '';
-  document.getElementById('tab-n-lists').textContent = state.lists.length || '';
-  document.getElementById('tab-n-tasks').textContent = state.tasks.filter(t=>t.status!=='Done').length || '';
-  document.getElementById('tab-n-events').textContent = state.events.length || '';
-  document.getElementById('tab-n-followups').textContent = getOverdueContacts().length || '';
+  const inboxBadge = document.getElementById('tab-n-inbox');
+  if(inboxBadge) inboxBadge.textContent = (state.correspondence||[]).filter(c=>c.status!=='resolved').length || '';
 }
 
 /* ---------------- CONTACTS ---------------- */
@@ -1747,6 +1895,10 @@ function exportEvents(){
   const rows = list.map(e=>({Name:e.name, "Start date":e.startDate, "End date":e.endDate, Location:e.location, Type:e.type, Attendees:(e.attendeeNames||[]).join('; '), Goals:e.goals, Notes:e.notes}));
   downloadWorkbook(rows, "Events", "Arselle_Events.xlsx");
 }
+function exportStuck(){
+  const rows = stuckContacts().map(c=>({Name:c.name, Organization:c.org, Status:c.status, Owner:c.owner, "Days since contact":daysBetween(c.lastContact, todayISO())}));
+  downloadWorkbook(rows, "Going Cold", "Arselle_GoingCold.xlsx");
+}
 
 /* ---------------- IMPORT (events + contacts) ---------------- */
 function getField(row, aliases){
@@ -1886,12 +2038,356 @@ function openImportModal(kind){
   });
 }
 
+/* ---------------- COMPANIES ---------------- */
+function renderCompanies(){
+  const wrap = document.getElementById('companies-wrap');
+  const q = (state.filters.companySearch||'').toLowerCase();
+  const groups = {};
+  state.contacts.forEach(c=>{
+    const org = c.org || 'No organization on file';
+    if(q && !org.toLowerCase().includes(q)) return;
+    (groups[org] = groups[org] || []).push(c);
+  });
+  const names = Object.keys(groups).sort();
+  if(names.length===0){ wrap.innerHTML = `<div class="empty"><h3>No companies match</h3><div>Try a different search.</div></div>`; return; }
+  wrap.innerHTML = names.map(org=>{
+    const rows = groups[org];
+    return `
+    <div class="card" style="padding:16px;margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:${rows.length>1?'10px':'0'};">
+        <div style="font-family:'Poppins',sans-serif;font-weight:600;font-size:14.5px;">${escapeHtml(org)}</div>
+        <div class="muted" style="font-size:12px;">${rows.length} contact${rows.length===1?'':'s'}</div>
+      </div>
+      ${rows.length>1 ? `<table><tbody>${rows.map(c=>`
+        <tr data-id="${c.id}" class="company-contact-row" style="cursor:pointer;">
+          <td class="name-cell">${escapeHtml(c.name)}</td>
+          <td class="muted">${escapeHtml(c.type)}</td>
+          <td><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span></td>
+        </tr>`).join('')}</tbody></table>` : `
+        <div class="company-contact-row muted" data-id="${rows[0].id}" style="cursor:pointer;font-size:13px;">${escapeHtml(rows[0].name)} &middot; ${escapeHtml(rows[0].type)}</div>
+      `}
+    </div>`;
+  }).join('');
+  wrap.querySelectorAll('.company-contact-row').forEach(row=>{
+    row.onclick = ()=> openContactDetail(row.dataset.id);
+  });
+}
+document.addEventListener('input', (e)=>{
+  if(e.target.id==='company-search'){ state.filters.companySearch = e.target.value; renderCompanies(); }
+});
+
+/* ---------------- INBOX ---------------- */
+function inboxStatusTagClass(s){ return statusTagClass(s); }
+function renderInbox(){
+  renderInboxStage();
+  renderInboxSuggested();
+}
+function renderInboxStage(){
+  const wrap = document.getElementById('inbox-stage-wrap');
+  const rows = state.correspondence.filter(c=>c.kind==='stage' && c.status==='pending');
+  if(rows.length===0){ wrap.innerHTML = `<div class="empty"><h3>Nothing pending</h3><div>No suggested stage changes waiting on review.</div></div>`; return; }
+  wrap.innerHTML = rows.map(r=>`
+    <div class="card" style="padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${escapeHtml(r.contactName)}</div>
+          <div class="muted" style="font-size:11.5px;margin-top:2px;">${escapeHtml(r.subject)}</div>
+        </div>
+        <span class="tag" style="background:var(--brass-bg);color:var(--brass-dark);">stage suggestion</span>
+      </div>
+      <div style="margin-top:10px;padding:8px 10px;background:var(--forest-bg);border-radius:6px;font-size:12.5px;">
+        AI suggests <strong>${escapeHtml(r.suggestedStatus)}</strong> &mdash; ${escapeHtml(r.rationale)}
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button class="btn small primary" data-confirm="${r.id}">Confirm</button>
+        <button class="btn small ghost" data-dismiss="${r.id}">Dismiss</button>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-confirm]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!guardEdit()) return;
+      const r = state.correspondence.find(x=>x.id===b.dataset.confirm);
+      const c = state.contacts.find(x=>x.name===r.contactName);
+      if(c){ c.status = r.suggestedStatus; renderContacts(); }
+      r.status = 'resolved';
+      showToast(`${r.contactName} moved to ${r.suggestedStatus}.`);
+      renderInboxStage(); updateTabCounts();
+    };
+  });
+  wrap.querySelectorAll('[data-dismiss]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!guardEdit()) return;
+      state.correspondence.find(x=>x.id===b.dataset.dismiss).status = 'resolved';
+      renderInboxStage(); updateTabCounts();
+    };
+  });
+}
+function parseSignatureDemo(text){
+  const phoneMatch = text.match(/\(?\d{3}\)?[\s.-]\d{3}[\s.-]\d{4}/);
+  const titleMatch = text.match(/^(.*(Director|Partner|Principal|President|Manager|Officer|Founder).*)$/mi);
+  const cityMatch = text.match(/^[A-Z][a-zA-Z\s]+,\s[A-Z]{2}$/m);
+  return { phone: phoneMatch ? phoneMatch[0] : '', title: titleMatch ? titleMatch[0].trim() : '', city: cityMatch ? cityMatch[0].trim() : '' };
+}
+function renderInboxSuggested(){
+  const wrap = document.getElementById('inbox-suggested-wrap');
+  const rows = state.correspondence.filter(c=>c.kind==='suggested' && c.status==='pending');
+  if(rows.length===0){ wrap.innerHTML = `<div class="empty"><h3>Inbox is clear</h3><div>No suggested contacts waiting on review.</div></div>`; return; }
+  wrap.innerHTML = rows.map(r=>`
+    <div class="card" style="padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;gap:12px;">
+        <div>
+          <div style="font-weight:600;font-size:14px;">${escapeHtml(r.subject)}</div>
+          <div class="muted" style="font-size:11.5px;margin-top:2px;">${fmtDate(r.receivedAt.slice(0,10))}</div>
+        </div>
+        <span class="tag" style="background:var(--forest-bg);color:var(--forest);">suggested contact</span>
+      </div>
+      <div class="muted" style="font-size:12.5px;margin-top:10px;white-space:pre-wrap;max-height:90px;overflow:auto;">${escapeHtml(r.bodyText)}</div>
+      <div class="field-row" style="margin-top:12px;">
+        <div class="field"><label>Name</label><input class="ib-name" value="${escapeHtml(r.name)}"></div>
+        <div class="field"><label>Organization</label><input class="ib-org" value=""></div>
+      </div>
+      <div class="field"><label>Email</label><input class="ib-email" value="${escapeHtml(r.email)}"></div>
+      <div style="margin-bottom:10px;"><button class="btn small" data-parse="${r.id}">Pull details from signature</button></div>
+      <div class="field-row">
+        <div class="field"><label>Phone</label><input class="ib-phone" data-phone="${r.id}" value=""></div>
+        <div class="field"><label>Title</label><input class="ib-title" data-title="${r.id}" value=""></div>
+      </div>
+      <div class="field"><label>Location</label><input class="ib-city" data-city="${r.id}" value=""></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn small primary" data-create="${r.id}">Create contact</button>
+        <button class="btn small btn-danger" data-ignore="${r.id}">Ignore</button>
+      </div>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-parse]').forEach(b=>{
+    b.onclick = ()=>{
+      const r = state.correspondence.find(x=>x.id===b.dataset.parse);
+      const found = parseSignatureDemo(r.bodyText);
+      const card = b.closest('.card');
+      if(found.phone) card.querySelector('[data-phone]').value = found.phone;
+      if(found.title) card.querySelector('[data-title]').value = found.title;
+      if(found.city) card.querySelector('[data-city]').value = found.city;
+      if(!found.phone && !found.title && !found.city) showToast("Didn't find a phone, title, or location in the message.");
+    };
+  });
+  wrap.querySelectorAll('[data-create]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!guardEdit()) return;
+      const r = state.correspondence.find(x=>x.id===b.dataset.create);
+      const card = b.closest('.card');
+      const name = card.querySelector('.ib-name').value.trim();
+      if(!name){ showToast('Name is required.'); return; }
+      state.contacts.push({
+        id:uid('ct'), name, org:card.querySelector('.ib-org').value.trim(), type:"Other", tier:"Tier 2",
+        tags:[], owner: state.currentUser, email:card.querySelector('.ib-email').value.trim(),
+        phone:card.querySelector('[data-phone]').value.trim(), city:card.querySelector('[data-city]').value.trim(),
+        lastContact:todayISO(), cadenceOverrideDays:null, status:"Not started",
+        notes: card.querySelector('[data-title]').value.trim() ? `Title: ${card.querySelector('[data-title]').value.trim()}` : '',
+        priorityQuarter: currentQuarterKey(0), sample:true, createdAt:todayISO()
+      });
+      r.status = 'resolved';
+      showToast(`${name} added to Contacts.`);
+      renderInboxSuggested(); updateTabCounts();
+    };
+  });
+  wrap.querySelectorAll('[data-ignore]').forEach(b=>{
+    b.onclick = ()=>{
+      if(!guardEdit()) return;
+      state.correspondence.find(x=>x.id===b.dataset.ignore).status = 'resolved';
+      renderInboxSuggested(); updateTabCounts();
+    };
+  });
+}
+
+/* ---------------- TRAVEL ---------------- */
+function contactMatchesCity(c, city){
+  if(!c.city) return false;
+  const a = c.city.toLowerCase(), b = city.toLowerCase();
+  return a.includes(b) || b.includes(a);
+}
+function renderTravel(){
+  const wrap = document.getElementById('travel-wrap');
+  if(state.travel.length===0){ wrap.innerHTML = `<div class="empty"><h3>No trips yet</h3><div>Add a trip to see which contacts are nearby.</div></div>`; return; }
+  wrap.innerHTML = state.travel.map(t=>`
+    <div class="card" style="padding:16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+        <div>
+          <div style="font-weight:600;font-size:15px;">${escapeHtml(t.city)}</div>
+          <div class="muted" style="font-size:12.5px;margin-top:2px;">${fmtDate(t.startDate)} &ndash; ${fmtDate(t.endDate)} &middot; ${escapeHtml(t.owner)}</div>
+          ${t.notes ? `<div class="muted" style="font-size:12.5px;margin-top:4px;">${escapeHtml(t.notes)}</div>` : ''}
+        </div>
+        <button class="btn small" data-expand="${t.id}">See matching contacts</button>
+      </div>
+      <div id="travel-expand-${t.id}" style="display:none;margin-top:14px;border-top:1px solid var(--line);padding-top:14px;"></div>
+    </div>`).join('');
+  wrap.querySelectorAll('[data-expand]').forEach(b=>{ b.onclick = ()=> toggleTravelExpand(b.dataset.expand, b); });
+}
+function toggleTravelExpand(id, btn){
+  const box = document.getElementById('travel-expand-'+id);
+  const trip = state.travel.find(t=>t.id===id);
+  if(box.style.display !== 'none'){ box.style.display='none'; btn.textContent='See matching contacts'; return; }
+  btn.textContent = 'Hide contacts';
+  const matches = state.contacts.filter(c=>contactMatchesCity(c, trip.city));
+  if(matches.length===0){
+    box.innerHTML = `<div class="muted" style="font-size:12.5px;">No contacts on file based in ${escapeHtml(trip.city)}.</div>`;
+    box.style.display = 'block';
+    return;
+  }
+  box.innerHTML = `
+    <table style="margin-bottom:12px;"><thead><tr><th></th><th>Name</th><th>Organization</th><th>Status</th></tr></thead>
+    <tbody>${matches.map(c=>`<tr><td><input type="checkbox" class="travel-select" data-cid="${c.id}"></td><td class="name-cell">${escapeHtml(c.name)}</td><td class="muted">${escapeHtml(c.org)}</td><td class="muted">${escapeHtml(c.status)}</td></tr>`).join('')}</tbody></table>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button class="btn small primary" data-draft>Draft outreach for selected</button>
+      <input type="text" class="travel-listname" placeholder="New list name" style="max-width:180px;">
+      <button class="btn small" data-addlist>Add to mailing list</button>
+    </div>
+    <div class="travel-drafts" style="margin-top:12px;"></div>
+  `;
+  box.querySelector('[data-draft]').onclick = ()=>{
+    if(!guardEdit()) return;
+    const ids = Array.from(box.querySelectorAll('.travel-select:checked')).map(cb=>cb.dataset.cid);
+    if(ids.length===0){ showToast('Select at least one contact.'); return; }
+    box.querySelector('.travel-drafts').innerHTML = ids.map(cid=>{
+      const c = state.contacts.find(x=>x.id===cid);
+      const draft = `Hi ${c.name.split(' ')[0]},\n\n${state.currentUser} will be in ${trip.city} from ${fmtDate(trip.startDate)} to ${fmtDate(trip.endDate)} and would love to grab time while there. Any chance you're around?\n\nBest,\n${state.currentUser}`;
+      return `<div style="margin-bottom:10px;"><div style="font-size:12.5px;font-weight:600;margin-bottom:4px;">${escapeHtml(c.name)}</div><textarea readonly style="width:100%;min-height:90px;font-family:'Work Sans',sans-serif;font-size:13px;">${escapeHtml(draft)}</textarea></div>`;
+    }).join('');
+  };
+  box.querySelector('[data-addlist]').onclick = ()=>{
+    if(!guardEdit()) return;
+    const nameInput = box.querySelector('.travel-listname');
+    const name = nameInput.value.trim();
+    if(!name){ showToast('Name the list first.'); return; }
+    const ids = Array.from(box.querySelectorAll('.travel-select:checked')).map(cb=>cb.dataset.cid);
+    if(ids.length===0){ showToast('Select at least one contact.'); return; }
+    state.lists.push({id:uid('ls'), name, description:'', contactIds:ids, createdAt:todayISO(), sample:true});
+    showToast(`Created "${name}" with ${ids.length} contact${ids.length===1?'':'s'}.`);
+    nameInput.value = '';
+  };
+  box.style.display = 'block';
+}
+function travelFormHtml(){
+  return `
+  <div class="field-row">
+    <div class="field"><label>City</label><input id="f-tcity" placeholder="e.g. Chicago, IL"></div>
+    <div class="field"><label>Owner</label><select id="f-towner">${state.settings.team.map(t=>`<option>${escapeHtml(t)}</option>`).join('')}</select></div>
+  </div>
+  <div class="field-row">
+    <div class="field"><label>Start date</label><input type="date" id="f-tstart"></div>
+    <div class="field"><label>End date</label><input type="date" id="f-tend"></div>
+  </div>
+  <div class="field"><label>Notes</label><textarea id="f-tnotes"></textarea></div>
+  `;
+}
+function openTravelModal(){
+  openModal({
+    title: "Add trip",
+    bodyHtml: travelFormHtml(),
+    onSave: async ()=>{
+      const city = document.getElementById('f-tcity').value.trim();
+      if(!city){ showToast('City is required.'); return false; }
+      state.travel.push({
+        id:uid('tr'), city, owner:document.getElementById('f-towner').value,
+        startDate:document.getElementById('f-tstart').value || todayISO(),
+        endDate:document.getElementById('f-tend').value || todayISO(),
+        notes:document.getElementById('f-tnotes').value, sample:false
+      });
+      renderTravel();
+      showToast('Trip added.');
+      return true;
+    }
+  });
+}
+
+/* ---------------- FUNNEL ---------------- */
+function renderFunnel(){
+  const wrap = document.getElementById('funnel-wrap');
+  const max = Math.max(1, ...STATUSES.map(s=>state.contacts.filter(c=>c.status===s).length));
+  wrap.innerHTML = `<div class="card" style="padding:20px;">` + STATUSES.map(s=>{
+    const count = state.contacts.filter(c=>c.status===s).length;
+    const pct = Math.round((count/max)*100);
+    return `
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+      <div style="width:130px;font-size:12.5px;color:var(--ink-soft);flex:none;">${escapeHtml(s)}</div>
+      <div style="flex:1;background:var(--slate-bg);border-radius:6px;height:22px;overflow:hidden;">
+        <div style="width:${pct}%;background:var(--brass);height:100%;border-radius:6px;"></div>
+      </div>
+      <div style="width:24px;text-align:right;font-size:12.5px;font-weight:600;flex:none;">${count}</div>
+    </div>`;
+  }).join('') + `</div>`;
+}
+
+/* ---------------- GOING COLD ---------------- */
+function stuckContacts(){
+  return state.contacts.filter(c=>{
+    if(c.status==='Committed' || c.status==='Passed') return false;
+    return daysBetween(c.lastContact, todayISO()) >= (state.settings.staleDays||45);
+  });
+}
+function renderStuck(){
+  const eyebrow = document.getElementById('stuck-eyebrow');
+  if(eyebrow) eyebrow.innerHTML = `No contact logged in ${state.settings.staleDays||45}+ days &middot; select contacts to draft check-ins or build a mailing list`;
+  const wrap = document.getElementById('stuck-wrap');
+  const rows = stuckContacts();
+  if(rows.length===0){ wrap.innerHTML = `<div class="empty"><h3>Nothing stuck</h3><div>Every active contact has been touched recently.</div></div>`; return; }
+  wrap.innerHTML = `
+    <table style="margin-bottom:16px;"><thead><tr><th></th><th>Name</th><th>Organization</th><th>Status</th><th>Owner</th><th>Days since contact</th></tr></thead>
+    <tbody>${rows.map(c=>`
+      <tr><td><input type="checkbox" class="stuck-select" data-cid="${c.id}"></td>
+      <td class="name-cell">${escapeHtml(c.name)}</td>
+      <td>${escapeHtml(c.org)}</td>
+      <td><span class="tag ${statusTagClass(c.status)}">${escapeHtml(c.status)}</span></td>
+      <td class="muted">${escapeHtml(c.owner)}</td>
+      <td><span class="tag brass">${daysBetween(c.lastContact, todayISO())}d</span></td></tr>
+    `).join('')}</tbody></table>
+    <div class="card" style="padding:16px;">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <button class="btn primary" id="stuck-draft-btn">Draft check-ins for selected</button>
+        <input type="text" id="stuck-listname" placeholder="New list name" style="max-width:200px;">
+        <button class="btn" id="stuck-addlist-btn">Add to mailing list</button>
+      </div>
+      <div id="stuck-drafts" style="margin-top:14px;"></div>
+    </div>
+  `;
+  document.getElementById('stuck-draft-btn').onclick = ()=>{
+    if(!guardEdit()) return;
+    const ids = Array.from(document.querySelectorAll('.stuck-select:checked')).map(cb=>cb.dataset.cid);
+    if(ids.length===0){ showToast('Select at least one contact.'); return; }
+    document.getElementById('stuck-drafts').innerHTML = ids.map(cid=>{
+      const c = state.contacts.find(x=>x.id===cid);
+      const draft = `Hi ${c.name.split(' ')[0]},\n\nIt's been a little while, wanted to check in and see how things are looking on your end. Happy to catch up whenever works.\n\nBest,\n${state.currentUser}`;
+      return `<div style="margin-bottom:10px;"><div style="font-size:12.5px;font-weight:600;margin-bottom:4px;">${escapeHtml(c.name)}</div><textarea readonly style="width:100%;min-height:90px;font-family:'Work Sans',sans-serif;font-size:13px;">${escapeHtml(draft)}</textarea></div>`;
+    }).join('');
+  };
+  document.getElementById('stuck-addlist-btn').onclick = ()=>{
+    if(!guardEdit()) return;
+    const nameInput = document.getElementById('stuck-listname');
+    const name = nameInput.value.trim();
+    if(!name){ showToast('Name the list first.'); return; }
+    const ids = Array.from(document.querySelectorAll('.stuck-select:checked')).map(cb=>cb.dataset.cid);
+    if(ids.length===0){ showToast('Select at least one contact.'); return; }
+    state.lists.push({id:uid('ls'), name, description:'', contactIds:ids, createdAt:todayISO(), sample:true});
+    showToast(`Created "${name}" with ${ids.length} contact${ids.length===1?'':'s'}.`);
+    nameInput.value = '';
+  };
+}
+
 /* ---------------- INIT ---------------- */
-document.querySelectorAll('.tab-btn').forEach(b=> b.addEventListener('click', ()=> switchView(b.dataset.view)));
+document.getElementById('tabs').addEventListener('click', (e)=>{
+  const b = e.target.closest('.tab-btn');
+  if(b) switchView(b.dataset.view);
+});
+document.getElementById('section-row').addEventListener('click', (e)=>{
+  const pill = e.target.closest('.section-pill');
+  if(pill){ switchSection(pill.dataset.section); return; }
+  const link = e.target.closest('.settings-link');
+  if(link){ e.preventDefault(); switchView('settings'); }
+});
 document.getElementById('contact-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openContactModal(); });
 document.getElementById('list-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openListModal(); });
 document.getElementById('task-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openTaskModal(); });
 document.getElementById('event-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openEventModal(); });
+document.getElementById('travel-add-btn').addEventListener('click', ()=>{ if(guardEdit()) openTravelModal(); });
+document.getElementById('stuck-export').addEventListener('click', exportStuck);
 document.getElementById('event-import-btn').addEventListener('click', ()=>{ if(guardEdit()) openImportModal('events'); });
 document.getElementById('contact-import-btn').addEventListener('click', ()=>{ if(guardEdit()) openImportModal('contacts'); });
 document.querySelectorAll('#events-view-toggle button').forEach(b=>{
@@ -1932,6 +2428,8 @@ document.getElementById('events-export').addEventListener('click', exportEvents)
 
 (async function init(){
   await loadAll();
+  state.correspondence = seedCorrespondence();
+  state.travel = seedTravel();
   if(!state.settings.team || state.settings.team.length===0) state.settings.team = DEFAULT_TEAM.slice();
   if(!state.settings.staleDays) state.settings.staleDays = 45;
   state.currentUser = state.settings.team[0];

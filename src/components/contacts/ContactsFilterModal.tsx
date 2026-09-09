@@ -1,7 +1,7 @@
 "use client";
 
-import { ContactStatus, User } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FundraisingStage, User } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 export type AdvancedFilters = {
   status: string;
@@ -65,9 +65,9 @@ export function ContactsFilterModal({
               <label>Status</label>
               <select value={filters.status} onChange={(e) => set("status", e.target.value)}>
                 <option value="">Any status</option>
-                {Object.values(ContactStatus).map((s) => (
+                {Object.values(FundraisingStage).map((s) => (
                   <option key={s} value={s}>
-                    {CONTACT_STATUS_LABELS[s]}
+                    {FUNDRAISING_STAGE_LABELS[s]}
                   </option>
                 ))}
               </select>

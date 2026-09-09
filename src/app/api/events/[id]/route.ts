@@ -31,6 +31,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.attendeeIds !== undefined ? { attendeeIds: data.attendeeIds } : {}),
       ...(data.goals !== undefined ? { goals: data.goals } : {}),
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.organizer !== undefined ? { organizer: data.organizer || null } : {}),
+      ...(data.registrationLink !== undefined ? { registrationLink: data.registrationLink || null } : {}),
+      ...(data.registrationStatus !== undefined ? { registrationStatus: data.registrationStatus || null } : {}),
+      ...(data.registrationOpensAt !== undefined
+        ? { registrationOpensAt: data.registrationOpensAt ? new Date(data.registrationOpensAt) : null }
+        : {}),
+      ...(data.dateConfidence !== undefined ? { dateConfidence: data.dateConfidence || null } : {}),
+      ...(data.fitNote !== undefined ? { fitNote: data.fitNote || null } : {}),
     },
   });
   return NextResponse.json({ event });

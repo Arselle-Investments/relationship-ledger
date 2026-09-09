@@ -1,12 +1,12 @@
 import { z } from "zod";
-import { ContactStatus, ContactTier, ContactType } from "@prisma/client";
+import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 
 export const contactInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   org: z.string().trim().optional().nullable(),
   type: z.nativeEnum(ContactType).default(ContactType.OTHER),
   tier: z.nativeEnum(ContactTier).default(ContactTier.TIER_2),
-  status: z.nativeEnum(ContactStatus).default(ContactStatus.NOT_STARTED),
+  status: z.nativeEnum(FundraisingStage).default(FundraisingStage.NOT_STARTED),
   ownerId: z.string().trim().optional().nullable(),
   warmPathId: z.string().trim().optional().nullable(),
   email: z.string().trim().optional().nullable(),
@@ -26,13 +26,13 @@ export type ContactInput = z.infer<typeof contactInputSchema>;
  * status to anything other than "Not started" requires a non-empty note.
  */
 export function validateStatusNoteRule(params: {
-  previousStatus: ContactStatus | null;
-  nextStatus: ContactStatus;
+  previousStatus: FundraisingStage | null;
+  nextStatus: FundraisingStage;
   notes: string | null | undefined;
 }): string | null {
   const { previousStatus, nextStatus, notes } = params;
   const statusChanged = previousStatus === null || previousStatus !== nextStatus;
-  if (nextStatus !== ContactStatus.NOT_STARTED && statusChanged && !notes?.trim()) {
+  if (nextStatus !== FundraisingStage.NOT_STARTED && statusChanged && !notes?.trim()) {
     return `Add a quick note before marking this contact "${nextStatus}" — what's the context?`;
   }
   return null;

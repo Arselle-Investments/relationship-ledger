@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, ContactType, ContactTier, ContactStatus } from "@prisma/client";
+import { User, ContactType, ContactTier, FundraisingStage } from "@prisma/client";
 import {
   CONTACT_TYPE_LABELS,
   CONTACT_TIER_LABELS,
-  CONTACT_STATUS_LABELS,
+  FUNDRAISING_STAGE_LABELS,
 } from "@/lib/contact-constants";
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
@@ -17,7 +17,7 @@ import { ContactAgoraSection } from "./ContactAgoraSection";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
-const STATUS_OPTIONS = Object.values(ContactStatus);
+const STATUS_OPTIONS = Object.values(FundraisingStage);
 
 function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
   if (!contact) {
@@ -26,7 +26,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       org: "",
       type: ContactType.OTHER,
       tier: ContactTier.TIER_2,
-      status: ContactStatus.NOT_STARTED,
+      status: FundraisingStage.NOT_STARTED,
       ownerId: "",
       warmPathId: "",
       email: "",
@@ -117,8 +117,8 @@ export function ContactModal({
       return;
     }
     const statusChanged = !contact || contact.status !== values.status;
-    if (values.status !== ContactStatus.NOT_STARTED && statusChanged && !values.notes.trim()) {
-      setError(`Add a quick note before marking this contact "${CONTACT_STATUS_LABELS[values.status]}" — what's the context?`);
+    if (values.status !== FundraisingStage.NOT_STARTED && statusChanged && !values.notes.trim()) {
+      setError(`Add a quick note before marking this contact "${FUNDRAISING_STAGE_LABELS[values.status]}" — what's the context?`);
       return;
     }
 
@@ -219,10 +219,10 @@ export function ContactModal({
           <div className="field-row">
             <div className="field">
               <label>Status</label>
-              <select value={values.status} onChange={(e) => set("status", e.target.value as ContactStatus)} disabled={!canEdit}>
+              <select value={values.status} onChange={(e) => set("status", e.target.value as FundraisingStage)} disabled={!canEdit}>
                 {STATUS_OPTIONS.map((s) => (
                   <option key={s} value={s}>
-                    {CONTACT_STATUS_LABELS[s]}
+                    {FUNDRAISING_STAGE_LABELS[s]}
                   </option>
                 ))}
               </select>

@@ -33,6 +33,30 @@ export function ListsClient({
     setEditing(null);
   }
 
+  async function duplicateList(entry: MailingListWithContacts) {
+    const res = await fetch("/api/lists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `${entry.list.name} (copy)`,
+        description: entry.list.description,
+        mode: entry.list.mode,
+        contactIds: entry.list.contactIds,
+        filterType: entry.list.filterType,
+        filterTier: entry.list.filterTier,
+        filterOwnerId: entry.list.filterOwnerId,
+        filterTag: entry.list.filterTag,
+      }),
+    });
+    const json = await res.json();
+    if (!res.ok) return;
+    // Same filter/contactIds as the original, so its current membership is a safe stand-in
+    // for the copy's — the copy is fully independent from here, editing it never touches the original.
+    const newEntry = { list: json.list, contacts: entry.contacts };
+    upsertLocal(newEntry);
+    setEditing(newEntry);
+  }
+
   return (
     <div>
       <div className="toolbar">
@@ -71,6 +95,11 @@ export function ListsClient({
                 <a className="btn small" href={`/api/lists/${entry.list.id}/export`}>
                   Export
                 </a>
+                {canEdit && (
+                  <button className="btn small" onClick={() => duplicateList(entry)}>
+                    Duplicate
+                  </button>
+                )}
                 {canEdit && (
                   <button className="btn small" onClick={() => setEditing(entry)}>
                     Edit

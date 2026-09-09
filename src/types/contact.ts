@@ -1,4 +1,4 @@
-import { Contact, ContactStatus, ContactTier, ContactType, User } from "@prisma/client";
+import { Contact, ContactTier, ContactType, FundraisingStage, User } from "@prisma/client";
 
 export type ContactWithRelations = Contact & {
   owner: User | null;
@@ -10,7 +10,7 @@ export type ContactFormValues = {
   org: string;
   type: ContactType;
   tier: ContactTier;
-  status: ContactStatus;
+  status: FundraisingStage;
   ownerId: string;
   warmPathId: string;
   email: string;

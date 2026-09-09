@@ -1,5 +1,5 @@
 import { ContactWithRelations } from "@/types/contact";
-import { ACTIVE_OUTREACH_STATUSES } from "@/lib/contact-constants";
+import { ACTIVE_OUTREACH_STAGES } from "@/lib/contact-constants";
 
 export type WindowBounds = { start: string; end: string };
 
@@ -21,7 +21,7 @@ export function getUpcomingCadenceContacts(
   today: string = new Date().toISOString().slice(0, 10)
 ): ContactWithRelations[] {
   return contacts.filter((c) => {
-    if (!ACTIVE_OUTREACH_STATUSES.includes(c.status) || !c.lastContact) return false;
+    if (!ACTIVE_OUTREACH_STAGES.includes(c.status) || !c.lastContact) return false;
     const cadence = c.cadenceOverrideDays ?? defaultCadenceDays;
     const dueDate = new Date(c.lastContact);
     dueDate.setDate(dueDate.getDate() + cadence);

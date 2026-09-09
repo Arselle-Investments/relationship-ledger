@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ContactTier } from "@prisma/client";
-import { CONTACT_STATUS_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
 import { nextNQuarters } from "@/lib/quarters";
 import { ContactWithRelations } from "@/types/contact";
 
@@ -92,7 +92,7 @@ export function PrioritiesClient({ contacts }: { contacts: ContactWithRelations[
                       <tr key={c.id}>
                         <td className="name-cell">{c.name}</td>
                         <td>{c.org || <span className="muted">—</span>}</td>
-                        <td>{CONTACT_STATUS_LABELS[c.status]}</td>
+                        <td>{FUNDRAISING_STAGE_LABELS[c.status]}</td>
                         <td className="muted">{c.owner?.name || "—"}</td>
                       </tr>
                     ))}

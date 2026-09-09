@@ -4,7 +4,7 @@ import { AuthError, requireUser } from "@/lib/permissions";
 import { getStuckContacts } from "@/lib/stuck-contacts";
 import { getSettings } from "@/lib/settings";
 import { draftCheckInEmail } from "@/lib/ai";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET() {
@@ -40,7 +40,7 @@ export async function GET() {
       name: safeCell(c.name),
       org: safeCell(c.org ?? ""),
       owner: safeCell(c.owner?.name ?? ""),
-      stage: CONTACT_STATUS_LABELS[c.status],
+      stage: FUNDRAISING_STAGE_LABELS[c.status],
       days: c.daysInStage,
       draft: safeCell(drafts[i]),
     });

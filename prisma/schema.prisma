@@ -86,6 +86,10 @@ enum ContactTier {
   TIER_3
 }
 
+// Outreach-tracking stages for Emerging Managers (Consultant, CapitalSource)
+// only — a separate, deliberately simpler pipeline from the fundraising
+// stages below, since EM outreach is a different motion (gatekeepers and
+// capital allocators, not LPs being fundraised).
 enum ContactStatus {
   NOT_STARTED
   OUTREACH_SENT
@@ -97,13 +101,31 @@ enum ContactStatus {
   PASSED
 }
 
+// The fundraising/syndication funnel — used by Contact (LP-level) and
+// DealFeedback (company/LP-level, the same funnel just anchored at the
+// company). Due diligence specifically means an NDA has been executed
+// and/or the LP has been given access to the data room, not just "looking
+// at it." The two passed stages distinguish someone worth re-approaching on
+// a future deal from a genuine no.
+enum FundraisingStage {
+  NOT_STARTED
+  OUTREACH_SENT
+  INITIAL_INTEREST
+  MEETING_OCCURRED
+  FOLLOW_UP_ENGAGEMENT
+  DUE_DILIGENCE
+  COMMITTED
+  PASSED_OPEN // passed on this deal, open to future ones
+  PASSED_NOT_INTERESTED // a genuine no
+}
+
 model Contact {
-  id                 String        @id @default(cuid())
+  id                 String           @id @default(cuid())
   name               String
   org                String?
-  type               ContactType   @default(OTHER)
-  tier               ContactTier   @default(TIER_2)
-  status             ContactStatus @default(NOT_STARTED)
+  type               ContactType      @default(OTHER)
+  tier               ContactTier      @default(TIER_2)
+  status             FundraisingStage @default(NOT_STARTED)
   ownerId            String?
   owner              User?         @relation("ContactOwner", fields: [ownerId], references: [id])
   warmPathId         String?
@@ -142,9 +164,13 @@ model Contact {
   createdAt          DateTime      @default(now())
   updatedAt          DateTime      @updatedAt
 
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+
   tasks Task[]
   correspondence Correspondence[]
   stageChanges   ContactStatusChange[]
+  dealFeedback   DealFeedback[]
 
   @@index([status])
   @@index([type])
@@ -152,6 +178,188 @@ model Contact {
   @@index([ownerId])
   @@index([agoraType])
   @@index([primaryLocation])
+  @@index([companyId])
+}
+
+// A real record for a capital partner/company, promoted out of the free-text
+// Contact.org string so deal feedback (and investment-criteria data) can live
+// at the company level, not just on whichever one contact happens to hold it.
+// Existing contacts keep their `org` string untouched; `companyId` is an
+// optional link on top, backfilled from distinct org names.
+model Company {
+  id   String @id @default(cuid())
+  name String @unique
+  type ContactType  @default(OTHER)
+  tier ContactTier?
+  city String?
+  tags String[] @default([])
+  notes String? @default("")
+
+  // Durable "what do they generally invest in" profile — separate from any
+  // one deal's feedback, so a new raise can quickly filter to matching
+  // capital partners (e.g. "who's interested in self storage") rather than
+  // digging back through past deal notes.
+  targetAssetClasses   String[] @default([]) // e.g. Industrial, Multifamily, Retail, Self-Storage, NNN
+  investmentStructures String[] @default([]) // e.g. Co-GP, LP Equity, Structured Equity, Debt Capital, Other Strategic
+  investmentStrategies String[] @default([]) // e.g. Core, Core+, Value-Add / Opp
+  investmentSizeMin   Float?
+  investmentSizeMax   Float?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  contacts Contact[]
+  feedback DealFeedback[]
+  outreach DealOutreach[]
+
+  @@index([name])
+}
+
+enum DealStatus {
+  ACTIVE
+  UNDER_CONTRACT
+  DEAD
+  DORMANT
+}
+
+model Deal {
+  id         String     @id @default(cuid())
+  name       String
+  status     DealStatus @default(ACTIVE)
+  assetClass String? // optional, e.g. "Self-Storage" — lets a new deal be matched against Company.targetAssetClasses
+  notes      String?    @default("")
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  feedback DealFeedback[]
+  outreach DealOutreach[]
+
+  @@index([status])
+}
+
+enum FeedbackSource {
+  MANUAL // typed in directly, e.g. from a call
+  CORRESPONDENCE // pulled from an email/Teams message
+}
+
+// One piece of feedback on one deal, from one company (and optionally a
+// specific contact there). Company is the anchor for "feedback by company"
+// rollups; contact is who actually said it, when known.
+model DealFeedback {
+  id        String         @id @default(cuid())
+  dealId    String
+  deal      Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  companyId String?
+  company   Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  status    FundraisingStage @default(NOT_STARTED)
+  notes     String
+  source    FeedbackSource @default(MANUAL)
+  // Set once a message is auto-classified as deal feedback (not built yet —
+  // this just leaves room for that without a future migration).
+  correspondenceId String?         @unique
+  correspondence    Correspondence? @relation(fields: [correspondenceId], references: [id], onDelete: SetNull)
+  createdByName String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([dealId])
+  @@index([companyId])
+  @@index([contactId])
+}
+
+// Records that a deal was actually sent/tracked to a company — separate from
+// DealFeedback, which requires an actual note. Answers "who received this
+// deal" even when they never responded with anything worth logging as
+// feedback. One row per (deal, company): re-sending the same deal to the
+// same company just refreshes sentAt rather than creating a duplicate.
+model DealOutreach {
+  id        String   @id @default(cuid())
+  dealId    String
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  sentAt    DateTime @default(now())
+
+  @@unique([dealId, companyId])
+  @@index([companyId])
+}
+
+// Remembers a cluster of companies a human looked at and confirmed are NOT
+// duplicates, so the same suggestion doesn't keep resurfacing on every visit
+// to the Companies review queue. groupKey is the cluster's company ids,
+// sorted and joined — a different cluster (even if it overlaps) gets its own
+// key and still surfaces normally.
+model CompanyMergeDismissal {
+  id        String   @id @default(cuid())
+  groupKey  String   @unique
+  createdAt DateTime @default(now())
+}
+
+// --- Emerging Managers -----------------------------------------------------
+// A deliberately separate track from Contacts/Companies: a capital source or
+// consultant here may well be the same real institution as an existing
+// contact/company, but this outreach is tracked on its own — different
+// cadence, different pitch, different program rules — rather than folded
+// into the general relationship data.
+
+model Consultant {
+  id                       String        @id @default(cuid())
+  name                     String        @unique
+  capitalSourcesCoveredNote String?      @default("") // freeform, e.g. "LAFPP, LACERS" — the CapitalSource.consultant relation is the structured version where confidently parsed
+  intakeProcess            String?       @default("")
+  knownContacts            String?       @default("")
+  nextStep                 String?       @default("")
+  outreachStatus           ContactStatus @default(NOT_STARTED)
+  verificationNotes        String?       @default("")
+  notes                    String?       @default("")
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  capitalSources CapitalSource[]
+  correspondence Correspondence[]
+
+  @@index([outreachStatus])
+}
+
+model CapitalSource {
+  id               String        @id @default(cuid())
+  name             String        @unique // "Capital Source (Detailed)" in the tracker
+  shortName        String?
+  tier             Int? // Arselle's own priority ranking (1 = highest), not in the source tracker — set manually
+  outreachStatus   ContactStatus @default(NOT_STARTED) // Arselle's own outreach stage — the tracker's "Status" column
+  actionability    String?       @default("") // the tracker's own "how ready is this to act on" label, e.g. "Immediate - Website"
+  nextStep         String?       @default("")
+  timing           String? // e.g. "4Q2026" — when the tracker expects the next real step
+  consultantId     String?
+  consultant       Consultant?   @relation(fields: [consultantId], references: [id], onDelete: SetNull)
+  programManager   String?
+  consultantSource String?       @default("") // where the Consultant link/name came from
+  knownCommitmentsCompetitors String? @default("")
+  knownCommitmentsOperators   String? @default("")
+  overview         String?       @default("")
+  openDoorPolicy   String?       @default("")
+  minimumFundSize  String? // kept as text — the tracker's values are often narrative, not a clean number
+  minimumFundSizeSource  String? @default("")
+  typicalCheckSize String?
+  typicalCheckSizeSource String? @default("")
+  keyContact       String?       @default("")
+  emailsWebsites   String?       @default("")
+  actionPlanSource String?       @default("") // sourcing for the overall outreach plan itself, distinct from any single field's source
+  timeline         String? // upcoming known dates/events tied to this source
+  capitalStatus    String? // the source's OWN program status (e.g. "Active, Empire II live") — distinct from outreachStatus
+  capitalStatusSource String?    @default("")
+  redFlags         String?       @default("")
+  arselleFit       String?       @default("")
+  notes            String?       @default("")
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  correspondence Correspondence[]
+
+  @@index([outreachStatus])
+  @@index([consultantId])
 }
 
 enum StageChangeSource {
@@ -166,8 +374,8 @@ model ContactStatusChange {
   id             String            @id @default(cuid())
   contactId      String
   contact        Contact           @relation(fields: [contactId], references: [id], onDelete: Cascade)
-  fromStatus     ContactStatus?
-  toStatus       ContactStatus
+  fromStatus     FundraisingStage?
+  toStatus       FundraisingStage
   note           String
   source         StageChangeSource @default(MANUAL)
   changedByName  String?
@@ -196,6 +404,14 @@ model Correspondence {
   receivedAt    DateTime
   contactId     String?
   contact       Contact?             @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  // A message can instead be about an Emerging Managers target — a capital
+  // source or a consultant — once the Teams ingestion is taught to match
+  // those too. Not wired up to the matching pipeline yet; the columns exist
+  // now so that doesn't need its own migration later.
+  capitalSourceId String?
+  capitalSource   CapitalSource?       @relation(fields: [capitalSourceId], references: [id], onDelete: SetNull)
+  consultantId    String?
+  consultant      Consultant?          @relation(fields: [consultantId], references: [id], onDelete: SetNull)
   extractedName String?
   extractedEmail String?
   extractedOrg  String?
@@ -206,11 +422,15 @@ model Correspondence {
   // contact it's matched to. Only ever a suggestion — nothing here changes a
   // contact's actual status until a human confirms it via the stage-suggestion
   // endpoints, which is why it lives on the correspondence, not the contact.
-  suggestedStatus     ContactStatus?
+  suggestedStatus     FundraisingStage?
   suggestionRationale String?
   suggestionState     SuggestionState @default(NONE)
 
+  dealFeedback DealFeedback?
+
   @@index([contactId])
+  @@index([capitalSourceId])
+  @@index([consultantId])
   @@index([status])
   @@index([suggestionState])
 }
@@ -266,6 +486,19 @@ model Event {
   notes       String?   @default("")
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  // --- Research-tracker fields (from the Emerging Managers conference
+  // tracker), all optional so plain manually-added events are unaffected ---
+  tier                Int? // 1 (highest priority) and up, per the tracker's own ranking
+  organizer           String?
+  registrationOpensAt DateTime? @db.Date
+  registrationLink    String? // also the URL a "Refresh" checks for updates
+  registrationStatus  String? // e.g. "Confirmed open", "Not yet open", "Invitation-only"
+  dateConfidence      String? // e.g. "Confirmed on prea.org" vs "Estimate — assumes similar lead time"
+  fitNote             String?
+  // Set after a manual "Refresh" fetches registrationLink and asks the model
+  // to re-read it — never applied automatically, just what the last check found.
+  lastRefreshedAt     DateTime?
 
   @@index([startDate])
 }

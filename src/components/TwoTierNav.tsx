@@ -34,12 +34,26 @@ const SECTIONS: SectionDef[] = [
       { href: "/funnel", label: "Funnel" },
       { href: "/priorities", label: "Priorities" },
       { href: "/stuck-contacts", label: "Going Cold" },
+      { href: "/deals", label: "Deals" },
     ],
   },
   {
     key: "connectors",
     label: "Connectors",
-    tabs: [{ href: "/inbox", label: "Inbox" }],
+    tabs: [
+      { href: "/inbox", label: "Inbox" },
+      { href: "/companies/review", label: "Company Review" },
+      { href: "/data-hygiene", label: "Data Hygiene" },
+    ],
+  },
+  {
+    key: "emerging-managers",
+    label: "Emerging Managers",
+    tabs: [
+      { href: "/capital-sources", label: "Capital Sources" },
+      { href: "/consultants", label: "Consultants" },
+      { href: "/emerging-managers/funnel", label: "Funnel" },
+    ],
   },
 ];
 
@@ -47,7 +61,17 @@ function sectionKeyForHref(href: string): string {
   return SECTIONS.find((s) => s.tabs.some((t) => t.href === href))?.key ?? SECTIONS[0].key;
 }
 
-export function TwoTierNav({ activeHref, inboxCount }: { activeHref: string; inboxCount?: number }) {
+export function TwoTierNav({
+  activeHref,
+  inboxCount,
+  companyReviewCount,
+  dataHygieneCount,
+}: {
+  activeHref: string;
+  inboxCount?: number;
+  companyReviewCount?: number;
+  dataHygieneCount?: number;
+}) {
   const [activeSection, setActiveSection] = useState(() => sectionKeyForHref(activeHref));
   const section = SECTIONS.find((s) => s.key === activeSection) ?? SECTIONS[0];
 
@@ -75,6 +99,8 @@ export function TwoTierNav({ activeHref, inboxCount }: { activeHref: string; inb
           <Link key={tab.href} href={tab.href} className={`tab-btn ${activeHref === tab.href ? "active" : ""}`}>
             {tab.label}
             {tab.href === "/inbox" && !!inboxCount && <span className="n">{inboxCount}</span>}
+            {tab.href === "/companies/review" && !!companyReviewCount && <span className="n">{companyReviewCount}</span>}
+            {tab.href === "/data-hygiene" && !!dataHygieneCount && <span className="n">{dataHygieneCount}</span>}
           </Link>
         ))}
       </div>

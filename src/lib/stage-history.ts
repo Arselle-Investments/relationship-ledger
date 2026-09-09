@@ -1,11 +1,11 @@
 import { prisma } from "@/lib/prisma";
-import { ContactStatus, StageChangeSource } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FundraisingStage, StageChangeSource } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 export async function recordStageChange(params: {
   contactId: string;
-  fromStatus: ContactStatus | null;
-  toStatus: ContactStatus;
+  fromStatus: FundraisingStage | null;
+  toStatus: FundraisingStage;
   note: string;
   changedByName?: string | null;
   source?: StageChangeSource;
@@ -31,6 +31,6 @@ export async function getRecentStageHistorySummary(contactId: string, limit = 3)
   });
   if (changes.length === 0) return "";
   return changes
-    .map((c) => `moved to ${CONTACT_STATUS_LABELS[c.toStatus]} on ${c.createdAt.toISOString().slice(0, 10)}`)
+    .map((c) => `moved to ${FUNDRAISING_STAGE_LABELS[c.toStatus]} on ${c.createdAt.toISOString().slice(0, 10)}`)
     .join("; ");
 }

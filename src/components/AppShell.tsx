@@ -7,11 +7,15 @@ export function AppShell({
   user,
   children,
   inboxCount,
+  companyReviewCount,
+  dataHygieneCount,
 }: {
   activeHref: string;
   user: { name?: string | null; email?: string | null; role: Role };
   children: React.ReactNode;
   inboxCount?: number;
+  companyReviewCount?: number;
+  dataHygieneCount?: number;
 }) {
   const canEdit = user.role === Role.ADMIN || user.role === Role.EDITOR;
 
@@ -51,7 +55,12 @@ export function AppShell({
         </div>
       </div>
 
-      <TwoTierNav activeHref={activeHref} inboxCount={inboxCount} />
+      <TwoTierNav
+        activeHref={activeHref}
+        inboxCount={inboxCount}
+        companyReviewCount={companyReviewCount}
+        dataHygieneCount={dataHygieneCount}
+      />
 
       {!canEdit && (
         <div className="locked-msg" style={{ marginTop: 22 }}>

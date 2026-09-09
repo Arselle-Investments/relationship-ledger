@@ -10,12 +10,19 @@ export default async function CompaniesPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, team] = await Promise.all([
+  const [contacts, team, companies] = await Promise.all([
     prisma.contact.findMany({
       include: { owner: true, warmPath: true },
       orderBy: { name: "asc" },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
+    prisma.company.findMany({
+      include: {
+        feedback: { include: { deal: true, contact: true }, orderBy: { createdAt: "desc" } },
+        outreach: { include: { deal: true }, orderBy: { sentAt: "desc" } },
+      },
+      orderBy: { name: "asc" },
+    }),
   ]);
 
   return (
@@ -23,6 +30,7 @@ export default async function CompaniesPage() {
       <CompaniesClient
         contacts={contacts}
         team={team}
+        companies={companies}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

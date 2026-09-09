@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Correspondence, ContactStatusChange } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 type TimelineEntry =
   | { kind: "correspondence"; at: string; data: Correspondence }
@@ -79,7 +79,7 @@ export function ActivityTimeline({
             {entry.data.suggestionState === "PENDING" && entry.data.suggestedStatus && (
               <div style={{ marginTop: 4, padding: "6px 8px", background: "var(--forest-bg)", borderRadius: 6 }}>
                 <div style={{ fontSize: 12, color: "var(--ink)" }}>
-                  AI suggests: move to <strong>{CONTACT_STATUS_LABELS[entry.data.suggestedStatus]}</strong>
+                  AI suggests: move to <strong>{FUNDRAISING_STAGE_LABELS[entry.data.suggestedStatus]}</strong>
                   {entry.data.suggestionRationale ? ` — ${entry.data.suggestionRationale}` : ""}
                 </div>
                 {canEdit && (
@@ -106,8 +106,8 @@ export function ActivityTimeline({
         ) : (
           <div key={`s-${entry.data.id}`} className="activity-item">
             <span className="when">{new Date(entry.at).toLocaleDateString()}</span> —{" "}
-            {entry.data.fromStatus ? `${CONTACT_STATUS_LABELS[entry.data.fromStatus]} → ` : ""}
-            {CONTACT_STATUS_LABELS[entry.data.toStatus]}
+            {entry.data.fromStatus ? `${FUNDRAISING_STAGE_LABELS[entry.data.fromStatus]} → ` : ""}
+            {FUNDRAISING_STAGE_LABELS[entry.data.toStatus]}
             {entry.data.note ? `: ${entry.data.note}` : ""}
             {entry.data.source === "AI_SUGGESTED" && <span className="tag forest" style={{ marginLeft: 6 }}>AI-confirmed</span>}
           </div>

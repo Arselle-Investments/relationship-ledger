@@ -1,24 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
-import { OverdueContact, StaleContact } from "@/lib/followups";
+import Link from "next/link";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { OverdueContact } from "@/lib/followups";
 import { OverdueSequenceContact } from "@/lib/sequences";
 import { ContactWithRelations } from "@/types/contact";
 
 export function FollowupsClient({
   initialOverdue,
-  initialStale,
   initialOverdueSequences,
   canEdit,
 }: {
   initialOverdue: OverdueContact[];
-  initialStale: StaleContact[];
   initialOverdueSequences: OverdueSequenceContact<ContactWithRelations>[];
   canEdit: boolean;
 }) {
   const [overdue, setOverdue] = useState(initialOverdue);
-  const [stale, setStale] = useState(initialStale);
   const [overdueSequences, setOverdueSequences] = useState(initialOverdueSequences);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [selectedCadence, setSelectedCadence] = useState<Set<string>>(new Set());
@@ -49,7 +47,6 @@ export function FollowupsClient({
     setBusyId(null);
     if (res.ok) {
       setOverdue((prev) => prev.filter((c) => c.id !== id));
-      setStale((prev) => prev.filter((c) => c.id !== id));
     }
   }
 
@@ -99,10 +96,6 @@ export function FollowupsClient({
         <div className="stat-card alert">
           <div className="num">{overdueSequences.length}</div>
           <div className="label">Overdue sequence steps</div>
-        </div>
-        <div className="stat-card">
-          <div className="num">{stale.length}</div>
-          <div className="label">Data hygiene flags</div>
         </div>
       </div>
 
@@ -165,10 +158,12 @@ export function FollowupsClient({
                 )}
                 <td className="name-cell">{c.name}</td>
                 <td>{c.org || <span className="muted">—</span>}</td>
-                <td>{CONTACT_STATUS_LABELS[c.status]}</td>
+                <td>{FUNDRAISING_STAGE_LABELS[c.status]}</td>
                 <td>{c.owner?.name || <span className="muted">—</span>}</td>
                 <td>
-                  <span className="overdue-badge">{c.daysOverdue}d over (cadence {c.cadence}d)</span>
+                  <span className="overdue-badge">
+                    {Number.isFinite(c.daysOverdue) ? `${c.daysOverdue}d over (cadence ${c.cadence}d)` : `no contact on file (cadence ${c.cadence}d)`}
+                  </span>
                 </td>
                 {canEdit && (
                   <td>
@@ -247,40 +242,10 @@ export function FollowupsClient({
         </table>
       )}
 
-      <h3 style={{ marginBottom: 12 }}>Data hygiene flags</h3>
-      {stale.length === 0 ? (
-        <div className="empty">
-          <h3>Nothing flagged</h3>
-          <div>No stale or incomplete contacts.</div>
-        </div>
-      ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Organization</th>
-              <th>Owner</th>
-              <th>Why flagged</th>
-            </tr>
-          </thead>
-          <tbody>
-            {stale.map((c) => (
-              <tr key={c.id}>
-                <td className="name-cell">{c.name}</td>
-                <td>{c.org || <span className="muted">—</span>}</td>
-                <td>{c.owner?.name || <span className="muted">—</span>}</td>
-                <td>
-                  {c.staleReasons.map((r) => (
-                    <span key={r} className="tag rust">
-                      {r}
-                    </span>
-                  ))}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+      <div className="helptext" style={{ marginTop: 20 }}>
+        Looking for missing/stale contact data? That moved to{" "}
+        <Link href="/data-hygiene">Connectors &rarr; Data Hygiene</Link>.
+      </div>
     </div>
   );
 }

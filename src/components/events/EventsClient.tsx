@@ -8,6 +8,7 @@ import { EventsGrid } from "./EventsGrid";
 import { EventsCalendar } from "./EventsCalendar";
 import { EventsMap } from "./EventsMap";
 import { EventModal } from "./EventModal";
+import { BulkConferenceRefreshModal } from "./BulkConferenceRefreshModal";
 
 export function EventsClient({
   initialEvents,
@@ -23,6 +24,8 @@ export function EventsClient({
   const [cardsFilter, setCardsFilter] = useState<"all" | "quarter">("all");
   const [regionFilter, setRegionFilter] = useState<Region | "all">("all");
   const [editing, setEditing] = useState<Event | null | "new">(null);
+  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [bulkRefreshOpen, setBulkRefreshOpen] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,11 +49,22 @@ export function EventsClient({
       return exists ? prev.map((e) => (e.id === event.id ? event : e)) : [...prev, event];
     });
     setEditing(null);
+    setAutoRefresh(false);
   }
 
   function removeLocal(id: string) {
     setEvents((prev) => prev.filter((e) => e.id !== id));
     setEditing(null);
+    setAutoRefresh(false);
+  }
+
+  function openForRefresh(event: Event) {
+    setEditing(event);
+    setAutoRefresh(true);
+  }
+
+  function updateEventLocal(event: Event) {
+    setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)));
   }
 
   async function handleImportFile(file: File) {
@@ -125,6 +139,9 @@ export function EventsClient({
             <button className="btn primary" onClick={() => setEditing("new")}>
               Add event
             </button>
+            <button className="btn" onClick={() => setBulkRefreshOpen(true)}>
+              Refresh all conferences
+            </button>
           </>
         )}
       </div>
@@ -132,7 +149,7 @@ export function EventsClient({
       {importMsg && <div className="helptext" style={{ marginBottom: 12 }}>{importMsg}</div>}
 
       {viewMode === "cards" ? (
-        <EventsGrid events={filteredCards} attendeeNamesById={attendeeNamesById} onClickEvent={setEditing} />
+        <EventsGrid events={filteredCards} attendeeNamesById={attendeeNamesById} onClickEvent={setEditing} onRefreshEvent={openForRefresh} />
       ) : viewMode === "calendar" ? (
         <EventsCalendar events={byRegion} />
       ) : (
@@ -144,10 +161,18 @@ export function EventsClient({
           event={editing === "new" ? null : editing}
           team={team}
           canEdit={canEdit}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            setAutoRefresh(false);
+          }}
           onSaved={upsertLocal}
           onDeleted={removeLocal}
+          autoRefresh={autoRefresh}
         />
+      )}
+
+      {bulkRefreshOpen && (
+        <BulkConferenceRefreshModal onClose={() => setBulkRefreshOpen(false)} onEventUpdated={updateEventLocal} />
       )}
     </div>
   );

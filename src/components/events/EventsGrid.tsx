@@ -14,10 +14,12 @@ export function EventsGrid({
   events,
   attendeeNamesById,
   onClickEvent,
+  onRefreshEvent,
 }: {
   events: Event[];
   attendeeNamesById: Map<string, string>;
   onClickEvent: (event: Event) => void;
+  onRefreshEvent?: (event: Event) => void;
 }) {
   if (events.length === 0) {
     return (
@@ -42,7 +44,24 @@ export function EventsGrid({
           <div className="loc">
             {ev.location} &middot; <span className="tag">{EVENT_TYPE_LABELS[ev.type]}</span>
           </div>
+          {ev.registrationStatus && (
+            <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
+              {ev.registrationStatus}
+            </div>
+          )}
           {ev.goals && <div className="muted" style={{ fontSize: 12.5 }}>{ev.goals}</div>}
+          {ev.registrationLink && onRefreshEvent && (
+            <button
+              className="btn small ghost"
+              style={{ marginTop: 8 }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRefreshEvent(ev);
+              }}
+            >
+              Check for updates
+            </button>
+          )}
           {ev.attendeeIds.length > 0 && (
             <div style={{ marginTop: 8 }}>
               {ev.attendeeIds.map((id) => (

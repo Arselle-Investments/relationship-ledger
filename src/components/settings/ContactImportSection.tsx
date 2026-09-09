@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { VerifyAgoraModal } from "./VerifyAgoraModal";
 
 export function ContactImportSection() {
   const router = useRouter();
@@ -9,8 +10,10 @@ export function ContactImportSection() {
   const [importMsg, setImportMsg] = useState<string | null>(null);
   const [agoraImporting, setAgoraImporting] = useState(false);
   const [agoraImportMsg, setAgoraImportMsg] = useState<string | null>(null);
+  const [verifyFile, setVerifyFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const agoraFileInputRef = useRef<HTMLInputElement>(null);
+  const verifyFileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleImportFile(file: File) {
     setImporting(true);
@@ -52,8 +55,10 @@ export function ContactImportSection() {
       <div className="helptext" style={{ marginBottom: 14 }}>
         &ldquo;Import&rdquo; adds/updates contacts from a plain spreadsheet. &ldquo;Import from Agora&rdquo; is the
         everyday sync from an Agora export — it only adds new contacts and refreshes Agora-owned fields on existing
-        ones, and never deletes. For a full re-baseline instead, see &ldquo;Replace all contacts from Agora&rdquo;
-        below.
+        ones, and never deletes. &ldquo;Verify against Agora&rdquo; is for after you&rsquo;ve fixed something in
+        Agora itself (a missing org, a placeholder email, etc.) — it compares organization, phone, city, and notes
+        against the file and lets you review and apply just the differences, one field at a time. For a full
+        re-baseline instead, see &ldquo;Replace all contacts from Agora&rdquo; below.
       </div>
 
       {importMsg && <div className="helptext" style={{ marginBottom: 10 }}>{importMsg}</div>}
@@ -84,11 +89,38 @@ export function ContactImportSection() {
           e.target.value = "";
         }}
       />
-      <div>
+      <div style={{ marginBottom: 14 }}>
         <button className="btn" onClick={() => agoraFileInputRef.current?.click()} disabled={agoraImporting}>
           {agoraImporting ? "Syncing…" : "Import from Agora"}
         </button>
       </div>
+
+      <input
+        ref={verifyFileInputRef}
+        type="file"
+        accept=".xlsx,.xls"
+        style={{ display: "none" }}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) setVerifyFile(file);
+          e.target.value = "";
+        }}
+      />
+      <div>
+        <button className="btn" onClick={() => verifyFileInputRef.current?.click()}>
+          Verify against Agora
+        </button>
+      </div>
+
+      {verifyFile && (
+        <VerifyAgoraModal
+          file={verifyFile}
+          onClose={() => {
+            setVerifyFile(null);
+            router.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }

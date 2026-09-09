@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       name: safeCell(c.name),
       org: safeCell(c.org ?? ""),
       owner: safeCell(c.owner?.name ?? ""),
-      issue: `${c.daysOverdue + c.cadence}d overdue on cadence`,
+      issue: Number.isFinite(c.daysOverdue) ? `${c.daysOverdue + c.cadence}d overdue on cadence` : "no contact on file, overdue on cadence",
     });
   }
   for (const c of requiredSeq) {

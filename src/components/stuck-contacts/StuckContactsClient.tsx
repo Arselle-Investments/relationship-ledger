@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { StuckContact } from "@/lib/stuck-contacts";
 
 export function StuckContactsClient({
@@ -107,7 +107,7 @@ export function StuckContactsClient({
                   )}
                   <td className="name-cell">{c.name}</td>
                   <td>{c.org || <span className="muted">—</span>}</td>
-                  <td>{CONTACT_STATUS_LABELS[c.status]}</td>
+                  <td>{FUNDRAISING_STAGE_LABELS[c.status]}</td>
                   <td className="muted">{c.owner?.name || "—"}</td>
                   <td>
                     <span className="overdue-badge">{c.daysInStage}d</span>

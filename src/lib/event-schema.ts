@@ -10,6 +10,12 @@ export const eventInputSchema = z.object({
   attendeeIds: z.array(z.string()).default([]),
   goals: z.string().optional().default(""),
   notes: z.string().optional().default(""),
+  organizer: z.string().trim().optional().nullable(),
+  registrationLink: z.string().trim().optional().nullable(),
+  registrationStatus: z.string().trim().optional().nullable(),
+  registrationOpensAt: z.string().trim().optional().nullable(),
+  dateConfidence: z.string().trim().optional().nullable(),
+  fitNote: z.string().trim().optional().nullable(),
 });
 
 export type EventInput = z.infer<typeof eventInputSchema>;

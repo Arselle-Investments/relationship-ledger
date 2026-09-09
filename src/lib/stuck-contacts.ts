@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { ContactStatus } from "@prisma/client";
+import { FundraisingStage } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 
-const TERMINAL_STATUSES: ContactStatus[] = [ContactStatus.COMMITTED, ContactStatus.PASSED];
+const TERMINAL_STATUSES: FundraisingStage[] = [
+  FundraisingStage.COMMITTED,
+  FundraisingStage.PASSED_OPEN,
+  FundraisingStage.PASSED_NOT_INTERESTED,
+];
 
 function utcMidnight(d: Date): number {
   return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());

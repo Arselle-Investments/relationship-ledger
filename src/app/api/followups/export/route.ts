@@ -2,10 +2,10 @@ import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
-import { getOverdueContacts, getStaleContacts } from "@/lib/followups";
+import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts } from "@/lib/sequences";
 import { getSettings } from "@/lib/settings";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET() {
@@ -21,7 +21,6 @@ export async function GET() {
     getSettings(),
   ]);
   const overdue = getOverdueContacts(contacts, settings.defaultCadenceDays);
-  const stale = getStaleContacts(contacts, settings.staleDays);
   const overdueSequences = getOverdueSequenceContacts(contacts);
 
   const workbook = new ExcelJS.Workbook();
@@ -40,9 +39,9 @@ export async function GET() {
     overdueSheet.addRow({
       name: safeCell(c.name),
       org: safeCell(c.org ?? ""),
-      status: CONTACT_STATUS_LABELS[c.status],
+      status: FUNDRAISING_STAGE_LABELS[c.status],
       owner: safeCell(c.owner?.name ?? ""),
-      daysOverdue: c.daysOverdue,
+      daysOverdue: Number.isFinite(c.daysOverdue) ? c.daysOverdue : "no contact on file",
       cadence: c.cadence,
     });
   }
@@ -57,23 +56,6 @@ export async function GET() {
   seqSheet.getRow(1).font = { bold: true };
   for (const c of overdueSequences) {
     seqSheet.addRow({ name: safeCell(c.name), org: safeCell(c.org ?? ""), step: safeCell(c.step.title), due: c.step.dueDate });
-  }
-
-  const staleSheet = workbook.addWorksheet("Data hygiene flags");
-  staleSheet.columns = [
-    { header: "Name", key: "name", width: 24 },
-    { header: "Organization", key: "org", width: 26 },
-    { header: "Owner", key: "owner", width: 20 },
-    { header: "Why Flagged", key: "reasons", width: 40 },
-  ];
-  staleSheet.getRow(1).font = { bold: true };
-  for (const c of stale) {
-    staleSheet.addRow({
-      name: safeCell(c.name),
-      org: safeCell(c.org ?? ""),
-      owner: safeCell(c.owner?.name ?? ""),
-      reasons: c.staleReasons.join(", "),
-    });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();

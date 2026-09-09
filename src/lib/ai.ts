@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
-import { ContactStatus } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { FundraisingStage } from "@prisma/client";
 
 let client: Anthropic | null = null;
 
@@ -75,11 +75,11 @@ export async function extractContactFromMessage(subject: string, bodyText: strin
 }
 
 export type StageSignal = {
-  suggestedStatus: ContactStatus | null;
+  suggestedStatus: FundraisingStage | null;
   rationale: string | null;
 };
 
-const STATUS_VALUES = Object.values(ContactStatus);
+const STATUS_VALUES = Object.values(FundraisingStage);
 
 const STAGE_SIGNAL_TOOL = {
   name: "stage_signal",
@@ -111,13 +111,13 @@ const STAGE_SIGNAL_TOOL = {
  * actually changes).
  */
 export async function classifyStageSignal(params: {
-  currentStatus: ContactStatus;
+  currentStatus: FundraisingStage;
   recentHistory: string; // short plain-text summary of recent stage changes, if any
   subject: string;
   bodyText: string;
 }): Promise<StageSignal> {
   const anthropic = getClient();
-  const statusList = STATUS_VALUES.map((s) => `${s} (${CONTACT_STATUS_LABELS[s]})`).join(", ");
+  const statusList = STATUS_VALUES.map((s) => `${s} (${FUNDRAISING_STAGE_LABELS[s]})`).join(", ");
   const message = await anthropic.messages.create({
     model: FAST_MODEL,
     max_tokens: 512,
@@ -128,10 +128,15 @@ export async function classifyStageSignal(params: {
         role: "user",
         content: `You're tracking an LP/investor's position in a fundraising pipeline. The possible stages are: ${statusList}.
 
-This contact's current stage: ${params.currentStatus} (${CONTACT_STATUS_LABELS[params.currentStatus]}).
+Important stage definitions:
+- DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's FOLLOW_UP_ENGAGEMENT unless the message explicitly mentions an NDA or data room access.
+- PASSED_OPEN means they declined this specific deal but remain open to future ones (a soft no).
+- PASSED_NOT_INTERESTED means a genuine, unambiguous no — not just declining one deal, but signaling they don't want to hear about future ones either.
+
+This contact's current stage: ${params.currentStatus} (${FUNDRAISING_STAGE_LABELS[params.currentStatus]}).
 ${params.recentHistory ? `Recent history: ${params.recentHistory}` : "No prior stage history."}
 
-A new message just came in from them. Does it clearly signal a move to a different stage? Only suggest a change if the message content itself makes it evident (e.g. explicitly scheduling a meeting, confirming a commitment, passing) — don't guess from a vague or routine message.
+A new message just came in from them. Does it clearly signal a move to a different stage? Only suggest a change if the message content itself makes it evident (e.g. explicitly scheduling a meeting, confirming a commitment, mentioning an NDA or data room, passing) — don't guess from a vague or routine message.
 
 Subject: ${params.subject}
 
@@ -159,7 +164,7 @@ ${params.bodyText.slice(0, 8000)}`,
 export async function draftCheckInEmail(params: {
   name: string;
   org: string | null;
-  status: ContactStatus;
+  status: FundraisingStage;
   daysInStage: number;
   notes: string | null;
 }): Promise<string> {
@@ -173,7 +178,7 @@ export async function draftCheckInEmail(params: {
         content: `Draft a short, warm, low-pressure check-in email to an LP/investor contact who's gone quiet. Write only the email body (no subject line, no placeholders like [Your Name] — sign off simply as "Best,"). Keep it under 120 words, no hard sell.
 
 Contact: ${params.name}${params.org ? `, ${params.org}` : ""}
-Current pipeline stage: ${CONTACT_STATUS_LABELS[params.status]}
+Current pipeline stage: ${FUNDRAISING_STAGE_LABELS[params.status]}
 Time with no movement in this stage: ${params.daysInStage} days
 ${params.notes ? `Latest notes on file: ${params.notes}` : ""}`,
       },
@@ -214,6 +219,118 @@ Dates ${params.travelerName} will be there: ${params.startDate} to ${params.endD
   });
   const textBlock = message.content.find((c) => c.type === "text");
   return textBlock && textBlock.type === "text" ? textBlock.text.trim() : "";
+}
+
+export type ConferenceRefreshResult = {
+  startDate: string | null; // YYYY-MM-DD
+  endDate: string | null; // YYYY-MM-DD
+  location: string | null;
+  registrationStatus: string | null;
+  registrationLink: string | null;
+  registrationOpensAt: string | null; // YYYY-MM-DD
+  dateConfidence: string | null;
+  fitNote: string | null;
+  summary: string | null; // one-line human summary of what changed / was confirmed
+};
+
+const CONFERENCE_REFRESH_TOOL = {
+  name: "conference_refresh",
+  description: "Updated conference details extracted from its registration page, compared against what's currently on file.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      startDate: { type: ["string", "null"], description: "The conference's start date as YYYY-MM-DD, only if it's different from what's on file. Null if unchanged or not stated." },
+      endDate: { type: ["string", "null"], description: "The conference's end date as YYYY-MM-DD, only if it's different from what's on file. Null if unchanged, a single-day event, or not stated." },
+      location: { type: ["string", "null"], description: "Venue/city, only if the page states one. Null if not found or unchanged from what's on file." },
+      registrationStatus: {
+        type: ["string", "null"],
+        description: "Short freeform status, e.g. 'Registration open', 'Registration not yet open', 'Sold out', 'Waitlist only'. Null if the page gives no clear signal.",
+      },
+      registrationLink: { type: ["string", "null"], description: "The direct registration/signup URL if the page links to one distinct from the page checked. Null otherwise." },
+      registrationOpensAt: { type: ["string", "null"], description: "Date registration opens/opened, as YYYY-MM-DD. Null if not stated." },
+      dateConfidence: {
+        type: ["string", "null"],
+        description: "One short phrase on how confident the page's information seems, e.g. 'Confirmed on official site', 'Date not yet announced'. Null if nothing to note.",
+      },
+      fitNote: { type: ["string", "null"], description: "Null unless the page reveals something relevant to whether this fits Arselle's outreach (audience, theme). Otherwise null." },
+      summary: { type: ["string", "null"], description: "One short sentence a human can scan to see what's new or confirmed. Null if nothing found." },
+    },
+    required: [
+      "startDate",
+      "endDate",
+      "location",
+      "registrationStatus",
+      "registrationLink",
+      "registrationOpensAt",
+      "dateConfidence",
+      "fitNote",
+      "summary",
+    ],
+  },
+};
+
+/**
+ * Reads a conference's registration page (already fetched and stripped to
+ * text by the caller) and extracts anything that looks new or changed versus
+ * what's currently on file. Never applies anything itself — the caller
+ * surfaces this as a suggestion for a human to accept or dismiss field by
+ * field, same as every other AI-assisted feature in this app.
+ */
+export async function refreshConferenceInfo(params: {
+  eventName: string;
+  currentStartDate: string; // YYYY-MM-DD
+  currentEndDate: string; // YYYY-MM-DD
+  currentLocation: string | null;
+  currentRegistrationStatus: string | null;
+  pageUrl: string;
+  pageText: string;
+}): Promise<ConferenceRefreshResult> {
+  const anthropic = getClient();
+  const message = await anthropic.messages.create({
+    model: FAST_MODEL,
+    max_tokens: 700,
+    tools: [CONFERENCE_REFRESH_TOOL],
+    tool_choice: { type: "tool", name: "conference_refresh" },
+    messages: [
+      {
+        role: "user",
+        content: `This is the text content of a conference's registration/info page. Compare it against what we currently have on file and report only what's new, changed, or newly confirmed. Leave a field null if the page doesn't say anything different from what's already on file, or doesn't mention it at all.
+
+Conference: ${params.eventName}
+Page checked: ${params.pageUrl}
+Currently on file — dates: ${params.currentStartDate} to ${params.currentEndDate}, location: ${params.currentLocation ?? "(none)"}, registration status: ${params.currentRegistrationStatus ?? "(none)"}
+
+Page text:
+${params.pageText.slice(0, 12000)}`,
+      },
+    ],
+  });
+  const toolUse = message.content.find((c) => c.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") {
+    return {
+      startDate: null,
+      endDate: null,
+      location: null,
+      registrationStatus: null,
+      registrationLink: null,
+      registrationOpensAt: null,
+      dateConfidence: null,
+      fitNote: null,
+      summary: null,
+    };
+  }
+  const input = toolUse.input as ConferenceRefreshResult;
+  return {
+    startDate: input.startDate || null,
+    endDate: input.endDate || null,
+    location: input.location || null,
+    registrationStatus: input.registrationStatus || null,
+    registrationLink: input.registrationLink || null,
+    registrationOpensAt: input.registrationOpensAt || null,
+    dateConfidence: input.dateConfidence || null,
+    fitNote: input.fitNote || null,
+    summary: input.summary || null,
+  };
 }
 
 export type ContactNewsItem = {
