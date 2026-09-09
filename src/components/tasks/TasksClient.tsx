@@ -80,6 +80,10 @@ export function TasksClient({
 
   function isAssignedToMe(task: TaskWithRelations): boolean {
     if (task.ownerId === currentUserId) return true;
+    // "Team" is a sentinel meaning all three task-team members jointly, not
+    // literal text to substring-match — a plain includes() check would never
+    // match anyone's actual name against the string "Team".
+    if (task.assigneeLabel === "Team") return taskTeam.some((u) => u.id === currentUserId);
     if (currentUserName && task.assigneeLabel) return task.assigneeLabel.includes(currentUserName);
     return false;
   }

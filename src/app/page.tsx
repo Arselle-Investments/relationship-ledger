@@ -4,6 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { prisma } from "@/lib/prisma";
 import { HomeClient } from "@/components/home/HomeClient";
 import { Role, TaskStatus } from "@prisma/client";
+import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
 
 export default async function HomePage() {
   const session = await auth();
@@ -28,11 +29,15 @@ export default async function HomePage() {
   ]);
 
   // "Mine" — either the sole owner, or named in a joint assigneeLabel (e.g.
-  // "Aaron Greeno or Kev Zoryan" / "Team"). Filtered here rather than by a
-  // query since the label match is a substring check, not a column equality.
-  const myTasks = allOpenTasks.filter(
-    (t) => t.ownerId === user.id || (user.name && t.assigneeLabel?.includes(user.name))
-  );
+  // "Aaron Greeno or Kev Zoryan"). "Team" is a sentinel meaning all three
+  // task-team members jointly, not literal text — only counts as "mine" when
+  // the signed-in user is actually one of the three.
+  const isOnTaskTeam = !!user.email && TASK_TEAM_EMAILS.includes(user.email.toLowerCase());
+  const myTasks = allOpenTasks.filter((t) => {
+    if (t.ownerId === user.id) return true;
+    if (t.assigneeLabel === "Team") return isOnTaskTeam;
+    return !!(user.name && t.assigneeLabel?.includes(user.name));
+  });
 
   return (
     <AppShell activeHref="/" user={user}>
