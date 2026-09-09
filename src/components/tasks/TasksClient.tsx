@@ -2,11 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { Contact, TaskStatus, User } from "@prisma/client";
-import { TASK_BOARD_COLUMNS } from "@/lib/task-constants";
+import { Contact, TaskPriority, User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
-import { BoardColumn } from "./BoardColumn";
+import { PriorityColumn } from "./PriorityColumn";
 import { TaskModal } from "./TaskModal";
+import { TasksCalendar } from "./TasksCalendar";
+
+const PRIORITY_COLUMNS: TaskPriority[] = [TaskPriority.HIGH, TaskPriority.MEDIUM, TaskPriority.LOW];
+
+function byDueDateAsc(a: TaskWithRelations, b: TaskWithRelations) {
+  if (!a.dueDate && !b.dueDate) return 0;
+  if (!a.dueDate) return 1;
+  if (!b.dueDate) return -1;
+  return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+}
 
 export function TasksClient({
   initialTasks,
@@ -21,6 +30,8 @@ export function TasksClient({
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [ownerFilter, setOwnerFilter] = useState("");
+  const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
+  const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<TaskWithRelations | null | "new">(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -39,12 +50,22 @@ export function TasksClient({
     return tasks.filter((t) => t.ownerId === ownerFilter);
   }, [tasks, ownerFilter]);
 
-  const byColumn = useMemo(() => {
-    const map = new Map<TaskStatus, TaskWithRelations[]>();
-    for (const status of TASK_BOARD_COLUMNS) map.set(status, []);
-    for (const t of filtered) map.get(t.status)?.push(t);
+  // Done tasks are archived out of the active board — they're still on file
+  // (and still counted, exportable, and searchable in the calendar) but
+  // don't clutter the view the team actually works from day to day.
+  const activeTasks = useMemo(() => filtered.filter((t) => t.status !== "DONE"), [filtered]);
+  const doneTasks = useMemo(
+    () => filtered.filter((t) => t.status === "DONE").sort((a, b) => b.updatedAt.valueOf() - a.updatedAt.valueOf()),
+    [filtered]
+  );
+
+  const byPriority = useMemo(() => {
+    const map = new Map<TaskPriority, TaskWithRelations[]>();
+    for (const pr of PRIORITY_COLUMNS) map.set(pr, []);
+    for (const t of activeTasks) map.get(t.priority)?.push(t);
+    for (const pr of PRIORITY_COLUMNS) map.get(pr)?.sort(byDueDateAsc);
     return map;
-  }, [filtered]);
+  }, [activeTasks]);
 
   function upsertLocal(task: TaskWithRelations) {
     setTasks((prev) => {
@@ -59,29 +80,49 @@ export function TasksClient({
     setEditing(null);
   }
 
+  async function patchTask(id: string, data: Record<string, unknown>) {
+    const res = await fetch(`/api/tasks/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.task as TaskWithRelations;
+  }
+
+  async function handleMarkDone(task: TaskWithRelations) {
+    setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: "DONE" } : t)));
+    const updated = await patchTask(task.id, { status: "DONE" });
+    if (updated) setTasks((prev) => prev.map((t) => (t.id === task.id ? updated : t)));
+  }
+
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
     const taskId = active.id as string;
-    const newStatus = over.id as TaskStatus;
+    const newPriority = over.id as TaskPriority;
     const task = tasks.find((t) => t.id === taskId);
-    if (!task || task.status === newStatus) return;
+    if (!task || task.priority === newPriority) return;
 
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
-    const res = await fetch(`/api/tasks/${taskId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: newStatus }),
-    });
-    if (!res.ok) {
-      // roll back on failure
-      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: task.status } : t)));
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: newPriority } : t)));
+    const updated = await patchTask(taskId, { priority: newPriority });
+    if (!updated) {
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, priority: task.priority } : t)));
     }
   }
 
   return (
     <div>
       <div className="toolbar">
+        <div className="view-toggle">
+          <button className={viewMode === "board" ? "active" : ""} onClick={() => setViewMode("board")}>
+            Board
+          </button>
+          <button className={viewMode === "calendar" ? "active" : ""} onClick={() => setViewMode("calendar")}>
+            Calendar
+          </button>
+        </div>
         <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
           <option value="">All owners</option>
           {team.map((u) => (
@@ -106,19 +147,54 @@ export function TasksClient({
         )}
       </div>
 
-      <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div id="task-board">
-          {TASK_BOARD_COLUMNS.map((status) => (
-            <BoardColumn
-              key={status}
-              status={status}
-              tasks={byColumn.get(status) ?? []}
-              canEdit={canEdit}
-              onCardClick={setEditing}
-            />
-          ))}
-        </div>
-      </DndContext>
+      {viewMode === "board" ? (
+        <>
+          <DndContext id="tasks-priority-board" sensors={sensors} onDragEnd={handleDragEnd}>
+            <div className="tier-board">
+              {PRIORITY_COLUMNS.map((priority) => (
+                <PriorityColumn
+                  key={priority}
+                  priority={priority}
+                  tasks={byPriority.get(priority) ?? []}
+                  canEdit={canEdit}
+                  onCardClick={setEditing}
+                  onMarkDone={handleMarkDone}
+                />
+              ))}
+            </div>
+          </DndContext>
+
+          <div style={{ marginTop: 24 }}>
+            <button className="btn small ghost" onClick={() => setShowDone((v) => !v)}>
+              {showDone ? "Hide" : "Show"} done ({doneTasks.length})
+            </button>
+            {showDone && (
+              <table style={{ marginTop: 12 }}>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Assigned to</th>
+                    <th>Contact</th>
+                    <th>Due date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {doneTasks.map((t) => (
+                    <tr key={t.id} onClick={() => setEditing(t)}>
+                      <td className="name-cell">{t.title}</td>
+                      <td className="muted">{t.assigneeLabel || t.owner?.name || "—"}</td>
+                      <td className="muted">{t.contact?.name || "—"}</td>
+                      <td className="muted">{t.dueDate ? new Date(t.dueDate).toISOString().slice(0, 10) : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </>
+      ) : (
+        <TasksCalendar tasks={filtered} onTaskClick={setEditing} />
+      )}
 
       {editing !== null && (
         <TaskModal

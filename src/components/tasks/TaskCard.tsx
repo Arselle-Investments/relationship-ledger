@@ -7,10 +7,12 @@ export function TaskCard({
   task,
   canEdit,
   onClick,
+  onMarkDone,
 }: {
   task: TaskWithRelations;
   canEdit: boolean;
   onClick: () => void;
+  onMarkDone?: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -33,7 +35,10 @@ export function TaskCard({
       className={`task-card ${isOverdue ? "overdue" : ""} ${isDragging ? "dragging" : ""}`}
       onClick={onClick}
     >
-      <div className="t">{task.title}</div>
+      <div className="t">
+        {task.title}
+        {task.status === "IN_PROGRESS" && <span className="tag brass" style={{ marginLeft: 6 }}>In progress</span>}
+      </div>
       <div className="meta">
         <span>
           <span className={`pri-dot pri-${task.priority === "HIGH" ? "High" : task.priority === "LOW" ? "Low" : "Medium"}`} />
@@ -45,6 +50,19 @@ export function TaskCard({
         <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>
           {task.contact.name}
         </div>
+      )}
+      {canEdit && onMarkDone && (
+        <button
+          type="button"
+          className="btn small"
+          style={{ marginTop: 8 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            onMarkDone();
+          }}
+        >
+          Mark done
+        </button>
       )}
     </div>
   );

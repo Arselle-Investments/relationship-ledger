@@ -11,5 +11,3 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   MEDIUM: "Medium",
   LOW: "Low",
 };
-
-export const TASK_BOARD_COLUMNS: TaskStatus[] = [TaskStatus.OPEN, TaskStatus.IN_PROGRESS, TaskStatus.DONE];
