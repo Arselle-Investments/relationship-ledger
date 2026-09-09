@@ -123,14 +123,14 @@ table tbody tr{cursor:pointer;}
 .pri-Medium{background:var(--brass);}
 .pri-Low{background:var(--slate);}
 
-/* Events */
-#events-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
-.event-card{padding:16px;background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;}
-.event-card .dates{font-family:'Work Sans',sans-serif;font-size:11px;color:var(--brass-dark);letter-spacing:.03em;}
-.event-card h3{font-size:16px;margin:6px 0 4px;}
-.event-card .loc{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
+/* Conferences */
+#conferences-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;}
+.conference-card{padding:16px;background:var(--paper-raised);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);cursor:pointer;}
+.conference-card .dates{font-family:'Work Sans',sans-serif;font-size:11px;color:var(--brass-dark);letter-spacing:.03em;}
+.conference-card h3{font-size:16px;margin:6px 0 4px;}
+.conference-card .loc{font-size:12.5px;color:var(--ink-soft);margin-bottom:8px;}
 
-/* Events calendar */
+/* Conferences calendar */
 .view-toggle{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden;}
 .view-toggle button{font-family:'Work Sans',sans-serif;font-size:12.5px;font-weight:600;padding:7px 13px;border:none;background:var(--paper-raised);color:var(--ink-soft);cursor:pointer;}
 .view-toggle button.active{background:var(--ink);color:var(--paper);}
@@ -147,12 +147,12 @@ table tbody tr{cursor:pointer;}
 .cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
 .cal-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;font-size:10.5px;border-radius:5px;padding-top:3px;position:relative;cursor:default;color:var(--ink-soft);}
 .cal-day.pad{visibility:hidden;}
-.cal-day.has-event{background:var(--brass-bg);color:var(--ink);cursor:pointer;font-weight:600;}
-.cal-day.has-event:hover{background:var(--brass);color:#fff;}
+.cal-day.has-conference{background:var(--brass-bg);color:var(--ink);cursor:pointer;font-weight:600;}
+.cal-day.has-conference:hover{background:var(--brass);color:#fff;}
 .cal-day.today{box-shadow:inset 0 0 0 1.5px var(--slate);}
 .cal-day .dots{display:flex;gap:2px;margin-top:2px;}
 .cal-day .dots span{width:4px;height:4px;border-radius:50%;background:var(--brass-dark);}
-.cal-day.has-event:hover .dots span{background:#fff;}
+.cal-day.has-conference:hover .dots span{background:#fff;}
 
 /* Priorities grid */
 #pri-grid-wrap{overflow-x:auto;}

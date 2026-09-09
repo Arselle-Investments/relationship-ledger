@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { formatDateRange } from "@/lib/travel-templates";
 import { FundraisingStage } from "@prisma/client";
 
 let client: Anthropic | null = null;
@@ -213,7 +214,7 @@ export async function draftTravelOutreachEmail(params: {
 
 Contact: ${params.contactName}${params.contactOrg ? `, ${params.contactOrg}` : ""}
 City: ${params.city}
-Dates ${params.travelerName} will be there: ${params.startDate} to ${params.endDate}`,
+Dates ${params.travelerName} will be there: ${formatDateRange(params.startDate, params.endDate)}`,
       },
     ],
   });

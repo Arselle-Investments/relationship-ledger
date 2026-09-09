@@ -32,9 +32,18 @@ export function ConferencesGrid({
 
   const sorted = [...conferences].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime());
 
+  const seriesCounts = new Map<string, number>();
+  for (const c of conferences) {
+    const key = c.seriesId ?? c.id;
+    seriesCounts.set(key, (seriesCounts.get(key) ?? 0) + 1);
+  }
+
   return (
     <div id="conferences-grid">
-      {sorted.map((ev) => (
+      {sorted.map((ev) => {
+        const seriesKey = ev.seriesId ?? ev.id;
+        const seriesSize = seriesCounts.get(seriesKey) ?? 1;
+        return (
         <div key={ev.id} className="conference-card" onClick={() => onClickConference(ev)}>
           <div className="dates">
             {fmtDate(ev.startDate)}
@@ -43,6 +52,11 @@ export function ConferencesGrid({
           <h3>{ev.name}</h3>
           <div className="loc">
             {ev.location} &middot; <span className="tag">{CONFERENCE_TYPE_LABELS[ev.type]}</span>
+            {seriesSize > 1 && (
+              <span className="tag forest" title="This conference recurs — other years are tracked as separate entries linked to this one">
+                Recurring &middot; {seriesSize} years on file
+              </span>
+            )}
           </div>
           {ev.registrationStatus && (
             <div className="muted" style={{ fontSize: 12.5, marginTop: 4 }}>
@@ -72,7 +86,8 @@ export function ConferencesGrid({
             </div>
           )}
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
