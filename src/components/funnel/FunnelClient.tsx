@@ -2,19 +2,40 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { FundraisingStage } from "@prisma/client";
+import { FundraisingStage, User } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
+import { ContactModal } from "@/components/contacts/ContactModal";
 
-export function FunnelClient({ contacts, canEdit }: { contacts: ContactWithRelations[]; canEdit: boolean }) {
+export function FunnelClient({
+  contacts: initialContacts,
+  team,
+  canEdit,
+}: {
+  contacts: ContactWithRelations[];
+  team: User[];
+  canEdit: boolean;
+}) {
+  const [contacts, setContacts] = useState(initialContacts);
   const counts = useMemo(() => buildFunnelCounts(contacts), [contacts]);
   const max = Math.max(1, ...counts.map((c) => c.count));
   const [selected, setSelected] = useState<FundraisingStage | null>(null);
   const [creatingList, setCreatingList] = useState(false);
   const [createdListId, setCreatedListId] = useState<string | null>(null);
+  const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
 
   const matches = useMemo(() => (selected ? contacts.filter((c) => c.status === selected) : []), [contacts, selected]);
+
+  function handleContactSaved(contact: ContactWithRelations) {
+    setContacts((prev) => prev.map((c) => (c.id === contact.id ? contact : c)));
+    setEditingContact(null);
+  }
+
+  function handleContactDeleted(id: string) {
+    setContacts((prev) => prev.filter((c) => c.id !== id));
+    setEditingContact(null);
+  }
 
   async function createListForStage() {
     if (!selected) return;
@@ -115,6 +136,8 @@ export function FunnelClient({ contacts, canEdit }: { contacts: ContactWithRelat
               {matches.length === 0 ? (
                 <div className="muted">No contacts in this stage.</div>
               ) : (
+                <>
+                <div className="helptext" style={{ marginBottom: 8 }}>Click a contact to see their details and correspondence.</div>
                 <table>
                   <thead>
                     <tr>
@@ -125,7 +148,7 @@ export function FunnelClient({ contacts, canEdit }: { contacts: ContactWithRelat
                   </thead>
                   <tbody>
                     {matches.map((c) => (
-                      <tr key={c.id}>
+                      <tr key={c.id} onClick={() => setEditingContact(c)}>
                         <td className="name-cell">{c.name}</td>
                         <td>{c.org || <span className="muted">—</span>}</td>
                         <td className="muted">{c.owner?.name || "—"}</td>
@@ -133,10 +156,22 @@ export function FunnelClient({ contacts, canEdit }: { contacts: ContactWithRelat
                     ))}
                   </tbody>
                 </table>
+                </>
               )}
             </div>
           </div>
         </div>
+      )}
+
+      {editingContact && (
+        <ContactModal
+          contact={editingContact}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setEditingContact(null)}
+          onSaved={handleContactSaved}
+          onDeleted={handleContactDeleted}
+        />
       )}
     </div>
   );

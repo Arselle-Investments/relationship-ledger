@@ -55,7 +55,7 @@ export function ActivityTimeline({
     if (res.ok) reload();
   }
 
-  if (entries === null || entries.length === 0) return null;
+  if (entries === null) return null; // still loading — avoid a flash of the empty state
 
   return (
     <div className="activity-log">
@@ -70,12 +70,23 @@ export function ActivityTimeline({
           marginBottom: 8,
         }}
       >
-        Activity
+        Correspondence &amp; activity ({entries.length})
       </label>
+      {entries.length === 0 && (
+        <div className="muted" style={{ fontSize: 12.5 }}>No correspondence or stage changes on file yet for this contact.</div>
+      )}
       {entries.map((entry) =>
         entry.kind === "correspondence" ? (
           <div key={`c-${entry.data.id}`} className="activity-item">
             <span className="when">{new Date(entry.at).toLocaleDateString()}</span> — {entry.data.subject || "(no subject)"}
+            {entry.data.bodyText && entry.data.bodyText.trim() && (
+              <div
+                className="muted"
+                style={{ fontSize: 12, marginTop: 3, whiteSpace: "pre-wrap", maxHeight: 90, overflow: "auto" }}
+              >
+                {entry.data.bodyText.trim().slice(0, 600)}
+              </div>
+            )}
             {entry.data.suggestionState === "PENDING" && entry.data.suggestedStatus && (
               <div style={{ marginTop: 4, padding: "6px 8px", background: "var(--forest-bg)", borderRadius: 6 }}>
                 <div style={{ fontSize: 12, color: "var(--ink)" }}>
