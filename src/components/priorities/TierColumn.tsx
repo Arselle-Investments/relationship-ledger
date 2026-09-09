@@ -9,17 +9,22 @@ export function TierColumn({
   tier,
   children,
   count,
+  itemLabel,
 }: {
   dropId: string;
   tier: ContactTier;
   children: React.ReactNode;
   count: number;
+  itemLabel: string;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dropId });
   return (
     <div ref={setNodeRef} className={`board-col ${isOver ? "drag-over" : ""}`}>
-      <h3>
-        {CONTACT_TIER_LABELS[tier]} <span className="muted">{count}</span>
+      <h3 className="tier-col-head">
+        <span className="tier-col-title">{CONTACT_TIER_LABELS[tier]}</span>
+        <span className="tier-col-count">
+          {count} {itemLabel}
+        </span>
       </h3>
       {children}
     </div>

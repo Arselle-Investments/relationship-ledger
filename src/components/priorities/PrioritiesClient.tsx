@@ -25,21 +25,33 @@ export function PrioritiesClient({
   const [contacts, setContacts] = useState(initialContacts);
   const [companies, setCompanies] = useState(initialCompanies);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
+  const [companySearch, setCompanySearch] = useState("");
+  const [contactSearch, setContactSearch] = useState("");
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const companiesByTier = useMemo(() => {
+    const q = companySearch.trim().toLowerCase();
+    const filtered = q
+      ? companies.filter((c) => c.name.toLowerCase().includes(q) || (c.city ?? "").toLowerCase().includes(q))
+      : companies;
     const map = new Map<ContactTier, Company[]>();
     for (const t of TIERS) map.set(t, []);
-    for (const c of companies) if (c.tier) map.get(c.tier)?.push(c);
+    for (const c of filtered) if (c.tier) map.get(c.tier)?.push(c);
+    for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
     return map;
-  }, [companies]);
+  }, [companies, companySearch]);
 
   const contactsByTier = useMemo(() => {
+    const q = contactSearch.trim().toLowerCase();
+    const filtered = q
+      ? contacts.filter((c) => c.name.toLowerCase().includes(q) || (c.org ?? "").toLowerCase().includes(q))
+      : contacts;
     const map = new Map<ContactTier, ContactWithRelations[]>();
     for (const t of TIERS) map.set(t, []);
-    for (const c of contacts) map.get(c.tier)?.push(c);
+    for (const c of filtered) map.get(c.tier)?.push(c);
+    for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
     return map;
-  }, [contacts]);
+  }, [contacts, contactSearch]);
 
   const untieredCompanyCount = companies.filter((c) => !c.tier).length;
 
@@ -99,7 +111,16 @@ export function PrioritiesClient({
         </div>
       </div>
 
-      <h3 style={{ marginBottom: 12, fontSize: 14 }}>Companies by tier</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <h3 style={{ fontSize: 14 }}>Companies by tier</h3>
+        <input
+          type="text"
+          placeholder="Search companies…"
+          value={companySearch}
+          onChange={(e) => setCompanySearch(e.target.value)}
+          style={{ width: 220 }}
+        />
+      </div>
       {untieredCompanyCount > 0 && (
         <div className="helptext" style={{ marginBottom: 10 }}>
           {untieredCompanyCount} compan{untieredCompanyCount === 1 ? "y has" : "ies have"} no tier set yet and
@@ -109,7 +130,7 @@ export function PrioritiesClient({
       <DndContext id="companies-tier-board" sensors={sensors} onDragEnd={handleCompanyDragEnd}>
         <div className="tier-board">
           {TIERS.map((tier) => (
-            <TierColumn key={tier} dropId={tier} tier={tier} count={companiesByTier.get(tier)?.length ?? 0}>
+            <TierColumn key={tier} dropId={tier} tier={tier} count={companiesByTier.get(tier)?.length ?? 0} itemLabel="companies">
               {(companiesByTier.get(tier) ?? []).map((c) => (
                 <TierCard
                   key={c.id}
@@ -124,11 +145,20 @@ export function PrioritiesClient({
         </div>
       </DndContext>
 
-      <h3 style={{ marginBottom: 12, fontSize: 14 }}>Contacts by tier</h3>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
+        <h3 style={{ fontSize: 14 }}>Contacts by tier</h3>
+        <input
+          type="text"
+          placeholder="Search contacts…"
+          value={contactSearch}
+          onChange={(e) => setContactSearch(e.target.value)}
+          style={{ width: 220 }}
+        />
+      </div>
       <DndContext id="contacts-tier-board" sensors={sensors} onDragEnd={handleContactDragEnd}>
         <div className="tier-board">
           {TIERS.map((tier) => (
-            <TierColumn key={tier} dropId={tier} tier={tier} count={contactsByTier.get(tier)?.length ?? 0}>
+            <TierColumn key={tier} dropId={tier} tier={tier} count={contactsByTier.get(tier)?.length ?? 0} itemLabel="contacts">
               {(contactsByTier.get(tier) ?? []).map((c) => (
                 <TierCard
                   key={c.id}
