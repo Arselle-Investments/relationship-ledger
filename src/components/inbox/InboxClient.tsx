@@ -1,9 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { CapitalSource, Consultant, Contact, FundraisingStage, Correspondence } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { parseSignature } from "@/lib/signature-parse";
+import { extractHighlight } from "@/lib/correspondence-highlight";
 
 const STATUS_OPTIONS = Object.values(FundraisingStage);
 
@@ -197,9 +198,10 @@ function CorrespondenceCard({
   const [existingContactId, setExistingContactId] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const highlight = useMemo(() => extractHighlight(item.bodyText), [item.bodyText]);
 
   function parseFromSignature() {
-    const found = parseSignature(item.bodyText);
+    const found = parseSignature(item.bodyText, { name: name || item.extractedName, email: email || item.extractedEmail });
     setSignatureParsed(true);
     if (found.phone) setPhone(found.phone);
     if (found.title) setTitle(found.title);
@@ -282,9 +284,16 @@ function CorrespondenceCard({
         <span className="tag forest">suggested contact</span>
       </div>
 
-      <div className="muted" style={{ fontSize: 12.5, marginTop: 10, whiteSpace: "pre-wrap", maxHeight: 100, overflow: "auto" }}>
-        {item.bodyText.slice(0, 500)}
-      </div>
+      {highlight ? (
+        <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--brass-bg)", borderRadius: 6, fontSize: 12.5 }}>
+          <span className="tag brass" style={{ marginRight: 6 }}>New interaction</span>
+          {highlight}
+        </div>
+      ) : (
+        <div className="muted" style={{ fontSize: 12.5, marginTop: 10, whiteSpace: "pre-wrap", maxHeight: 100, overflow: "auto" }}>
+          {item.bodyText.slice(0, 500)}
+        </div>
+      )}
 
       {!canEdit ? (
         <div className="helptext" style={{ marginTop: 10 }}>
