@@ -60,6 +60,21 @@ export function ListsClient({
     return emails.length === 0 ? "mailto:" : `mailto:?bcc=${encodeURIComponent(emails.join(","))}`;
   }
 
+  // mailto: links can fail silently — no default mail client registered, a
+  // blocked protocol handler, or (with a long recipient list) a URL the
+  // OS/browser won't hand off. Always copy the addresses too, so the click
+  // does *something* visible even when the mail client never opens.
+  async function handleMailtoClick(entry: MailingListWithContacts) {
+    const emails = emailsFor(entry);
+    if (emails.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setCopyMsg(`Also copied ${emails.length} email${emails.length === 1 ? "" : "es"} from "${entry.list.name}" to the clipboard, in case your email client didn't open.`);
+    } catch {
+      // Clipboard permission denied — the mailto: attempt still stands on its own.
+    }
+  }
+
   function upsertLocal(entry: MailingListWithContacts) {
     setLists((prev) => {
       const exists = prev.some((e) => e.list.id === entry.list.id);
@@ -146,7 +161,7 @@ export function ListsClient({
                 <button className="btn small" onClick={() => copyEmails(entry)}>
                   Copy emails
                 </button>
-                <a className="btn small" href={mailtoHref(entry)}>
+                <a className="btn small" href={mailtoHref(entry)} onClick={() => handleMailtoClick(entry)}>
                   Email (BCC)
                 </a>
                 {canEdit && (

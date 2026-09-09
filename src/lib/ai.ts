@@ -210,7 +210,7 @@ export async function draftTravelOutreachEmail(params: {
     messages: [
       {
         role: "user",
-        content: `Draft a short, warm email from ${params.travelerName} to an LP/investor contact, letting them know ${params.travelerName} will be in the contact's city and proposing to meet up. Write only the email body (no subject line, no placeholders like [Your Name] — sign off simply as "Best,"). Keep it under 100 words, casual and low-pressure, not a sales pitch.
+        content: `Draft a short, professional-but-warm email written in the first person, as if ${params.travelerName} is writing it themselves, letting an LP/investor contact know they'll be in the contact's city and proposing to meet up. Write in first person ("I'll be in town...", never "${params.travelerName} will be..."). Write only the email body (no subject line, no placeholders like [Your Name] — sign off simply as "Best,"). Keep it under 100 words, warm but professional — not overly casual, and not a sales pitch.
 
 Contact: ${params.contactName}${params.contactOrg ? `, ${params.contactOrg}` : ""}
 City: ${params.city}

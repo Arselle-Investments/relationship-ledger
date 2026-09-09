@@ -34,6 +34,9 @@ export function TripCard({
   const [draftError, setDraftError] = useState<string | null>(null);
   const [useAI, setUseAI] = useState(true);
   const aiTouched = useRef(false);
+  const [combine, setCombine] = useState(false);
+  const [combinedDraft, setCombinedDraft] = useState<string | null>(null);
+  const [mailtoNotice, setMailtoNotice] = useState<string | null>(null);
 
   async function toggleExpand() {
     const next = !expanded;
@@ -76,8 +79,18 @@ export function TripCard({
     setDrafts(next);
   }
 
+  function generateCombinedDraft() {
+    setCombinedDraft(
+      buildGenericTravelEmail({ contactName: null, travelerName, city: trip.city, startDate: startDateIso, endDate: endDateIso })
+    );
+  }
+
   async function generateDrafts() {
     if (selected.size === 0) return;
+    if (combine) {
+      generateCombinedDraft();
+      return;
+    }
     if (!useAI) {
       generateGenericDrafts();
       return;
@@ -117,18 +130,38 @@ export function TripCard({
     }
   }
 
+  function mailtoBody(): string | null {
+    if (combine) return combinedDraft;
+    if (!useAI && selected.size > 0) {
+      return buildGenericTravelEmail({ contactName: null, travelerName, city: trip.city, startDate: startDateIso, endDate: endDateIso });
+    }
+    return null;
+  }
+
   function mailtoHref(): string {
     if (!matches) return "mailto:";
     const emails = matches.filter((c) => selected.has(c.id) && c.email).map((c) => c.email as string);
     const params = new URLSearchParams();
     if (emails.length > 0) params.set("bcc", emails.join(","));
-    if (!useAI && selected.size > 0) {
-      params.set(
-        "body",
-        buildGenericTravelEmail({ contactName: "there", travelerName, city: trip.city, startDate: startDateIso, endDate: endDateIso })
-      );
-    }
+    const body = mailtoBody();
+    if (body) params.set("body", body);
     return `mailto:?${params.toString()}`;
+  }
+
+  // mailto: links can fail silently — no default mail client registered, or
+  // (with many BCC recipients plus a body) the URL simply exceeds what the
+  // OS/browser will hand off. Always copy the addresses as a fallback the
+  // user can paste in manually, so the click does *something* visible either way.
+  async function handleMailtoClick() {
+    if (!matches) return;
+    const emails = matches.filter((c) => selected.has(c.id) && c.email).map((c) => c.email as string);
+    if (emails.length === 0) return;
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setMailtoNotice(`Also copied ${emails.length} email${emails.length === 1 ? "" : "es"} to the clipboard, in case your email client didn't open.`);
+    } catch {
+      // Clipboard permission denied — the mailto: attempt still stands on its own.
+    }
   }
 
   async function createList() {
@@ -218,16 +251,29 @@ export function TripCard({
                     <input
                       type="checkbox"
                       checked={useAI}
+                      disabled={combine}
                       onChange={(e) => {
                         aiTouched.current = true;
                         setUseAI(e.target.checked);
                       }}
                     />
-                    Personalize with AI (uses AI credits — off by default past {AI_DEFAULT_THRESHOLD} contacts)
+                    Personalize with AI (uses AI credits — off by default past {AI_DEFAULT_THRESHOLD} contacts
+                    {combine ? ", unavailable when combining into one email" : ""})
+                  </label>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
+                    <input
+                      type="checkbox"
+                      checked={combine}
+                      onChange={(e) => {
+                        setCombine(e.target.checked);
+                        setCombinedDraft(null);
+                      }}
+                    />
+                    Combine into one email for everyone selected (sent as a single BCC, not personalized per person)
                   </label>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                     <button className="btn small primary" onClick={generateDrafts} disabled={selected.size === 0 || drafting}>
-                      {drafting ? "Drafting…" : `Draft outreach for ${selected.size || ""} selected`}
+                      {drafting ? "Drafting…" : combine ? `Draft combined message for ${selected.size || ""} selected` : `Draft outreach for ${selected.size || ""} selected`}
                     </button>
                     <button className="btn small" onClick={copyEmails} disabled={selected.size === 0}>
                       Copy emails
@@ -236,6 +282,7 @@ export function TripCard({
                       className="btn small"
                       style={selected.size === 0 ? { opacity: 0.5, pointerEvents: "none" } : undefined}
                       href={selected.size === 0 ? undefined : mailtoHref()}
+                      onClick={handleMailtoClick}
                     >
                       Email selected (BCC)
                     </a>
@@ -252,24 +299,39 @@ export function TripCard({
                 </div>
               )}
               {msg && <div className="helptext" style={{ marginTop: 8 }}>{msg}</div>}
+              {mailtoNotice && <div className="helptext" style={{ marginTop: 8 }}>{mailtoNotice}</div>}
               {draftError && <div className="error-text" style={{ marginTop: 8 }}>{draftError}</div>}
 
-              {Object.keys(drafts).length > 0 && (
+              {combine && combinedDraft ? (
                 <div style={{ marginTop: 14 }}>
-                  {matches
-                    .filter((c) => drafts[c.id])
-                    .map((c) => (
-                      <div key={c.id} style={{ marginBottom: 10 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
-                        <textarea
-                          readOnly
-                          value={drafts[c.id]}
-                          style={{ width: "100%", minHeight: 100, fontFamily: "'Work Sans',sans-serif", fontSize: 13 }}
-                          onClick={(e) => (e.target as HTMLTextAreaElement).select()}
-                        />
-                      </div>
-                    ))}
+                  <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
+                    Combined message ({selected.size} recipient{selected.size === 1 ? "" : "s"}, BCC)
+                  </div>
+                  <textarea
+                    readOnly
+                    value={combinedDraft}
+                    style={{ width: "100%", minHeight: 100, fontFamily: "'Work Sans',sans-serif", fontSize: 13 }}
+                    onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                  />
                 </div>
+              ) : (
+                Object.keys(drafts).length > 0 && (
+                  <div style={{ marginTop: 14 }}>
+                    {matches
+                      .filter((c) => drafts[c.id])
+                      .map((c) => (
+                        <div key={c.id} style={{ marginBottom: 10 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>{c.name}</div>
+                          <textarea
+                            readOnly
+                            value={drafts[c.id]}
+                            style={{ width: "100%", minHeight: 100, fontFamily: "'Work Sans',sans-serif", fontSize: 13 }}
+                            onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                )
               )}
             </>
           )}

@@ -33,22 +33,28 @@ export function formatDateRange(startISO: string, endISO: string): string {
  * API call, no cost. Used as the default so a team member mass-emailing a
  * long list of contacts in a city doesn't burn AI credits on every one; AI
  * personalization is an opt-in for when there are just a few people worth the
- * extra polish.
+ * extra polish. First-person from the traveler, since they're the one
+ * signing it — not a third-person announcement about them.
+ *
+ * `contactName: null` produces a group-appropriate greeting for the
+ * combined/BCC case, where the email isn't addressed to one specific person.
  */
 export function buildGenericTravelEmail(params: {
-  contactName: string;
+  contactName: string | null;
   travelerName: string;
   city: string;
   startDate: string;
   endDate: string;
 }): string {
-  const firstName = params.contactName.trim().split(/\s+/)[0] || params.contactName;
+  const greeting = params.contactName
+    ? `Hi ${params.contactName.trim().split(/\s+/)[0] || params.contactName},`
+    : "Hi all,";
   const dateRange = formatDateRange(params.startDate, params.endDate);
-  return `Hi ${firstName},
+  return `${greeting}
 
-${params.travelerName} will be in ${params.city} from ${dateRange} and would love to connect if you're around — happy to grab coffee or hop on a quick call, whatever's easiest.
+I'll be in ${params.city} from ${dateRange} and would welcome the chance to connect while I'm in town — happy to meet for coffee or a call, whichever works best for you.
 
-Let me know if you're free!
+Let me know if you have some time.
 
 Best,
 ${params.travelerName}`;
