@@ -50,7 +50,13 @@ h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:600;margin:0;color:var(--i
 .settings-link:hover{color:var(--ink);background:var(--slate-bg);}
 .settings-link.active{color:var(--ink);background:var(--slate-bg);}
 
-/* Tabs (tier 2, within the active section) */
+/* Subsection pills (tier 2, only for sections with a category above their tabs) */
+.subsection-row{display:flex;align-items:center;gap:4px;margin-top:10px;flex-wrap:wrap;}
+.subsection-pill{font-family:'Work Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.01em;padding:6px 13px;border-radius:7px;border:1px solid var(--line);background:none;color:var(--ink-soft);cursor:pointer;transition:background .12s, color .12s, border-color .12s;}
+.subsection-pill:hover{border-color:var(--brass);color:var(--ink);}
+.subsection-pill.active{background:var(--brass-bg);border-color:var(--brass);color:var(--brass-dark);}
+
+/* Tabs (tier 3, within the active section/subsection) */
 #tabs{display:flex;gap:2px;margin-top:2px;padding-top:8px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);flex-wrap:wrap;min-height:41px;}
 .tab-btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;color:var(--ink-soft);background:none;border:none;padding:11px 16px;cursor:pointer;position:relative;top:1px;border-bottom:2px solid transparent;text-decoration:none;display:inline-block;}
 .tab-btn .n{font-family:'Work Sans',sans-serif;font-size:10px;color:var(--brass-dark);margin-left:5px;}

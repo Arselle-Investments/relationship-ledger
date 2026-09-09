@@ -12,7 +12,7 @@ export default async function HomePage() {
   const user = session.user as { id: string; name?: string | null; email?: string | null; role: Role };
   const today = new Date().toISOString().slice(0, 10);
 
-  const [allOpenTasks, travel, upcomingConferences, allConferences, team] = await Promise.all([
+  const [allOpenTasks, travel, upcomingConferences, allConferences, team, contacts] = await Promise.all([
     prisma.task.findMany({
       where: { status: { not: TaskStatus.DONE } },
       include: { owner: true, contact: true },
@@ -31,6 +31,7 @@ export default async function HomePage() {
     }),
     prisma.conference.findMany(), // ConferenceModal needs the full history to detect a recurring series
     prisma.user.findMany({ orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   // "Mine" — either the sole owner, or named in a joint assigneeLabel (e.g.
@@ -49,11 +50,14 @@ export default async function HomePage() {
       <HomeClient
         currentUserId={user.id}
         userName={user.name ?? user.email ?? "there"}
+        currentUserName={user.name ?? null}
+        isOnTaskTeam={isOnTaskTeam}
         tasks={myTasks}
         travel={travel}
         conferences={upcomingConferences}
         allConferences={allConferences}
         team={team}
+        contacts={contacts}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

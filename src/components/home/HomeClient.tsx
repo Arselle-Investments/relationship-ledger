@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Conference, Travel, User } from "@prisma/client";
+import { Conference, Contact, Travel, User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
 import { ConferenceModal } from "@/components/conferences/ConferenceModal";
+import { TaskModal } from "@/components/tasks/TaskModal";
 
 function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -20,27 +21,43 @@ function greeting(): string {
 export function HomeClient({
   currentUserId,
   userName,
+  currentUserName,
+  isOnTaskTeam,
   tasks: initialTasks,
-  travel,
+  travel: initialTravel,
   conferences: initialConferences,
   allConferences: initialAllConferences,
   team,
+  contacts,
   canEdit,
 }: {
   currentUserId: string;
   userName: string;
+  currentUserName: string | null;
+  isOnTaskTeam: boolean;
   tasks: TaskWithRelations[];
   travel: Travel[];
   conferences: Conference[];
   allConferences: Conference[];
   team: User[];
+  contacts: Contact[];
   canEdit: boolean;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [conferences, setConferences] = useState(initialConferences);
   const [allConferences, setAllConferences] = useState(initialAllConferences);
   const [editingConference, setEditingConference] = useState<Conference | null>(null);
+  const [addingTask, setAddingTask] = useState(false);
   const myConferenceCount = conferences.filter((c) => c.attendeeIds.includes(currentUserId)).length;
+
+  const [travel, setTravel] = useState(initialTravel);
+  const [addingTrip, setAddingTrip] = useState(false);
+  const [tripCity, setTripCity] = useState("");
+  const [tripStart, setTripStart] = useState("");
+  const [tripEnd, setTripEnd] = useState("");
+  const [tripNotes, setTripNotes] = useState("");
+  const [tripError, setTripError] = useState<string | null>(null);
+  const [savingTrip, setSavingTrip] = useState(false);
 
   function upsertConference(conference: Conference) {
     setConferences((prev) => {
@@ -59,6 +76,53 @@ export function HomeClient({
     setAllConferences((prev) => prev.filter((c) => c.id !== id));
     setEditingConference(null);
   }
+
+  function isMine(task: TaskWithRelations): boolean {
+    if (task.ownerId === currentUserId) return true;
+    if (task.assigneeLabel === "Team") return isOnTaskTeam;
+    return !!(currentUserName && task.assigneeLabel?.includes(currentUserName));
+  }
+
+  function handleTaskSaved(task: TaskWithRelations) {
+    setTasks((prev) => {
+      const exists = prev.some((t) => t.id === task.id);
+      if (exists) return prev.map((t) => (t.id === task.id ? task : t));
+      return isMine(task) ? [...prev, task] : prev;
+    });
+    setAddingTask(false);
+  }
+
+  function handleTaskDeleted(id: string) {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+    setAddingTask(false);
+  }
+
+  async function handleAddTrip() {
+    setTripError(null);
+    if (!tripCity.trim() || !tripStart) {
+      setTripError("City and start date are required.");
+      return;
+    }
+    setSavingTrip(true);
+    const res = await fetch("/api/travel", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ city: tripCity.trim(), startDate: tripStart, endDate: tripEnd || tripStart, notes: tripNotes }),
+    });
+    const json = await res.json();
+    setSavingTrip(false);
+    if (!res.ok) {
+      setTripError(json.error ?? "Something went wrong.");
+      return;
+    }
+    setTravel((prev) => [...prev, json.trip].sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()));
+    setTripCity("");
+    setTripStart("");
+    setTripEnd("");
+    setTripNotes("");
+    setAddingTrip(false);
+  }
+
   const firstName = userName.trim().split(/\s+/)[0];
   const today = new Date().toISOString().slice(0, 10);
   const twoWeeksOut = useMemo(() => {
@@ -112,9 +176,16 @@ export function HomeClient({
 
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 28, marginBottom: 10 }}>
         <h3 style={{ fontSize: 14 }}>Your tasks</h3>
-        <Link href="/tasks" className="settings-link" style={{ padding: 0, fontSize: 12 }}>
-          Open Tasks board →
-        </Link>
+        <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
+          {canEdit && (
+            <button className="btn small" onClick={() => setAddingTask(true)}>
+              Add task
+            </button>
+          )}
+          <Link href="/tasks" className="settings-link" style={{ padding: 0, fontSize: 12 }}>
+            Open Tasks board →
+          </Link>
+        </div>
       </div>
       {upcomingTasks.length === 0 && noDateTasks.length === 0 ? (
         <div className="empty" style={{ marginBottom: 24 }}>
@@ -158,7 +229,42 @@ export function HomeClient({
 
       <div className="field-row">
         <div className="field" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: 14, marginBottom: 10 }}>Your travel</h3>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ fontSize: 14 }}>Your travel</h3>
+            {canEdit && (
+              <button className="btn small" onClick={() => setAddingTrip((v) => !v)}>
+                {addingTrip ? "Cancel" : "Add trip"}
+              </button>
+            )}
+          </div>
+          {addingTrip && (
+            <div className="card" style={{ padding: 12, marginBottom: 8 }}>
+              <div className="field-row">
+                <div className="field">
+                  <label>City</label>
+                  <input placeholder="e.g. Austin, TX" value={tripCity} onChange={(e) => setTripCity(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>Notes (optional)</label>
+                  <input value={tripNotes} onChange={(e) => setTripNotes(e.target.value)} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Start date</label>
+                  <input type="date" value={tripStart} onChange={(e) => setTripStart(e.target.value)} />
+                </div>
+                <div className="field">
+                  <label>End date</label>
+                  <input type="date" value={tripEnd} onChange={(e) => setTripEnd(e.target.value)} />
+                </div>
+              </div>
+              {tripError && <div className="error-text" style={{ marginBottom: 10 }}>{tripError}</div>}
+              <button className="btn primary" onClick={handleAddTrip} disabled={savingTrip}>
+                {savingTrip ? "Saving…" : "Save trip"}
+              </button>
+            </div>
+          )}
           {travel.length === 0 ? (
             <div className="empty">
               <div>No upcoming trips on file.</div>
@@ -228,14 +334,26 @@ export function HomeClient({
         />
       )}
 
+      {addingTask && (
+        <TaskModal
+          task={null}
+          team={team}
+          contacts={contacts}
+          canEdit={canEdit}
+          onClose={() => setAddingTask(false)}
+          onSaved={handleTaskSaved}
+          onDeleted={handleTaskDeleted}
+        />
+      )}
+
       <div style={{ marginTop: 28 }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Jump to</h3>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Link className="btn" href="/lookahead">
-            Look Ahead
+            Upcoming
           </Link>
-          <Link className="btn" href="/priorities">
-            Priorities
+          <Link className="btn" href="/target-companies">
+            Target Companies
           </Link>
           <Link className="btn" href="/tasks">
             Tasks

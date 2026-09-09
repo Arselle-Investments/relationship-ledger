@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
-import { Company, ContactTier, User } from "@prisma/client";
+import { ContactTier, User } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
@@ -11,43 +11,24 @@ import { TierCard } from "./TierCard";
 
 const TIERS = [ContactTier.TIER_1, ContactTier.TIER_2, ContactTier.TIER_3];
 
-export function PrioritiesClient({
+export function TargetContactsClient({
   contacts: initialContacts,
-  companies: initialCompanies,
   team,
   canEdit,
 }: {
   contacts: ContactWithRelations[];
-  companies: Company[];
   team: User[];
   canEdit: boolean;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
-  const [companies, setCompanies] = useState(initialCompanies);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
-  const [companySearch, setCompanySearch] = useState("");
-  const [contactSearch, setContactSearch] = useState("");
-  // Defaults to "view" — a whole board of drag targets is an easy way to
-  // bump something to the wrong tier by accident, so reprioritizing takes a
-  // deliberate switch to Edit first.
+  const [search, setSearch] = useState("");
   const [mode, setMode] = useState<"view" | "edit">("view");
   const canEditNow = canEdit && mode === "edit";
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const companiesByTier = useMemo(() => {
-    const q = companySearch.trim().toLowerCase();
-    const filtered = q
-      ? companies.filter((c) => c.name.toLowerCase().includes(q) || (c.city ?? "").toLowerCase().includes(q))
-      : companies;
-    const map = new Map<ContactTier, Company[]>();
-    for (const t of TIERS) map.set(t, []);
-    for (const c of filtered) if (c.tier) map.get(c.tier)?.push(c);
-    for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
-    return map;
-  }, [companies, companySearch]);
-
-  const contactsByTier = useMemo(() => {
-    const q = contactSearch.trim().toLowerCase();
+  const byTier = useMemo(() => {
+    const q = search.trim().toLowerCase();
     const filtered = q
       ? contacts.filter((c) => c.name.toLowerCase().includes(q) || (c.org ?? "").toLowerCase().includes(q))
       : contacts;
@@ -56,30 +37,9 @@ export function PrioritiesClient({
     for (const c of filtered) map.get(c.tier)?.push(c);
     for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
     return map;
-  }, [contacts, contactSearch]);
+  }, [contacts, search]);
 
-  const untieredCompanyCount = companies.filter((c) => !c.tier).length;
-
-  async function handleCompanyDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const companyId = active.id as string;
-    const newTier = over.id as ContactTier;
-    const company = companies.find((c) => c.id === companyId);
-    if (!company || company.tier === newTier) return;
-
-    setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier: newTier } : c)));
-    const res = await fetch(`/api/companies/${companyId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tier: newTier }),
-    });
-    if (!res.ok) {
-      setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier: company.tier } : c)));
-    }
-  }
-
-  async function handleContactDragEnd(event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over) return;
     const contactId = active.id as string;
@@ -127,54 +87,23 @@ export function PrioritiesClient({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ fontSize: 14 }}>Fund-raise companies by tier</h3>
+        <h3 style={{ fontSize: 14 }}>Target contacts by tier</h3>
         <input
           type="text"
-          placeholder="Search companies…"
-          value={companySearch}
-          onChange={(e) => setCompanySearch(e.target.value)}
+          placeholder="Search contacts…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
           style={{ width: 220 }}
         />
       </div>
       <div className="helptext" style={{ marginBottom: 10 }}>
-        Priority for the AREF I fund raise specifically — not deal-level capital sources (see Deal Capital) or
-        Emerging Managers allocators (see Emerging Managers).
-        {untieredCompanyCount > 0 &&
-          ` ${untieredCompanyCount} compan${untieredCompanyCount === 1 ? "y has" : "ies have"} no tier set yet and aren't shown here — set a tier from the Companies page to bring one onto this board.`}
+        LP contacts prioritized for the AREF I fund raise, shown with their current funnel stage.
       </div>
-      <DndContext id="companies-tier-board" sensors={sensors} onDragEnd={handleCompanyDragEnd}>
+      <DndContext id="target-contacts-board" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="tier-board">
           {TIERS.map((tier) => (
-            <TierColumn key={tier} dropId={tier} tier={tier} count={companiesByTier.get(tier)?.length ?? 0} itemLabel="companies">
-              {(companiesByTier.get(tier) ?? []).map((c) => (
-                <TierCard
-                  key={c.id}
-                  dragId={c.id}
-                  canEdit={canEditNow}
-                  title={c.name}
-                  subtitle={c.city}
-                />
-              ))}
-            </TierColumn>
-          ))}
-        </div>
-      </DndContext>
-
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, marginTop: 8 }}>
-        <h3 style={{ fontSize: 14 }}>Contacts by tier</h3>
-        <input
-          type="text"
-          placeholder="Search contacts…"
-          value={contactSearch}
-          onChange={(e) => setContactSearch(e.target.value)}
-          style={{ width: 220 }}
-        />
-      </div>
-      <DndContext id="contacts-tier-board" sensors={sensors} onDragEnd={handleContactDragEnd}>
-        <div className="tier-board">
-          {TIERS.map((tier) => (
-            <TierColumn key={tier} dropId={tier} tier={tier} count={contactsByTier.get(tier)?.length ?? 0} itemLabel="contacts">
-              {(contactsByTier.get(tier) ?? []).map((c) => (
+            <TierColumn key={tier} dropId={tier} tier={tier} count={byTier.get(tier)?.length ?? 0} itemLabel="contacts">
+              {(byTier.get(tier) ?? []).map((c) => (
                 <TierCard
                   key={c.id}
                   dragId={c.id}
