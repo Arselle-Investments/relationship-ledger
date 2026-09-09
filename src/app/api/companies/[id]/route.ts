@@ -7,6 +7,10 @@ import { ContactTier } from "@prisma/client";
 const schema = z.object({
   tier: z.nativeEnum(ContactTier).optional().nullable(),
   priorityQuarter: z.string().trim().optional().nullable(),
+  website: z.string().trim().optional().nullable(),
+  linkedinUrl: z.string().trim().optional().nullable(),
+  aum: z.string().trim().optional().nullable(),
+  founded: z.string().trim().optional().nullable(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,6 +32,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const data: Record<string, unknown> = {};
   if ("tier" in parsed.data) data.tier = parsed.data.tier || null;
   if ("priorityQuarter" in parsed.data) data.priorityQuarter = parsed.data.priorityQuarter?.trim() || null;
+  if ("website" in parsed.data) data.website = parsed.data.website?.trim() || null;
+  if ("linkedinUrl" in parsed.data) data.linkedinUrl = parsed.data.linkedinUrl?.trim() || null;
+  if ("aum" in parsed.data) data.aum = parsed.data.aum?.trim() || null;
+  if ("founded" in parsed.data) data.founded = parsed.data.founded?.trim() || null;
 
   const company = await prisma.company.update({ where: { id }, data });
   return NextResponse.json({ company });

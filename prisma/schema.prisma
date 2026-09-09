@@ -182,6 +182,17 @@ model Company {
   tags String[] @default([])
   notes String? @default("")
 
+  // Which upstream export(s) this record's data has come from — e.g. "Agora
+  // Contact Export", "Agora Org Export", "AREF I Tracker", "Deal/LP
+  // Spreadsheet". A company built from more than one source keeps every tag
+  // it has ever earned; this is the audit trail the team needs to trust a
+  // collapsed, cross-source view instead of one silo per source.
+  sources String[] @default([])
+  website String?
+  linkedinUrl String?
+  aum String? // free text ("~$10B+") — source data isn't consistently numeric
+  founded String? // free text — a handful of sources give a range or "N/A" instead of a clean year
+
   // Durable "what do they generally invest in" profile — separate from any
   // one deal's feedback, so a new raise can quickly filter to matching
   // capital partners (e.g. "who's interested in self storage") rather than

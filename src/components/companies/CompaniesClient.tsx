@@ -33,13 +33,16 @@ export function CompaniesClient({
   const [companies, setCompanies] = useState(initialCompanies);
   const [search, setSearch] = useState("");
   const [assetClassFilter, setAssetClassFilter] = useState("");
+  const [sourceFilter, setSourceFilter] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
 
   const companyById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
-  const companyByName = useMemo(() => new Map(companies.map((c) => [c.name, c])), [companies]);
 
-  async function patchCompany(id: string, data: { tier?: ContactTier | null; priorityQuarter?: string | null }) {
+  async function patchCompany(
+    id: string,
+    data: { tier?: ContactTier | null; priorityQuarter?: string | null; website?: string | null; linkedinUrl?: string | null; aum?: string | null; founded?: string | null }
+  ) {
     const res = await fetch(`/api/companies/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -55,44 +58,37 @@ export function CompaniesClient({
     [companies]
   );
 
-  // Companies pulled in from the AREF I fundraising tracker get their own
-  // section for visibility into where they came from — they stay in the
-  // main list below too once there's a real relationship (a linked contact
-  // or an assigned tier), which is how every one of these got here in the
-  // first place.
-  const arefTargetCompanies = useMemo(
-    () =>
-      companies
-        .filter((c) => c.notes?.includes("[AREF I tracker — Target Companies]"))
-        .sort((a, b) => a.name.localeCompare(b.name)),
-    [companies]
-  );
-  const arefContactCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const c of contacts) {
-      const org = c.org?.trim();
-      if (!org) continue;
-      counts.set(org, (counts.get(org) ?? 0) + 1);
-    }
-    return counts;
-  }, [contacts]);
+  // Every source that's contributed to at least one company on file —
+  // drives the filter row below. A company can carry more than one of these
+  // at once (that's the point: one record, full provenance) so this is the
+  // audit trail the "collapse but don't lose track of origin" ask needs.
+  const allSources = useMemo(() => Array.from(new Set(companies.flatMap((c) => c.sources))).sort(), [companies]);
 
+  // Companies are the primary list now (every Company row gets a slot, not
+  // just ones that happen to match a contact's org string), with contacts
+  // attached by matching org name. An org only ever seen as free text on a
+  // Contact (no Company record yet) still shows up too, so nothing that was
+  // visible before goes missing.
   const groups = useMemo(() => {
-    const byName = new Map<string, ContactWithRelations[]>();
+    const contactsByOrgKey = new Map<string, ContactWithRelations[]>();
     for (const c of contacts) {
       const org = c.org?.trim();
       if (!org) continue;
-      if (!byName.has(org)) byName.set(org, []);
-      byName.get(org)!.push(c);
+      const key = org.toLowerCase();
+      if (!contactsByOrgKey.has(key)) contactsByOrgKey.set(key, []);
+      contactsByOrgKey.get(key)!.push(c);
     }
-    const list: CompanyGroup[] = Array.from(byName.entries()).map(([name, groupContacts]) => ({
-      name,
-      contacts: groupContacts,
-      company: companyByName.get(name) ?? null,
-    }));
-    list.sort((a, b) => a.name.localeCompare(b.name));
-    return list;
-  }, [contacts, companyByName]);
+    const seenKeys = new Set<string>();
+    const fromCompanies: CompanyGroup[] = companies.map((company) => {
+      const key = company.name.toLowerCase();
+      seenKeys.add(key);
+      return { name: company.name, contacts: contactsByOrgKey.get(key) ?? [], company };
+    });
+    const orphanOrgs: CompanyGroup[] = Array.from(contactsByOrgKey.entries())
+      .filter(([key]) => !seenKeys.has(key))
+      .map(([, groupContacts]) => ({ name: groupContacts[0].org!.trim(), contacts: groupContacts, company: null }));
+    return [...fromCompanies, ...orphanOrgs].sort((a, b) => a.name.localeCompare(b.name));
+  }, [contacts, companies]);
 
   const noOrgCount = contacts.length - groups.reduce((sum, c) => sum + c.contacts.length, 0);
 
@@ -101,9 +97,10 @@ export function CompaniesClient({
     return groups.filter((g) => {
       if (q && !g.name.toLowerCase().includes(q)) return false;
       if (assetClassFilter && !(g.company?.targetAssetClasses ?? []).includes(assetClassFilter)) return false;
+      if (sourceFilter && !(g.company?.sources ?? []).includes(sourceFilter)) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter]);
+  }, [groups, search, assetClassFilter, sourceFilter]);
 
   const activeGroup = selectedCompany ? groups.find((g) => g.name === selectedCompany) ?? null : null;
   const activeCompany = activeGroup?.company
@@ -125,35 +122,19 @@ export function CompaniesClient({
 
   return (
     <div>
-      {arefTargetCompanies.length > 0 && (
-        <div className="card" style={{ padding: 16, marginBottom: 22, background: "var(--forest-bg)" }}>
-          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
-            <h3 style={{ fontSize: 14 }}>From the AREF I tracker ({arefTargetCompanies.length})</h3>
+      {allSources.length > 0 && (
+        <div className="toolbar" style={{ marginBottom: 10 }}>
+          <span className="helptext" style={{ margin: 0 }}>Source:</span>
+          <div className="view-toggle">
+            <button className={sourceFilter === "" ? "active" : ""} onClick={() => setSourceFilter("")}>
+              All
+            </button>
+            {allSources.map((s) => (
+              <button key={s} className={sourceFilter === s ? "active" : ""} onClick={() => setSourceFilter(s)}>
+                {s}
+              </button>
+            ))}
           </div>
-          <div className="helptext" style={{ marginBottom: 12 }}>
-            Target companies pulled in from the AREF I fundraising tracker. They also appear in the main list below
-            once there&rsquo;s a real relationship on file — a linked contact or an assigned tier.
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th>Company</th>
-                <th>City</th>
-                <th>Tier</th>
-                <th>Contacts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {arefTargetCompanies.map((c) => (
-                <tr key={c.id} onClick={() => setSelectedCompany(c.name)}>
-                  <td className="name-cell">{c.name}</td>
-                  <td className="muted">{c.city || "—"}</td>
-                  <td>{c.tier ? CONTACT_TIER_LABELS[c.tier] : <span className="muted">No tier</span>}</td>
-                  <td className="muted">{arefContactCounts.get(c.name) ?? 0}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       )}
 
@@ -181,6 +162,7 @@ export function CompaniesClient({
         {filtered.length} of {groups.length} companies
         {noOrgCount > 0 ? ` · ${noOrgCount} contact${noOrgCount === 1 ? "" : "s"} with no organization on file` : ""}
         {assetClassFilter ? ` · filtered to ${assetClassFilter} investors` : ""}
+        {sourceFilter ? ` · sourced from ${sourceFilter}` : ""}
       </div>
 
       {filtered.length === 0 ? (
@@ -196,6 +178,7 @@ export function CompaniesClient({
               <th>Contacts</th>
               <th>Target asset classes</th>
               <th>Deal feedback</th>
+              <th>Sources</th>
             </tr>
           </thead>
           <tbody>
@@ -205,6 +188,17 @@ export function CompaniesClient({
                 <td>{g.contacts.length}</td>
                 <td className="muted">{(g.company?.targetAssetClasses ?? []).join(", ") || "—"}</td>
                 <td className="muted">{g.company?.feedback.length || 0}</td>
+                <td>
+                  {(g.company?.sources ?? []).length > 0 ? (
+                    g.company!.sources.map((s) => (
+                      <span key={s} className="tag" style={{ fontSize: 10 }}>
+                        {s}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -222,32 +216,83 @@ export function CompaniesClient({
             </div>
             <div className="modal-body">
               {activeCompany ? (
-                <div className="field-row" style={{ marginBottom: 16 }}>
-                  <div className="field">
-                    <label>Tier</label>
-                    <select
-                      value={activeCompany.tier ?? ""}
-                      disabled={!canEdit}
-                      onChange={(e) => patchCompany(activeCompany.id, { tier: (e.target.value as ContactTier) || null })}
-                    >
-                      <option value="">No tier</option>
-                      {Object.values(ContactTier).map((t) => (
-                        <option key={t} value={t}>
-                          {CONTACT_TIER_LABELS[t]}
-                        </option>
+                <>
+                  {activeCompany.sources.length > 0 && (
+                    <div style={{ marginBottom: 12 }}>
+                      {activeCompany.sources.map((s) => (
+                        <span key={s} className="tag forest">
+                          {s}
+                        </span>
                       ))}
-                    </select>
+                    </div>
+                  )}
+                  <div className="field-row" style={{ marginBottom: 16 }}>
+                    <div className="field">
+                      <label>Tier</label>
+                      <select
+                        value={activeCompany.tier ?? ""}
+                        disabled={!canEdit}
+                        onChange={(e) => patchCompany(activeCompany.id, { tier: (e.target.value as ContactTier) || null })}
+                      >
+                        <option value="">No tier</option>
+                        {Object.values(ContactTier).map((t) => (
+                          <option key={t} value={t}>
+                            {CONTACT_TIER_LABELS[t]}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="field">
+                      <label>Priority quarter</label>
+                      <input
+                        placeholder="e.g. 2026-Q4"
+                        defaultValue={activeCompany.priorityQuarter ?? ""}
+                        disabled={!canEdit}
+                        onBlur={(e) => patchCompany(activeCompany.id, { priorityQuarter: e.target.value.trim() || null })}
+                      />
+                    </div>
                   </div>
-                  <div className="field">
-                    <label>Priority quarter</label>
-                    <input
-                      placeholder="e.g. 2026-Q4"
-                      defaultValue={activeCompany.priorityQuarter ?? ""}
-                      disabled={!canEdit}
-                      onBlur={(e) => patchCompany(activeCompany.id, { priorityQuarter: e.target.value.trim() || null })}
-                    />
+                  <div className="field-row" style={{ marginBottom: 16 }}>
+                    <div className="field">
+                      <label>Website</label>
+                      <input
+                        placeholder="https://…"
+                        defaultValue={activeCompany.website ?? ""}
+                        disabled={!canEdit}
+                        onBlur={(e) => patchCompany(activeCompany.id, { website: e.target.value.trim() || null })}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>LinkedIn</label>
+                      <input
+                        placeholder="https://linkedin.com/company/…"
+                        defaultValue={activeCompany.linkedinUrl ?? ""}
+                        disabled={!canEdit}
+                        onBlur={(e) => patchCompany(activeCompany.id, { linkedinUrl: e.target.value.trim() || null })}
+                      />
+                    </div>
                   </div>
-                </div>
+                  <div className="field-row" style={{ marginBottom: 16 }}>
+                    <div className="field">
+                      <label>AUM</label>
+                      <input
+                        placeholder="e.g. ~$10B+"
+                        defaultValue={activeCompany.aum ?? ""}
+                        disabled={!canEdit}
+                        onBlur={(e) => patchCompany(activeCompany.id, { aum: e.target.value.trim() || null })}
+                      />
+                    </div>
+                    <div className="field">
+                      <label>Founded</label>
+                      <input
+                        placeholder="e.g. 2011"
+                        defaultValue={activeCompany.founded ?? ""}
+                        disabled={!canEdit}
+                        onBlur={(e) => patchCompany(activeCompany.id, { founded: e.target.value.trim() || null })}
+                      />
+                    </div>
+                  </div>
+                </>
               ) : (
                 <div className="helptext" style={{ marginBottom: 16 }}>
                   No company record on file yet for this organization — tier and priority quarter aren&rsquo;t set-able until one exists.
