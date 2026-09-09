@@ -23,6 +23,7 @@ export async function computeListContacts(list: MailingList): Promise<ContactWit
     ...(list.filterType ? { type: list.filterType } : {}),
     ...(list.filterTier ? { tier: list.filterTier } : {}),
     ...(list.filterOwnerId ? { ownerId: list.filterOwnerId } : {}),
+    ...(list.filterStatus ? { status: list.filterStatus } : {}),
   };
   const candidates = await prisma.contact.findMany({
     where,

@@ -1,17 +1,41 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { FundraisingStage } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 
-export function FunnelClient({ contacts }: { contacts: ContactWithRelations[] }) {
+export function FunnelClient({ contacts, canEdit }: { contacts: ContactWithRelations[]; canEdit: boolean }) {
   const counts = useMemo(() => buildFunnelCounts(contacts), [contacts]);
   const max = Math.max(1, ...counts.map((c) => c.count));
   const [selected, setSelected] = useState<FundraisingStage | null>(null);
+  const [creatingList, setCreatingList] = useState(false);
+  const [createdListId, setCreatedListId] = useState<string | null>(null);
 
   const matches = useMemo(() => (selected ? contacts.filter((c) => c.status === selected) : []), [contacts, selected]);
+
+  async function createListForStage() {
+    if (!selected) return;
+    setCreatingList(true);
+    setCreatedListId(null);
+    const res = await fetch("/api/lists", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: `${FUNDRAISING_STAGE_LABELS[selected]} (auto-refreshing)`,
+        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[selected]}" — created from the Funnel view, refreshes automatically as stages change.`,
+        mode: "DYNAMIC",
+        filterStatus: selected,
+      }),
+    });
+    setCreatingList(false);
+    if (res.ok) {
+      const json = await res.json();
+      setCreatedListId(json.list.id);
+    }
+  }
 
   return (
     <div>
@@ -28,7 +52,10 @@ export function FunnelClient({ contacts }: { contacts: ContactWithRelations[] })
           return (
             <div
               key={status}
-              onClick={() => setSelected(status)}
+              onClick={() => {
+                setSelected(status);
+                setCreatedListId(null);
+              }}
               style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, cursor: "pointer" }}
             >
               <div style={{ width: 170, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
@@ -71,6 +98,20 @@ export function FunnelClient({ contacts }: { contacts: ContactWithRelations[] })
               </button>
             </div>
             <div className="modal-body">
+              {canEdit && (
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                  {createdListId ? (
+                    <div className="helptext" style={{ margin: 0 }}>
+                      Created — <Link href="/lists">view in Mailing Lists</Link>. It&rsquo;ll stay current as contacts move
+                      through this stage.
+                    </div>
+                  ) : (
+                    <button className="btn small" onClick={createListForStage} disabled={creatingList}>
+                      {creatingList ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
+                    </button>
+                  )}
+                </div>
+              )}
               {matches.length === 0 ? (
                 <div className="muted">No contacts in this stage.</div>
               ) : (

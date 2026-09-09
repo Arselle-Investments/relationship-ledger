@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContactTier, ContactType, MailingListMode } from "@prisma/client";
+import { ContactTier, ContactType, FundraisingStage, MailingListMode } from "@prisma/client";
 
 export const mailingListInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -10,6 +10,7 @@ export const mailingListInputSchema = z.object({
   filterTier: z.nativeEnum(ContactTier).optional().nullable(),
   filterOwnerId: z.string().trim().optional().nullable(),
   filterTag: z.string().trim().optional().nullable(),
+  filterStatus: z.nativeEnum(FundraisingStage).optional().nullable(),
 });
 
 export type MailingListInput = z.infer<typeof mailingListInputSchema>;

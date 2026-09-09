@@ -462,6 +462,7 @@ model MailingList {
   filterTier    ContactTier?
   filterOwnerId String?
   filterTag     String?
+  filterStatus  FundraisingStage?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

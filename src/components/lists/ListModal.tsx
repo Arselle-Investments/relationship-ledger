@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ContactTier, ContactType, MailingList, MailingListMode, User } from "@prisma/client";
-import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { ContactTier, ContactType, FundraisingStage, MailingList, MailingListMode, User } from "@prisma/client";
+import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { MailingListWithContacts } from "@/types/mailing-list";
 
@@ -30,6 +30,7 @@ export function ListModal({
   const [filterTier, setFilterTier] = useState(entry?.list.filterTier ?? "");
   const [filterOwnerId, setFilterOwnerId] = useState(entry?.list.filterOwnerId ?? "");
   const [filterTag, setFilterTag] = useState(entry?.list.filterTag ?? "");
+  const [filterStatus, setFilterStatus] = useState(entry?.list.filterStatus ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -58,6 +59,7 @@ export function ListModal({
       filterTier: mode === MailingListMode.DYNAMIC ? filterTier || null : null,
       filterOwnerId: mode === MailingListMode.DYNAMIC ? filterOwnerId || null : null,
       filterTag: mode === MailingListMode.DYNAMIC ? filterTag.trim() || null : null,
+      filterStatus: mode === MailingListMode.DYNAMIC ? filterStatus || null : null,
     };
 
     const res = await fetch(isEdit ? `/api/lists/${entry!.list.id}` : "/api/lists", {
@@ -83,6 +85,7 @@ export function ListModal({
               if (filterTier && c.tier !== filterTier) return false;
               if (filterOwnerId && c.ownerId !== filterOwnerId) return false;
               if (filterTag && !c.tags.some((t) => t.toLowerCase().includes(filterTag.toLowerCase()))) return false;
+              if (filterStatus && c.status !== filterStatus) return false;
               return true;
             });
       onSaved({ list: json.list as MailingList, contacts });
@@ -180,6 +183,17 @@ export function ListModal({
                   <label>Tag contains</label>
                   <input value={filterTag} onChange={(e) => setFilterTag(e.target.value)} />
                 </div>
+              </div>
+              <div className="field">
+                <label>Pipeline stage</label>
+                <select value={filterStatus ?? ""} onChange={(e) => setFilterStatus(e.target.value as FundraisingStage | "")}>
+                  <option value="">Any</option>
+                  {Object.values(FundraisingStage).map((s) => (
+                    <option key={s} value={s}>
+                      {FUNDRAISING_STAGE_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="helptext">Smart lists recompute membership live every time they&rsquo;re viewed.</div>
             </>

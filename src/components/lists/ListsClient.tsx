@@ -2,9 +2,25 @@
 
 import { useState } from "react";
 import { User } from "@prisma/client";
+import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { MailingListWithContacts } from "@/types/mailing-list";
 import { ListModal } from "./ListModal";
+
+function filterSummary(entry: MailingListWithContacts, team: User[]): string | null {
+  const { list } = entry;
+  if (list.mode !== "DYNAMIC") return null;
+  const parts: string[] = [];
+  if (list.filterStatus) parts.push(FUNDRAISING_STAGE_LABELS[list.filterStatus]);
+  if (list.filterType) parts.push(CONTACT_TYPE_LABELS[list.filterType]);
+  if (list.filterTier) parts.push(CONTACT_TIER_LABELS[list.filterTier]);
+  if (list.filterOwnerId) {
+    const owner = team.find((u) => u.id === list.filterOwnerId);
+    parts.push(`Owner: ${owner?.name || owner?.email || "—"}`);
+  }
+  if (list.filterTag) parts.push(`Tag: ${list.filterTag}`);
+  return parts.length > 0 ? parts.join(" · ") : "Any contact";
+}
 
 export function ListsClient({
   initialLists,
@@ -46,6 +62,7 @@ export function ListsClient({
         filterTier: entry.list.filterTier,
         filterOwnerId: entry.list.filterOwnerId,
         filterTag: entry.list.filterTag,
+        filterStatus: entry.list.filterStatus,
       }),
     });
     const json = await res.json();
@@ -85,6 +102,11 @@ export function ListsClient({
                 {entry.list.description && (
                   <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>
                     {entry.list.description}
+                  </div>
+                )}
+                {filterSummary(entry, team) && (
+                  <div className="muted" style={{ fontSize: 11.5, marginTop: 3 }}>
+                    Filters: {filterSummary(entry, team)}
                   </div>
                 )}
               </div>

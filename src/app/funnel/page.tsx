@@ -14,7 +14,7 @@ export default async function FunnelPage() {
 
   return (
     <AppShell activeHref="/funnel" user={user}>
-      <FunnelClient contacts={contacts} />
+      <FunnelClient contacts={contacts} canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR} />
     </AppShell>
   );
 }

@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
       filterTier: data.filterTier || null,
       filterOwnerId: data.filterOwnerId || null,
       filterTag: data.filterTag || null,
+      filterStatus: data.filterStatus || null,
     },
   });
   return NextResponse.json({ list }, { status: 201 });
