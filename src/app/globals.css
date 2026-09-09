@@ -66,6 +66,7 @@ h1,h2,h3{font-family:'Poppins',sans-serif;font-weight:600;margin:0;color:var(--i
 /* Toolbar */
 .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px;}
 .toolbar input[type=text], .toolbar select{font-family:'Work Sans',sans-serif;font-size:13px;padding:8px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);}
+input[type=text]{font-family:'Work Sans',sans-serif;font-size:13px;padding:8px 11px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);}
 .toolbar input[type=text]{min-width:220px;}
 .spacer{flex:1;}
 .btn{font-family:'Work Sans',sans-serif;font-size:13px;font-weight:600;padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--paper-raised);color:var(--ink);cursor:pointer;white-space:nowrap;}
@@ -95,6 +96,25 @@ table tbody tr{cursor:pointer;}
 .overdue-badge{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--rust);}
 .overdue-badge:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--rust);}
 
+/* Contact correspondence / stage-change timeline */
+.timeline{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;padding-right:4px;}
+.timeline-row{display:flex;gap:10px;}
+.timeline-rail{display:flex;flex-direction:column;align-items:center;width:12px;flex:none;}
+.timeline-rail:before{content:"";flex:1;width:1px;background:var(--line);}
+.timeline-row:first-child .timeline-rail:before{background:transparent;}
+.timeline-dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:4px;background:var(--slate);border:2px solid var(--paper-raised);box-shadow:0 0 0 1px var(--line);}
+.timeline-dot.correspondence{background:var(--paper-raised);border-color:var(--ink-soft);}
+.timeline-dot.milestone{background:var(--forest);}
+.timeline-content{flex:1;padding-bottom:14px;min-width:0;}
+.timeline-row:last-child .timeline-content{padding-bottom:2px;}
+.timeline-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.timeline-date{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
+.timeline-subject{font-size:13px;font-weight:600;color:var(--ink);}
+.timeline-stage-change{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.timeline-body{font-size:12px;color:var(--ink-soft);margin-top:3px;white-space:pre-wrap;line-height:1.45;}
+.timeline-expand{background:none;border:none;padding:0;font:inherit;font-size:12px;font-weight:600;color:var(--brass-dark);cursor:pointer;text-decoration:underline;}
+.timeline-row.milestone .timeline-content{background:#F3F6F5;border-radius:8px;padding:8px 10px;margin-top:-4px;}
+
 /* Empty state */
 .empty{padding:50px 20px;text-align:center;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--radius);background:var(--paper-raised);}
 .empty h3{color:var(--ink-soft);font-size:16px;margin-bottom:6px;}
@@ -111,6 +131,9 @@ table tbody tr{cursor:pointer;}
 #task-board, .tier-board{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:26px;}
 .board-col{background:#E7ECEB;border-radius:var(--radius);padding:12px;min-height:120px;transition:background .12s, box-shadow .12s;}
 .board-col h3{font-size:12.5px;text-transform:uppercase;letter-spacing:.06em;font-family:'Work Sans',sans-serif;color:var(--ink-soft);margin-bottom:10px;font-weight:600;}
+.tier-col-head{display:flex;flex-direction:column;gap:2px;}
+.tier-col-title{font-size:14px;color:var(--ink);}
+.tier-col-count{font-size:11px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-soft);}
 .board-col.drag-over{background:var(--brass-bg);box-shadow:inset 0 0 0 2px var(--brass);border-radius:10px;}
 .task-card{background:var(--paper-raised);border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:9px;box-shadow:var(--shadow);cursor:grab;transition:opacity .15s, transform .15s;}
 .task-card:active{cursor:grabbing;}
