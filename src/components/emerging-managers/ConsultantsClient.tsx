@@ -3,8 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Consultant, ContactStatus } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { Consultant, FundraisingStage } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 type ConsultantWithCount = Consultant & { _count: { capitalSources: number } };
 
@@ -103,7 +103,7 @@ export function ConsultantsClient({
                   </Link>
                 </td>
                 <td>
-                  <span className="tag brass">{CONTACT_STATUS_LABELS[c.outreachStatus as ContactStatus]}</span>
+                  <span className="tag brass">{FUNDRAISING_STAGE_LABELS[c.outreachStatus as FundraisingStage]}</span>
                 </td>
                 <td className="muted">{c._count.capitalSources}</td>
               </tr>

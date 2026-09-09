@@ -22,7 +22,7 @@ export default async function InboxPage() {
     }),
     prisma.correspondence.findMany({
       where: { suggestionState: SuggestionState.PENDING },
-      include: { contact: true },
+      include: { contact: true, consultant: true, capitalSource: true },
       orderBy: { receivedAt: "desc" },
     }),
     prisma.contact.findMany({ orderBy: { name: "asc" } }),

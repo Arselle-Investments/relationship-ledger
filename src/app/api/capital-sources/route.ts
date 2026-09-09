@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
-import { ContactStatus } from "@prisma/client";
+import { FundraisingStage } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
   const capitalSource = await prisma.capitalSource.create({
-    data: { name: parsed.data.name, shortName: parsed.data.shortName || null, outreachStatus: ContactStatus.NOT_STARTED },
+    data: { name: parsed.data.name, shortName: parsed.data.shortName || null, outreachStatus: FundraisingStage.NOT_STARTED },
   });
   return NextResponse.json({ capitalSource }, { status: 201 });
 }

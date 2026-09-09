@@ -6,6 +6,7 @@ import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
+import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
 
 const messageSchema = z.object({
@@ -104,6 +105,15 @@ export async function POST(req: NextRequest) {
         }
       }
 
+      let consultantId: string | null = null;
+      let capitalSourceId: string | null = null;
+      if (!contactId) {
+        const emMatch = await findEmergingManagerMatch(extractedOrg, subject);
+        if (emMatch && "consultantId" in emMatch) consultantId = emMatch.consultantId;
+        else if (emMatch && "capitalSourceId" in emMatch) capitalSourceId = emMatch.capitalSourceId;
+      }
+      const matchedId = contactId || consultantId || capitalSourceId;
+
       const correspondence = await prisma.correspondence.create({
         data: {
           source: "eml_import",
@@ -112,15 +122,17 @@ export async function POST(req: NextRequest) {
           bodyText,
           receivedAt: msg.date ? new Date(msg.date) : new Date(),
           contactId,
+          consultantId,
+          capitalSourceId,
           extractedName,
           extractedEmail,
           extractedOrg,
-          status: contactId ? CorrespondenceStatus.MATCHED : CorrespondenceStatus.SUGGESTED,
+          status: matchedId ? CorrespondenceStatus.MATCHED : CorrespondenceStatus.SUGGESTED,
         },
       });
 
-      if (contactId) {
-        await maybeCreateStageSuggestion({ correspondenceId: correspondence.id, contactId, subject, bodyText });
+      if (matchedId) {
+        await maybeCreateStageSuggestion({ correspondenceId: correspondence.id, contactId, consultantId, capitalSourceId, subject, bodyText });
         matched++;
       } else {
         suggested++;

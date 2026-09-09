@@ -86,27 +86,13 @@ enum ContactTier {
   TIER_3
 }
 
-// Outreach-tracking stages for Emerging Managers (Consultant, CapitalSource)
-// only — a separate, deliberately simpler pipeline from the fundraising
-// stages below, since EM outreach is a different motion (gatekeepers and
-// capital allocators, not LPs being fundraised).
-enum ContactStatus {
-  NOT_STARTED
-  OUTREACH_SENT
-  AWAITING_REPLY
-  RESPONDED
-  MEETING_SCHEDULED
-  DILIGENCE
-  COMMITTED
-  PASSED
-}
-
-// The fundraising/syndication funnel — used by Contact (LP-level) and
+// The fundraising/syndication funnel — used by Contact (LP-level),
 // DealFeedback (company/LP-level, the same funnel just anchored at the
-// company). Due diligence specifically means an NDA has been executed
-// and/or the LP has been given access to the data room, not just "looking
-// at it." The two passed stages distinguish someone worth re-approaching on
-// a future deal from a genuine no.
+// company), and Consultant/CapitalSource (Emerging Managers outreach, once
+// it gets real correspondence and stage tracking of its own). Due diligence
+// specifically means an NDA has been executed and/or the LP has been given
+// access to the data room, not just "looking at it." The two passed stages
+// distinguish someone worth re-approaching on a future deal from a genuine no.
 enum FundraisingStage {
   NOT_STARTED
   OUTREACH_SENT
@@ -311,7 +297,7 @@ model Consultant {
   intakeProcess            String?       @default("")
   knownContacts            String?       @default("")
   nextStep                 String?       @default("")
-  outreachStatus           ContactStatus @default(NOT_STARTED)
+  outreachStatus           FundraisingStage @default(NOT_STARTED)
   verificationNotes        String?       @default("")
   notes                    String?       @default("")
   createdAt                DateTime      @default(now())
@@ -328,7 +314,7 @@ model CapitalSource {
   name             String        @unique // "Capital Source (Detailed)" in the tracker
   shortName        String?
   tier             Int? // Arselle's own priority ranking (1 = highest), not in the source tracker — set manually
-  outreachStatus   ContactStatus @default(NOT_STARTED) // Arselle's own outreach stage — the tracker's "Status" column
+  outreachStatus   FundraisingStage @default(NOT_STARTED) // Arselle's own outreach stage — the tracker's "Status" column
   actionability    String?       @default("") // the tracker's own "how ready is this to act on" label, e.g. "Immediate - Website"
   nextStep         String?       @default("")
   timing           String? // e.g. "4Q2026" — when the tracker expects the next real step

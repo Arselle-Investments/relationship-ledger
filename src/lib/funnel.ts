@@ -1,4 +1,4 @@
-import { ContactStatus, FundraisingStage } from "@prisma/client";
+import { FundraisingStage } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 
 // The fundraising pipeline order shown in Diligence -> Funnel. Both PASSED
@@ -51,42 +51,16 @@ export function buildFunnelCounts(contacts: ContactWithRelations[]): { status: F
   }));
 }
 
-// Emerging Managers (Consultant, CapitalSource) outreach order — its own
-// separate, simpler pipeline; unaffected by the fundraising stage revision.
-export const OUTREACH_FUNNEL_STAGES: ContactStatus[] = [
-  ContactStatus.NOT_STARTED,
-  ContactStatus.OUTREACH_SENT,
-  ContactStatus.AWAITING_REPLY,
-  ContactStatus.RESPONDED,
-  ContactStatus.MEETING_SCHEDULED,
-  ContactStatus.DILIGENCE,
-  ContactStatus.COMMITTED,
-  ContactStatus.PASSED,
-];
-
-// Same heatmap idea as FUNDRAISING_STAGE_COLORS, for the EM outreach pipeline.
-export const OUTREACH_STAGE_COLORS: Record<ContactStatus, string> = {
-  NOT_STARTED: "#EEF2F1",
-  OUTREACH_SENT: "#D7E3E1",
-  AWAITING_REPLY: "#BCD0CC",
-  RESPONDED: "#9CB9B3",
-  MEETING_SCHEDULED: "#7C9992",
-  DILIGENCE: "#5B8079",
-  COMMITTED: "#3D615A",
-  PASSED: "#A85A40",
-};
-
-const DARK_OUTREACH_STAGES = new Set<ContactStatus>([ContactStatus.DILIGENCE, ContactStatus.COMMITTED, ContactStatus.PASSED]);
-
-export function outreachStatusTextColor(status: ContactStatus): string {
-  return DARK_OUTREACH_STAGES.has(status) ? "#FFFFFF" : "var(--ink)";
-}
-
-/** Same stage ordering, generalized to anything with an outreachStatus (CapitalSource, Consultant). */
-export function buildStatusFunnelCounts<T extends { outreachStatus: ContactStatus }>(
+/**
+ * Same stage ordering/colors as the fundraising funnel above, generalized to
+ * anything with an outreachStatus (CapitalSource, Consultant) — Emerging
+ * Managers outreach adopted the same FundraisingStage vocabulary once it
+ * started getting real correspondence and stage tracking of its own.
+ */
+export function buildStatusFunnelCounts<T extends { outreachStatus: FundraisingStage }>(
   items: T[]
-): { status: ContactStatus; count: number }[] {
-  return OUTREACH_FUNNEL_STAGES.map((status) => ({
+): { status: FundraisingStage; count: number }[] {
+  return FUNDRAISING_STAGES.map((status) => ({
     status,
     count: items.filter((item) => item.outreachStatus === status).length,
   }));

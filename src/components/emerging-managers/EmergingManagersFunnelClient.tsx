@@ -2,9 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { CapitalSource, Consultant, ContactStatus } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
-import { buildStatusFunnelCounts, OUTREACH_STAGE_COLORS, outreachStatusTextColor } from "@/lib/funnel";
+import { CapitalSource, Consultant, FundraisingStage } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { buildStatusFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 
 type Kind = "capital-sources" | "consultants";
 
@@ -16,9 +16,9 @@ export function EmergingManagersFunnelClient({
   consultants: Consultant[];
 }) {
   const [kind, setKind] = useState<Kind>("capital-sources");
-  const [selected, setSelected] = useState<ContactStatus | null>(null);
+  const [selected, setSelected] = useState<FundraisingStage | null>(null);
 
-  const items: { id: string; name: string; outreachStatus: ContactStatus }[] =
+  const items: { id: string; name: string; outreachStatus: FundraisingStage }[] =
     kind === "capital-sources" ? capitalSources : consultants;
   const counts = useMemo(() => buildStatusFunnelCounts(items), [items]);
   const max = Math.max(1, ...counts.map((c) => c.count));
@@ -60,14 +60,14 @@ export function EmergingManagersFunnelClient({
               style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, cursor: "pointer" }}
             >
               <div style={{ width: 140, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
-                {CONTACT_STATUS_LABELS[status]}
+                {FUNDRAISING_STAGE_LABELS[status]}
               </div>
               <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
                 <div
                   style={{
                     width: `${widthPct}%`,
                     height: "100%",
-                    background: OUTREACH_STAGE_COLORS[status],
+                    background: FUNDRAISING_STAGE_COLORS[status],
                     borderRadius: 6,
                     transition: "width .2s",
                     display: "flex",
@@ -77,7 +77,7 @@ export function EmergingManagersFunnelClient({
                   }}
                 >
                   {widthPct > 14 && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: outreachStatusTextColor(status) }}>{count}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: fundraisingStageTextColor(status) }}>{count}</span>
                   )}
                 </div>
               </div>
@@ -93,7 +93,7 @@ export function EmergingManagersFunnelClient({
         <div className="overlay open" onClick={() => setSelected(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h2>{CONTACT_STATUS_LABELS[selected]}</h2>
+              <h2>{FUNDRAISING_STAGE_LABELS[selected]}</h2>
               <button className="close-x" onClick={() => setSelected(null)}>
                 &times;
               </button>

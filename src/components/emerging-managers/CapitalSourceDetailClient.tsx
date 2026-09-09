@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CapitalSource, ContactStatus, Consultant } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { CapitalSource, FundraisingStage, Consultant } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EmCorrespondenceTimeline } from "./EmCorrespondenceTimeline";
 
 type CapitalSourceWithConsultant = CapitalSource & { consultant: Consultant | null };
 
@@ -71,6 +72,14 @@ export function CapitalSourceDetailClient({
     }
   }
 
+  async function reload() {
+    const res = await fetch(`/api/capital-sources/${cs.id}`);
+    if (res.ok) {
+      const json = await res.json();
+      setCs(json.capitalSource);
+    }
+  }
+
   async function deleteCapitalSource() {
     if (!confirm(`Delete "${cs.name}"? This cannot be undone.`)) return;
     const res = await fetch(`/api/capital-sources/${cs.id}`, { method: "DELETE" });
@@ -128,16 +137,16 @@ export function CapitalSourceDetailClient({
                   </option>
                 ))}
               </select>
-              <select value={cs.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as ContactStatus })}>
-                {Object.values(ContactStatus).map((s) => (
+              <select value={cs.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as FundraisingStage })}>
+                {Object.values(FundraisingStage).map((s) => (
                   <option key={s} value={s}>
-                    {CONTACT_STATUS_LABELS[s]}
+                    {FUNDRAISING_STAGE_LABELS[s]}
                   </option>
                 ))}
               </select>
             </>
           ) : (
-            <span className="tag brass">{CONTACT_STATUS_LABELS[cs.outreachStatus]}</span>
+            <span className="tag brass">{FUNDRAISING_STAGE_LABELS[cs.outreachStatus]}</span>
           )}
           {cs.consultant && (
             <Link href={`/consultants/${cs.consultant.id}`} className="btn small ghost">
@@ -146,6 +155,8 @@ export function CapitalSourceDetailClient({
           )}
         </div>
       </div>
+
+      <EmCorrespondenceTimeline entityType="capitalSource" entityId={cs.id} canEdit={canEdit} onStatusChanged={reload} />
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
         <h3 style={{ marginBottom: 12, fontSize: 14 }}>Outreach</h3>

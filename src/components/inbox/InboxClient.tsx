@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Contact, FundraisingStage, Correspondence } from "@prisma/client";
+import { CapitalSource, Consultant, Contact, FundraisingStage, Correspondence } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { parseSignature } from "@/lib/signature-parse";
 
@@ -66,7 +66,18 @@ function EmlImportSection({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-type CorrespondenceWithContact = Correspondence & { contact: Contact | null };
+type CorrespondenceWithContact = Correspondence & {
+  contact: Contact | null;
+  consultant: Consultant | null;
+  capitalSource: CapitalSource | null;
+};
+
+function linkedEntityLabel(item: CorrespondenceWithContact): string {
+  if (item.contact) return item.contact.name;
+  if (item.consultant) return `${item.consultant.name} (Consultant)`;
+  if (item.capitalSource) return `${item.capitalSource.name} (Capital Source)`;
+  return "Unknown";
+}
 
 function StageSuggestionCard({
   item,
@@ -119,7 +130,7 @@ function StageSuggestionCard({
             />
           )}
           <div>
-            <div style={{ fontWeight: 600, fontSize: 14 }}>{item.contact?.name ?? "Unknown contact"}</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>{linkedEntityLabel(item)}</div>
             <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
               {item.subject || "(no subject)"} &middot; {new Date(item.receivedAt).toLocaleString()}
             </div>

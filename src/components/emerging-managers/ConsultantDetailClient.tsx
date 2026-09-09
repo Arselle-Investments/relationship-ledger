@@ -3,8 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CapitalSource, ContactStatus, Consultant } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { CapitalSource, FundraisingStage, Consultant } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EmCorrespondenceTimeline } from "./EmCorrespondenceTimeline";
 
 type ConsultantWithSources = Consultant & { capitalSources: CapitalSource[] };
 
@@ -58,6 +59,14 @@ export function ConsultantDetailClient({
     }
   }
 
+  async function reload() {
+    const res = await fetch(`/api/consultants/${consultant.id}`);
+    if (res.ok) {
+      const json = await res.json();
+      setConsultant(json.consultant);
+    }
+  }
+
   async function deleteConsultant() {
     if (!confirm(`Delete "${consultant.name}"? Any capital sources linked to it will just become unlinked, not deleted.`)) return;
     const res = await fetch(`/api/consultants/${consultant.id}`, { method: "DELETE" });
@@ -79,10 +88,10 @@ export function ConsultantDetailClient({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 20 }}>
         <h2 style={{ marginBottom: 0 }}>{consultant.name}</h2>
         {canEdit && (
-          <select value={consultant.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as ContactStatus })}>
-            {Object.values(ContactStatus).map((s) => (
+          <select value={consultant.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as FundraisingStage })}>
+            {Object.values(FundraisingStage).map((s) => (
               <option key={s} value={s}>
-                {CONTACT_STATUS_LABELS[s]}
+                {FUNDRAISING_STAGE_LABELS[s]}
               </option>
             ))}
           </select>
@@ -97,6 +106,13 @@ export function ConsultantDetailClient({
         {field("verificationNotes", "Verification notes")}
         {field("notes", "Notes")}
       </div>
+
+      <EmCorrespondenceTimeline
+        entityType="consultant"
+        entityId={consultant.id}
+        canEdit={canEdit}
+        onStatusChanged={reload}
+      />
 
       <h3 style={{ marginBottom: 10, fontSize: 14 }}>Capital sources linked here ({consultant.capitalSources.length})</h3>
       {consultant.capitalSources.length === 0 ? (
@@ -121,7 +137,7 @@ export function ConsultantDetailClient({
                   </Link>
                 </td>
                 <td>
-                  <span className="tag brass">{CONTACT_STATUS_LABELS[cs.outreachStatus]}</span>
+                  <span className="tag brass">{FUNDRAISING_STAGE_LABELS[cs.outreachStatus]}</span>
                 </td>
               </tr>
             ))}

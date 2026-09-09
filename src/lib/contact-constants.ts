@@ -1,4 +1,4 @@
-import { ContactStatus, ContactTier, ContactType, FundraisingStage } from "@prisma/client";
+import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 
 // Labels match the reference prototype (docs/arselle-crm.html) verbatim —
 // that file is the source of truth for exact wording shown in the UI.
@@ -19,21 +19,9 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
   TIER_3: "Tier 3",
 };
 
-// Emerging Managers outreach tracking (Consultant, CapitalSource) only — a
-// separate, simpler pipeline from the fundraising stages below.
-export const CONTACT_STATUS_LABELS: Record<ContactStatus, string> = {
-  NOT_STARTED: "Not started",
-  OUTREACH_SENT: "Outreach sent",
-  AWAITING_REPLY: "Awaiting reply",
-  RESPONDED: "Responded",
-  MEETING_SCHEDULED: "Meeting scheduled",
-  DILIGENCE: "Diligence",
-  COMMITTED: "Committed",
-  PASSED: "Passed",
-};
-
-// The fundraising/syndication pipeline — Contact (LP-level) and DealFeedback
-// (company-level), the same funnel just anchored at whichever level applies.
+// The fundraising/syndication pipeline — Contact (LP-level), DealFeedback
+// (company-level), and Consultant/CapitalSource (Emerging Managers outreach),
+// the same funnel just anchored at whichever level applies.
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   NOT_STARTED: "Not started",
   OUTREACH_SENT: "Outreach sent",
@@ -66,5 +54,4 @@ function invert<T extends string>(labels: Record<T, string>): Record<string, T> 
 
 export const CONTACT_TYPE_BY_LABEL = invert(CONTACT_TYPE_LABELS);
 export const CONTACT_TIER_BY_LABEL = invert(CONTACT_TIER_LABELS);
-export const CONTACT_STATUS_BY_LABEL = invert(CONTACT_STATUS_LABELS);
 export const FUNDRAISING_STAGE_BY_LABEL = invert(FUNDRAISING_STAGE_LABELS);

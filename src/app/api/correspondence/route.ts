@@ -14,6 +14,8 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status") as CorrespondenceStatus | null;
   const contactId = searchParams.get("contactId");
+  const consultantId = searchParams.get("consultantId");
+  const capitalSourceId = searchParams.get("capitalSourceId");
   const suggestionState = searchParams.get("suggestionState") as SuggestionState | null;
   const includeContact = searchParams.get("includeContact") === "true";
 
@@ -21,6 +23,8 @@ export async function GET(req: NextRequest) {
     where: {
       ...(status ? { status } : {}),
       ...(contactId ? { contactId } : {}),
+      ...(consultantId ? { consultantId } : {}),
+      ...(capitalSourceId ? { capitalSourceId } : {}),
       ...(suggestionState ? { suggestionState } : {}),
     },
     include: includeContact ? { contact: true } : undefined,

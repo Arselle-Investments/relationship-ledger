@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAdmin, requireEditor, requireUser } from "@/lib/permissions";
-import { ContactStatus } from "@prisma/client";
+import { FundraisingStage } from "@prisma/client";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -21,7 +21,7 @@ const schema = z.object({
   name: z.string().trim().min(1).optional(),
   shortName: z.string().trim().optional().nullable(),
   tier: z.number().int().min(1).max(4).optional().nullable(),
-  outreachStatus: z.nativeEnum(ContactStatus).optional(),
+  outreachStatus: z.nativeEnum(FundraisingStage).optional(),
   actionability: z.string().optional(),
   nextStep: z.string().optional(),
   timing: z.string().trim().optional().nullable(),

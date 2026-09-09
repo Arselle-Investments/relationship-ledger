@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CapitalSource, ContactStatus, Consultant } from "@prisma/client";
-import { CONTACT_STATUS_LABELS } from "@/lib/contact-constants";
+import { CapitalSource, FundraisingStage, Consultant } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 type CapitalSourceWithConsultant = CapitalSource & { consultant: Consultant | null };
 
@@ -24,7 +24,7 @@ function sortValue(c: CapitalSourceWithConsultant, key: SortKey): string | numbe
     case "name":
       return c.name.toLowerCase();
     case "status":
-      return CONTACT_STATUS_LABELS[c.outreachStatus];
+      return FUNDRAISING_STAGE_LABELS[c.outreachStatus];
     case "tier":
       // untiered sinks to the bottom regardless of direction
       return c.tier ?? 99;
@@ -114,9 +114,9 @@ export function CapitalSourcesClient({
         <input type="text" placeholder="Search name..." value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
-          {Object.values(ContactStatus).map((s) => (
+          {Object.values(FundraisingStage).map((s) => (
             <option key={s} value={s}>
-              {CONTACT_STATUS_LABELS[s]}
+              {FUNDRAISING_STAGE_LABELS[s]}
             </option>
           ))}
         </select>
@@ -178,7 +178,7 @@ export function CapitalSourcesClient({
                     </Link>
                   </td>
                   <td>
-                    <span className="tag brass">{CONTACT_STATUS_LABELS[c.outreachStatus]}</span>
+                    <span className="tag brass">{FUNDRAISING_STAGE_LABELS[c.outreachStatus]}</span>
                   </td>
                   <td className="muted">{c.tier ? `Tier ${c.tier}` : "—"}</td>
                   <td className="muted">{c.timing || "—"}</td>
