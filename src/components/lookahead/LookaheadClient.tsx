@@ -6,7 +6,7 @@ import { Settings, Deal, Consultant, CapitalSource, Company } from "@prisma/clie
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
-import { conferenceOverlapsWindow } from "@/lib/conferences";
+import { conferenceOverlapsWindow, quarterBounds } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
@@ -43,9 +43,12 @@ export function LookaheadClient({
   tier1Companies: Company[];
   arefTargetContacts: ContactWithRelations[];
 }) {
-  const [windowDays, setWindowDays] = useState<14 | 30>(14);
+  const [windowDays, setWindowDays] = useState<14 | 30 | "quarter">(14);
 
-  const bounds = useMemo(() => windowBounds(windowDays), [windowDays]);
+  const bounds = useMemo(
+    () => (windowDays === "quarter" ? { start: new Date().toISOString().slice(0, 10), end: quarterBounds(0).end } : windowBounds(windowDays)),
+    [windowDays]
+  );
   const today = new Date().toISOString().slice(0, 10);
 
   const requiredCadence = useMemo(() => getOverdueContacts(contacts, settings.defaultCadenceDays), [contacts, settings]);
@@ -96,7 +99,7 @@ export function LookaheadClient({
     [travel, contacts, bounds]
   );
 
-  const windowLabel = windowDays === 14 ? "next 2 weeks" : "next 30 days";
+  const windowLabel = windowDays === 14 ? "the next 2 weeks" : windowDays === 30 ? "the next 30 days" : "this quarter";
 
   return (
     <div>
@@ -108,6 +111,9 @@ export function LookaheadClient({
           <button className={windowDays === 30 ? "active" : ""} onClick={() => setWindowDays(30)}>
             Next 30 days
           </button>
+          <button className={windowDays === "quarter" ? "active" : ""} onClick={() => setWindowDays("quarter")}>
+            This quarter
+          </button>
         </div>
         <div className="spacer" />
         <a className="btn" href={`/api/lookahead/export?days=${windowDays}`}>
@@ -116,7 +122,7 @@ export function LookaheadClient({
       </div>
 
       <div className="eyebrow" style={{ marginBottom: 14 }}>
-        At a glance for the {windowLabel} &middot; {fmtDate(bounds.start)} to {fmtDate(bounds.end)}
+        At a glance for {windowLabel} &middot; {fmtDate(bounds.start)} to {fmtDate(bounds.end)}
       </div>
 
       <Section title="Tier 1 companies" count={tier1Companies.length} emptyMsg="No companies are marked Tier 1 yet.">

@@ -6,7 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
-import { conferenceOverlapsWindow } from "@/lib/conferences";
+import { conferenceOverlapsWindow, quarterBounds } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
@@ -23,7 +23,8 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const days = searchParams.get("days") === "30" ? 30 : 14;
+  const daysParam = searchParams.get("days");
+  const days = daysParam === "30" ? 30 : daysParam === "quarter" ? "quarter" : 14;
 
   const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
     await Promise.all([
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
       }),
     ]);
 
-  const bounds = windowBounds(days);
+  const bounds = days === "quarter" ? { start: new Date().toISOString().slice(0, 10), end: quarterBounds(0).end } : windowBounds(days);
   const today = new Date().toISOString().slice(0, 10);
 
   const requiredCadence = getOverdueContacts(contacts, settings.defaultCadenceDays);
@@ -223,7 +224,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="arselle-lookahead-${days}d-${today}.xlsx"`,
+      "Content-Disposition": `attachment; filename="arselle-lookahead-${days === "quarter" ? "quarter" : `${days}d`}-${today}.xlsx"`,
     },
   });
 }
