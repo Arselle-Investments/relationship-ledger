@@ -55,6 +55,28 @@ export function CompaniesClient({
     [companies]
   );
 
+  // Companies pulled in from the AREF I fundraising tracker get their own
+  // section for visibility into where they came from — they stay in the
+  // main list below too once there's a real relationship (a linked contact
+  // or an assigned tier), which is how every one of these got here in the
+  // first place.
+  const arefTargetCompanies = useMemo(
+    () =>
+      companies
+        .filter((c) => c.notes?.includes("[AREF I tracker — Target Companies]"))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [companies]
+  );
+  const arefContactCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of contacts) {
+      const org = c.org?.trim();
+      if (!org) continue;
+      counts.set(org, (counts.get(org) ?? 0) + 1);
+    }
+    return counts;
+  }, [contacts]);
+
   const groups = useMemo(() => {
     const byName = new Map<string, ContactWithRelations[]>();
     for (const c of contacts) {
@@ -103,6 +125,38 @@ export function CompaniesClient({
 
   return (
     <div>
+      {arefTargetCompanies.length > 0 && (
+        <div className="card" style={{ padding: 16, marginBottom: 22, background: "var(--forest-bg)" }}>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 4 }}>
+            <h3 style={{ fontSize: 14 }}>From the AREF I tracker ({arefTargetCompanies.length})</h3>
+          </div>
+          <div className="helptext" style={{ marginBottom: 12 }}>
+            Target companies pulled in from the AREF I fundraising tracker. They also appear in the main list below
+            once there&rsquo;s a real relationship on file — a linked contact or an assigned tier.
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>City</th>
+                <th>Tier</th>
+                <th>Contacts</th>
+              </tr>
+            </thead>
+            <tbody>
+              {arefTargetCompanies.map((c) => (
+                <tr key={c.id} onClick={() => setSelectedCompany(c.name)}>
+                  <td className="name-cell">{c.name}</td>
+                  <td className="muted">{c.city || "—"}</td>
+                  <td>{c.tier ? CONTACT_TIER_LABELS[c.tier] : <span className="muted">No tier</span>}</td>
+                  <td className="muted">{arefContactCounts.get(c.name) ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       <div className="toolbar">
         <input
           type="text"
