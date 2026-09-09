@@ -1,4 +1,5 @@
 import { DEV_TEAM } from "@/lib/dev-team";
+import { extractEmailFromText } from "@/lib/email-extract";
 
 // Heuristic-first email signature scraping — an email's signature block
 // (last few lines of the body) often carries a phone number, job title, and
@@ -83,10 +84,11 @@ function splitIntoBlocks(bodyText: string): string[][] {
   return blocks.filter((b) => b.length > 0);
 }
 
-function scanLines(lines: string[]): { phone: string | null; title: string | null; city: string | null } {
+function scanLines(lines: string[]): { phone: string | null; title: string | null; city: string | null; email: string | null } {
   let phone: string | null = null;
   let title: string | null = null;
   let city: string | null = null;
+  let email: string | null = null;
 
   for (const line of lines.slice(-30)) {
     if (lineMentionsStaff(line)) continue;
@@ -103,14 +105,17 @@ function scanLines(lines: string[]): { phone: string | null; title: string | nul
     if (!city && line.length < 40 && CITY_RE.test(line)) {
       city = line;
     }
+    if (!email) {
+      email = extractEmailFromText(line);
+    }
   }
 
-  return { phone, title, city };
+  return { phone, title, city, email };
 }
 
 /**
- * Pulls a phone/title/city out of a message body, preferring the block of
- * text that actually belongs to the contact being created (identified by
+ * Pulls a phone/title/city/email out of a message body, preferring the block
+ * of text that actually belongs to the contact being created (identified by
  * their extracted name/email) over whichever signature happens to sit at the
  * very end of the raw body — which, in a forwarded or introduced thread, is
  * often one of our own team's, not the new contact's.
@@ -118,7 +123,7 @@ function scanLines(lines: string[]): { phone: string | null; title: string | nul
 export function parseSignature(
   bodyText: string,
   contact?: { name?: string | null; email?: string | null }
-): { phone: string | null; title: string | null; city: string | null } {
+): { phone: string | null; title: string | null; city: string | null; email: string | null } {
   const blocks = splitIntoBlocks(bodyText);
   const nonStaffBlocks = blocks.filter((block) => !block.some(lineMentionsStaff));
 
@@ -145,7 +150,7 @@ export function parseSignature(
 
   if (target) {
     const found = scanLines(target);
-    if (found.phone || found.title || found.city) return found;
+    if (found.phone || found.title || found.city || found.email) return found;
   }
 
   // Last resort: scan everything that isn't staff-attributed, tail-first.

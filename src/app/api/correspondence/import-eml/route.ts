@@ -5,6 +5,7 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
+import { extractEmailFromText } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -108,6 +109,9 @@ export async function POST(req: NextRequest) {
         if (isStaffEmail(extractedEmail)) {
           extractedEmail = null;
           extractedName = null;
+        }
+        if (!extractedEmail) {
+          extractedEmail = extractEmailFromText(bodyText);
         }
         if (extractedEmail && extractedEmail !== headerEmail) {
           const match = await prisma.contact.findFirst({

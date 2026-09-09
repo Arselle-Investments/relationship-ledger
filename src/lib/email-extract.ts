@@ -1,0 +1,34 @@
+import { isStaffEmail } from "@/lib/staff-emails";
+
+const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
+
+// Not real contact addresses even though they match the shape of one:
+// Agora's own BCC/logging relay (shows up in forwarded email headers), and
+// the "first.last@" template placeholder some source profiles use as a
+// stand-in for "we don't actually have this person's email."
+const NON_CONTACT_DOMAIN_RE = /agorareal\.com$|\.bcc\.clients\./i;
+const PLACEHOLDER_LOCAL_RE = /^(first\.?last|firstname\.?lastname|jane\.?doe|john\.?doe|name)$/i;
+
+function isRealContactEmail(email: string): boolean {
+  const [local, domain] = email.split("@");
+  if (!domain || NON_CONTACT_DOMAIN_RE.test(domain)) return false;
+  if (PLACEHOLDER_LOCAL_RE.test(local)) return false;
+  return true;
+}
+
+/**
+ * Regex fallback for when the AI extraction step didn't find a sender email
+ * (rate-limited, out of credits, or just missed it) — a message body often
+ * has the sender's email in a signature block even when their name doesn't
+ * parse cleanly. Skips our own team's addresses the same way the AI-driven
+ * extraction does, so an internal reply never gets attached as "the contact,"
+ * and skips known non-contact/placeholder shapes (Agora's BCC relay, "first.last@").
+ */
+export function extractEmailFromText(text: string): string | null {
+  const matches = text.match(EMAIL_RE);
+  if (!matches) return null;
+  const candidate = matches
+    .map((m) => m.toLowerCase())
+    .find((m) => !m.endsWith("@arselleinvestments.com") && !isStaffEmail(m) && isRealContactEmail(m));
+  return candidate ?? null;
+}

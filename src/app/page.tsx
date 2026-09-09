@@ -5,12 +5,14 @@ import { prisma } from "@/lib/prisma";
 import { HomeClient } from "@/components/home/HomeClient";
 import { Role, TaskStatus } from "@prisma/client";
 import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
+import { quarterBounds } from "@/lib/conferences";
 
 export default async function HomePage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
   const user = session.user as { id: string; name?: string | null; email?: string | null; role: Role };
   const today = new Date().toISOString().slice(0, 10);
+  const quarterEnd = quarterBounds(0).end;
 
   const [allOpenTasks, travel, upcomingConferences, allConferences, team, contacts] = await Promise.all([
     prisma.task.findMany({
@@ -18,15 +20,19 @@ export default async function HomePage() {
       include: { owner: true, contact: true },
       orderBy: { dueDate: "asc" },
     }),
+    // Capped at the end of this quarter — Home is a "what's soon" dashboard,
+    // not the full travel calendar. Adding a trip further out still works
+    // fine (see /travel for the uncapped list); it just doesn't clutter Home.
     prisma.travel.findMany({
-      where: { userId: user.id, endDate: { gte: new Date(today) } },
+      where: { userId: user.id, endDate: { gte: new Date(today) }, startDate: { lte: new Date(quarterEnd) } },
       orderBy: { startDate: "asc" },
     }),
     // Company-wide, not just this user's — Home is where you discover an
     // upcoming conference and add yourself (or someone else) to it, not only
-    // a read-only recap of ones you're already down for.
+    // a read-only recap of ones you're already down for. Capped to this
+    // quarter for the same "what's soon" reason as travel above.
     prisma.conference.findMany({
-      where: { endDate: { gte: new Date(today) } },
+      where: { endDate: { gte: new Date(today) }, startDate: { lte: new Date(quarterEnd) } },
       orderBy: { startDate: "asc" },
     }),
     prisma.conference.findMany(), // ConferenceModal needs the full history to detect a recurring series

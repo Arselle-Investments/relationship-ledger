@@ -4,6 +4,7 @@ import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
 import { isStaffEmail } from "@/lib/staff-emails";
+import { extractEmailFromText } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -55,6 +56,12 @@ export async function POST(req: NextRequest) {
   if (isStaffEmail(extracted.email)) {
     extracted.email = null;
     extracted.name = null;
+  }
+  // The model sometimes finds a name but misses the email even when one's
+  // sitting right in the message (a signature block, a quoted reply) — a
+  // plain regex scan catches those cases the AI extraction didn't.
+  if (!extracted.email) {
+    extracted.email = extractEmailFromText(data.bodyText);
   }
 
   let contactId: string | null = null;

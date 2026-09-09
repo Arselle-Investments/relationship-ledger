@@ -130,13 +130,24 @@ export function HomeClient({
     d.setDate(d.getDate() + 14);
     return d.toISOString().slice(0, 10);
   }, []);
+  const twoWeeksAgo = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 14);
+    return d.toISOString().slice(0, 10);
+  }, []);
 
+  // A ±2 week window — anything overdue by more than 2 weeks belongs on the
+  // Tasks board's own filters, not cluttering the Home dashboard.
   const upcomingTasks = useMemo(
     () =>
       tasks
-        .filter((t) => t.dueDate && new Date(t.dueDate).toISOString().slice(0, 10) <= twoWeeksOut)
+        .filter((t) => {
+          if (!t.dueDate) return false;
+          const due = new Date(t.dueDate).toISOString().slice(0, 10);
+          return due >= twoWeeksAgo && due <= twoWeeksOut;
+        })
         .sort((a, b) => new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime()),
-    [tasks, twoWeeksOut]
+    [tasks, twoWeeksAgo, twoWeeksOut]
   );
   const noDateTasks = useMemo(() => tasks.filter((t) => !t.dueDate), [tasks]);
 
@@ -162,7 +173,7 @@ export function HomeClient({
       <div className="stat-row">
         <div className="stat-card">
           <div style={{ fontSize: 22, fontWeight: 700 }}>{upcomingTasks.length}</div>
-          <div className="label">Tasks due in the next 2 weeks</div>
+          <div className="label">Tasks due within 2 weeks (either way)</div>
         </div>
         <div className="stat-card">
           <div style={{ fontSize: 22, fontWeight: 700 }}>{travel.length}</div>

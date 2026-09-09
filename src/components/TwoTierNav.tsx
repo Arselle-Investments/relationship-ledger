@@ -71,8 +71,8 @@ const UTILITY_SECTIONS: SectionDef[] = [
     key: "data-quality",
     label: "Data Quality",
     tabs: [
-      { href: "/inbox", label: "Inbox" },
-      { href: "/companies/review", label: "Company Review" },
+      { href: "/inbox", label: "Correspondence" },
+      { href: "/companies/review", label: "Duplicate Companies" },
       { href: "/data-hygiene", label: "Data Hygiene" },
     ],
   },
