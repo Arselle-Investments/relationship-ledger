@@ -535,6 +535,10 @@ model Task {
   contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
   ownerId   String?
   owner     User?        @relation("TaskOwner", fields: [ownerId], references: [id])
+  // Set instead of ownerId when a task is jointly assigned to more than one
+  // person ("Aaron or Kev", "Team") — there's no single accountable owner to
+  // point ownerId at, but the task still needs a human-readable assignee.
+  assigneeLabel String?
   dueDate   DateTime?    @db.Date
   status    TaskStatus   @default(OPEN)
   priority  TaskPriority @default(MEDIUM)

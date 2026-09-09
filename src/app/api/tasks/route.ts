@@ -40,7 +40,8 @@ export async function POST(req: NextRequest) {
     data: {
       title: data.title,
       contactId: data.contactId || null,
-      ownerId: data.ownerId || actingUser.id,
+      ownerId: data.assigneeLabel ? null : data.ownerId || actingUser.id,
+      assigneeLabel: data.assigneeLabel || null,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       status: data.status,
       priority: data.priority,

@@ -25,10 +25,19 @@ export function TasksClient({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const filtered = useMemo(
-    () => (ownerFilter ? tasks.filter((t) => t.ownerId === ownerFilter) : tasks),
-    [tasks, ownerFilter]
+  const assigneeLabels = useMemo(
+    () => Array.from(new Set(tasks.map((t) => t.assigneeLabel).filter((l): l is string => !!l))).sort(),
+    [tasks]
   );
+
+  const filtered = useMemo(() => {
+    if (!ownerFilter) return tasks;
+    if (ownerFilter.startsWith("label:")) {
+      const label = ownerFilter.slice("label:".length);
+      return tasks.filter((t) => t.assigneeLabel === label);
+    }
+    return tasks.filter((t) => t.ownerId === ownerFilter);
+  }, [tasks, ownerFilter]);
 
   const byColumn = useMemo(() => {
     const map = new Map<TaskStatus, TaskWithRelations[]>();
@@ -78,6 +87,11 @@ export function TasksClient({
           {team.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name || u.email}
+            </option>
+          ))}
+          {assigneeLabels.map((label) => (
+            <option key={label} value={`label:${label}`}>
+              {label}
             </option>
           ))}
         </select>

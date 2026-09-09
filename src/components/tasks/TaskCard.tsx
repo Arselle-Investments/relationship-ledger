@@ -37,7 +37,7 @@ export function TaskCard({
       <div className="meta">
         <span>
           <span className={`pri-dot pri-${task.priority === "HIGH" ? "High" : task.priority === "LOW" ? "Low" : "Medium"}`} />
-          {task.owner?.name || "Unassigned"}
+          {task.assigneeLabel || task.owner?.name || "Unassigned"}
         </span>
         <span>{task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""}</span>
       </div>

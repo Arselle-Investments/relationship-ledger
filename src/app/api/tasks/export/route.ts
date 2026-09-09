@@ -14,10 +14,13 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const ownerId = searchParams.get("ownerId");
+  const ownerIdParam = searchParams.get("ownerId");
+  const isLabelFilter = ownerIdParam?.startsWith("label:") ?? false;
+  const ownerId = ownerIdParam && !isLabelFilter ? ownerIdParam : null;
+  const assigneeLabel = isLabelFilter ? ownerIdParam!.slice("label:".length) : null;
 
   const tasks = await prisma.task.findMany({
-    where: ownerId ? { ownerId } : undefined,
+    where: ownerId ? { ownerId } : assigneeLabel ? { assigneeLabel } : undefined,
     include: { owner: true, contact: true },
     orderBy: { createdAt: "desc" },
   });
@@ -38,7 +41,7 @@ export async function GET(req: NextRequest) {
     sheet.addRow({
       title: safeCell(t.title),
       contact: safeCell(t.contact?.name ?? ""),
-      owner: safeCell(t.owner?.name ?? ""),
+      owner: safeCell(t.assigneeLabel ?? t.owner?.name ?? ""),
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],

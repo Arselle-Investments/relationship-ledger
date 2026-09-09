@@ -127,7 +127,7 @@ export async function GET(req: NextRequest) {
   for (const t of milestones) {
     milestonesSheet.addRow({
       title: safeCell(t.title),
-      owner: safeCell(t.owner?.name ?? ""),
+      owner: safeCell(t.assigneeLabel ?? t.owner?.name ?? ""),
       due: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],

@@ -25,7 +25,17 @@ export function TaskModal({
   const isEdit = !!task;
   const [title, setTitle] = useState(task?.title ?? "");
   const [contactId, setContactId] = useState(task?.contactId ?? "");
-  const [ownerId, setOwnerId] = useState(task?.ownerId ?? "");
+  // The "assigned to" select doubles as an owner picker and a joint-assignee
+  // picker: a plain team member's id, or a synthetic "pair:idA,idB" / "team"
+  // value that resolves to a human-readable assigneeLabel instead of a
+  // single ownerId — there's no one accountable owner for a shared task.
+  const pairOptions = team.flatMap((a, i) =>
+    team.slice(i + 1).map((b) => ({ value: `pair:${a.id},${b.id}`, label: `${a.name || a.email} or ${b.name || b.email}` }))
+  );
+  const initialAssignee = task?.assigneeLabel
+    ? pairOptions.find((p) => p.label === task.assigneeLabel)?.value ?? (task.assigneeLabel === "Team" ? "team" : "")
+    : task?.ownerId ?? "";
+  const [assignee, setAssignee] = useState(initialAssignee);
   const [dueDate, setDueDate] = useState(task?.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : "");
   const [status, setStatus] = useState<TaskStatus>(task?.status ?? TaskStatus.OPEN);
   const [priority, setPriority] = useState<TaskPriority>(task?.priority ?? TaskPriority.MEDIUM);
@@ -40,10 +50,20 @@ export function TaskModal({
       return;
     }
     setSaving(true);
+    let ownerId: string | null = null;
+    let assigneeLabel: string | null = null;
+    if (assignee === "team") {
+      assigneeLabel = "Team";
+    } else if (assignee.startsWith("pair:")) {
+      assigneeLabel = pairOptions.find((p) => p.value === assignee)?.label ?? null;
+    } else if (assignee) {
+      ownerId = assignee;
+    }
     const payload = {
       title: title.trim(),
       contactId: contactId || null,
-      ownerId: ownerId || null,
+      ownerId,
+      assigneeLabel,
       dueDate: dueDate || null,
       status,
       priority,
@@ -102,12 +122,18 @@ export function TaskModal({
               </select>
             </div>
             <div className="field">
-              <label>Owner</label>
-              <select value={ownerId} onChange={(e) => setOwnerId(e.target.value)} disabled={!canEdit}>
+              <label>Assigned to</label>
+              <select value={assignee} onChange={(e) => setAssignee(e.target.value)} disabled={!canEdit}>
                 <option value="">— none —</option>
                 {team.map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.name || u.email}
+                  </option>
+                ))}
+                <option value="team">Team (everyone)</option>
+                {pairOptions.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
                   </option>
                 ))}
               </select>

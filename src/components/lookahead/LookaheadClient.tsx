@@ -215,7 +215,7 @@ export function LookaheadClient({
                       <span className={`pri-dot pri-${t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium"}`} />
                       {t.title}
                     </td>
-                    <td className="muted">{t.owner?.name || "—"}</td>
+                    <td className="muted">{t.assigneeLabel || t.owner?.name || "—"}</td>
                     <td>
                       {isOverdue ? (
                         <span className="overdue-badge">{fmtDate(t.dueDate!)} (overdue)</span>

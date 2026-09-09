@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.title !== undefined ? { title: data.title } : {}),
       ...(data.contactId !== undefined ? { contactId: data.contactId || null } : {}),
       ...(data.ownerId !== undefined ? { ownerId: data.ownerId || null } : {}),
+      ...(data.assigneeLabel !== undefined ? { assigneeLabel: data.assigneeLabel || null } : {}),
       ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.priority !== undefined ? { priority: data.priority } : {}),
