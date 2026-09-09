@@ -62,6 +62,24 @@ export function LookaheadClient({
         .sort((a, b) => (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0)),
     [tasks, bounds]
   );
+  // Grouped by the exact date they're due, with anything already overdue
+  // collapsed into its own leading bucket — this is what "feeds into Look
+  // Ahead by the date it corresponds to" actually means day to day: a
+  // flat list sorted by date still makes you scan every row to find "what's
+  // due Thursday," a day-by-day agenda doesn't.
+  const milestonesByDay = useMemo(() => {
+    const groups = new Map<string, TaskWithRelations[]>();
+    for (const t of milestones) {
+      const key = t.dueDate && new Date(t.dueDate).toISOString().slice(0, 10) < today ? "overdue" : new Date(t.dueDate!).toISOString().slice(0, 10);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(t);
+    }
+    const dayKeys = Array.from(groups.keys())
+      .filter((k) => k !== "overdue")
+      .sort();
+    return [...(groups.has("overdue") ? [["overdue", groups.get("overdue")!] as const] : []), ...dayKeys.map((k) => [k, groups.get(k)!] as const)];
+  }, [milestones, today]);
+
   const upcomingConferences = useMemo(
     () =>
       conferences
@@ -204,34 +222,37 @@ export function LookaheadClient({
       </Section>
 
       <Section title="Milestones (tasks due)" count={milestones.length} emptyMsg="No tasks due in this window.">
-        {milestones.length > 0 && (
-          <table>
-            <tbody>
-              {milestones.map((t) => {
-                const isOverdue = t.dueDate && new Date(t.dueDate).toISOString().slice(0, 10) < today;
-                return (
+        {milestonesByDay.map(([day, dayTasks]) => (
+          <div key={day} style={{ marginBottom: 14 }}>
+            <div
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                textTransform: "uppercase",
+                letterSpacing: ".03em",
+                color: day === "overdue" ? "var(--rust)" : "var(--ink-soft)",
+                marginBottom: 4,
+              }}
+            >
+              {day === "overdue" ? "Overdue" : fmtDate(day)}
+            </div>
+            <table>
+              <tbody>
+                {dayTasks.map((t) => (
                   <tr key={t.id}>
                     <td className="name-cell">
                       <span className={`pri-dot pri-${t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium"}`} />
                       {t.title}
                     </td>
                     <td className="muted">{t.assigneeLabel || t.owner?.name || "—"}</td>
-                    <td>
-                      {isOverdue ? (
-                        <span className="overdue-badge">{fmtDate(t.dueDate!)} (overdue)</span>
-                      ) : t.dueDate ? (
-                        fmtDate(t.dueDate)
-                      ) : (
-                        <span className="muted">—</span>
-                      )}
-                    </td>
+                    <td className="muted">{t.contact?.name || "—"}</td>
                     <td className="muted">{TASK_STATUS_LABELS[t.status]}</td>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        )}
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </Section>
 
       <Section title="Conferences" count={upcomingConferences.length} emptyMsg="No conferences in this window.">
