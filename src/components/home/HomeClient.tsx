@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Conference, Travel } from "@prisma/client";
+import { Conference, Travel, User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
+import { ConferenceModal } from "@/components/conferences/ConferenceModal";
 
 function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
@@ -17,19 +18,47 @@ function greeting(): string {
 }
 
 export function HomeClient({
+  currentUserId,
   userName,
   tasks: initialTasks,
   travel,
-  conferences,
+  conferences: initialConferences,
+  allConferences: initialAllConferences,
+  team,
   canEdit,
 }: {
+  currentUserId: string;
   userName: string;
   tasks: TaskWithRelations[];
   travel: Travel[];
   conferences: Conference[];
+  allConferences: Conference[];
+  team: User[];
   canEdit: boolean;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [conferences, setConferences] = useState(initialConferences);
+  const [allConferences, setAllConferences] = useState(initialAllConferences);
+  const [editingConference, setEditingConference] = useState<Conference | null>(null);
+  const myConferenceCount = conferences.filter((c) => c.attendeeIds.includes(currentUserId)).length;
+
+  function upsertConference(conference: Conference) {
+    setConferences((prev) => {
+      const exists = prev.some((c) => c.id === conference.id);
+      return exists ? prev.map((c) => (c.id === conference.id ? conference : c)) : [...prev, conference];
+    });
+    setAllConferences((prev) => {
+      const exists = prev.some((c) => c.id === conference.id);
+      return exists ? prev.map((c) => (c.id === conference.id ? conference : c)) : [...prev, conference];
+    });
+    setEditingConference(null);
+  }
+
+  function removeConference(id: string) {
+    setConferences((prev) => prev.filter((c) => c.id !== id));
+    setAllConferences((prev) => prev.filter((c) => c.id !== id));
+    setEditingConference(null);
+  }
   const firstName = userName.trim().split(/\s+/)[0];
   const today = new Date().toISOString().slice(0, 10);
   const twoWeeksOut = useMemo(() => {
@@ -76,7 +105,7 @@ export function HomeClient({
           <div className="label">Upcoming trips</div>
         </div>
         <div className="stat-card">
-          <div style={{ fontSize: 22, fontWeight: 700 }}>{conferences.length}</div>
+          <div style={{ fontSize: 22, fontWeight: 700 }}>{myConferenceCount}</div>
           <div className="label">Conferences you&rsquo;re attending</div>
         </div>
       </div>
@@ -147,24 +176,57 @@ export function HomeClient({
           )}
         </div>
         <div className="field" style={{ flex: 1 }}>
-          <h3 style={{ fontSize: 14, marginBottom: 10 }}>Conferences you&rsquo;re attending</h3>
+          <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 10 }}>
+            <h3 style={{ fontSize: 14 }}>Upcoming conferences</h3>
+            <Link href="/conferences" className="settings-link" style={{ padding: 0, fontSize: 12 }}>
+              Open Conferences →
+            </Link>
+          </div>
+          <div className="helptext" style={{ marginBottom: 10 }}>
+            Click one to mark yourself (or anyone from Arselle) as attending.
+          </div>
           {conferences.length === 0 ? (
             <div className="empty">
-              <div>Nothing on your conference calendar yet.</div>
+              <div>Nothing on the conference calendar yet.</div>
             </div>
           ) : (
-            conferences.map((c) => (
-              <div key={c.id} className="card" style={{ padding: 12, marginBottom: 8 }}>
-                <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.name}</div>
-                <div className="muted" style={{ fontSize: 12 }}>
-                  {fmtDate(c.startDate)} – {fmtDate(c.endDate)}
-                  {c.location ? ` · ${c.location}` : ""}
+            conferences.map((c) => {
+              const attending = c.attendeeIds.includes(currentUserId);
+              return (
+                <div
+                  key={c.id}
+                  className="card"
+                  style={{ padding: 12, marginBottom: 8, cursor: "pointer" }}
+                  onClick={() => setEditingConference(c)}
+                >
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                    <div style={{ fontWeight: 600, fontSize: 13.5 }}>{c.name}</div>
+                    {attending && <span className="tag forest">You&rsquo;re attending</span>}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12 }}>
+                    {fmtDate(c.startDate)} – {fmtDate(c.endDate)}
+                    {c.location ? ` · ${c.location}` : ""}
+                    {c.attendeeIds.length > 0 ? ` · ${c.attendeeIds.length} attending` : ""}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
+
+      {editingConference && (
+        <ConferenceModal
+          conference={editingConference}
+          allConferences={allConferences}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setEditingConference(null)}
+          onSaved={upsertConference}
+          onDeleted={removeConference}
+          onCreatedNext={upsertConference}
+        />
+      )}
 
       <div style={{ marginTop: 28 }}>
         <h3 style={{ fontSize: 14, marginBottom: 10 }}>Jump to</h3>

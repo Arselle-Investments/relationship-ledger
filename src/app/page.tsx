@@ -12,7 +12,7 @@ export default async function HomePage() {
   const user = session.user as { id: string; name?: string | null; email?: string | null; role: Role };
   const today = new Date().toISOString().slice(0, 10);
 
-  const [allOpenTasks, travel, conferences] = await Promise.all([
+  const [allOpenTasks, travel, upcomingConferences, allConferences, team] = await Promise.all([
     prisma.task.findMany({
       where: { status: { not: TaskStatus.DONE } },
       include: { owner: true, contact: true },
@@ -22,10 +22,15 @@ export default async function HomePage() {
       where: { userId: user.id, endDate: { gte: new Date(today) } },
       orderBy: { startDate: "asc" },
     }),
+    // Company-wide, not just this user's — Home is where you discover an
+    // upcoming conference and add yourself (or someone else) to it, not only
+    // a read-only recap of ones you're already down for.
     prisma.conference.findMany({
-      where: { attendeeIds: { has: user.id }, endDate: { gte: new Date(today) } },
+      where: { endDate: { gte: new Date(today) } },
       orderBy: { startDate: "asc" },
     }),
+    prisma.conference.findMany(), // ConferenceModal needs the full history to detect a recurring series
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   // "Mine" — either the sole owner, or named in a joint assigneeLabel (e.g.
@@ -42,10 +47,13 @@ export default async function HomePage() {
   return (
     <AppShell activeHref="/" user={user}>
       <HomeClient
+        currentUserId={user.id}
         userName={user.name ?? user.email ?? "there"}
         tasks={myTasks}
         travel={travel}
-        conferences={conferences}
+        conferences={upcomingConferences}
+        allConferences={allConferences}
+        team={team}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>
