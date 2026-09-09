@@ -127,7 +127,7 @@ export function PrioritiesClient({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ fontSize: 14 }}>Companies by tier</h3>
+        <h3 style={{ fontSize: 14 }}>Fund-raise companies by tier</h3>
         <input
           type="text"
           placeholder="Search companies…"
@@ -136,12 +136,12 @@ export function PrioritiesClient({
           style={{ width: 220 }}
         />
       </div>
-      {untieredCompanyCount > 0 && (
-        <div className="helptext" style={{ marginBottom: 10 }}>
-          {untieredCompanyCount} compan{untieredCompanyCount === 1 ? "y has" : "ies have"} no tier set yet and
-          aren&rsquo;t shown here — set a tier from the Companies page to bring one onto this board.
-        </div>
-      )}
+      <div className="helptext" style={{ marginBottom: 10 }}>
+        Priority for the AREF I fund raise specifically — not deal-level capital sources (see Deal Capital) or
+        Emerging Managers allocators (see Emerging Managers).
+        {untieredCompanyCount > 0 &&
+          ` ${untieredCompanyCount} compan${untieredCompanyCount === 1 ? "y has" : "ies have"} no tier set yet and aren't shown here — set a tier from the Companies page to bring one onto this board.`}
+      </div>
       <DndContext id="companies-tier-board" sensors={sensors} onDragEnd={handleCompanyDragEnd}>
         <div className="tier-board">
           {TIERS.map((tier) => (

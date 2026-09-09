@@ -28,14 +28,18 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
-    key: "pipeline",
-    label: "Pipeline",
+    key: "fund-raise",
+    label: "Fund Raise",
     tabs: [
       { href: "/funnel", label: "Funnel" },
       { href: "/priorities", label: "Priorities" },
       { href: "/stuck-contacts", label: "Going Cold" },
-      { href: "/deals", label: "Deals" },
     ],
+  },
+  {
+    key: "deal-capital",
+    label: "Deal Capital",
+    tabs: [{ href: "/deals", label: "Deals" }],
   },
   {
     key: "data-quality",
@@ -52,7 +56,7 @@ const SECTIONS: SectionDef[] = [
     tabs: [
       { href: "/capital-sources", label: "Capital Sources" },
       { href: "/consultants", label: "Consultants" },
-      { href: "/emerging-managers/funnel", label: "Funnel" },
+      { href: "/emerging-managers/funnel", label: "EM Funnel" },
     ],
   },
 ];
