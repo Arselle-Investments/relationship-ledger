@@ -28,8 +28,8 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
-    key: "diligence",
-    label: "Diligence",
+    key: "pipeline",
+    label: "Pipeline",
     tabs: [
       { href: "/funnel", label: "Funnel" },
       { href: "/priorities", label: "Priorities" },
@@ -38,8 +38,8 @@ const SECTIONS: SectionDef[] = [
     ],
   },
   {
-    key: "connectors",
-    label: "Connectors",
+    key: "data-quality",
+    label: "Data Quality",
     tabs: [
       { href: "/inbox", label: "Inbox" },
       { href: "/companies/review", label: "Company Review" },

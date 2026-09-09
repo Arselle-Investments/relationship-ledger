@@ -32,7 +32,7 @@ export function AppShell({
           </div>
           <div>
             <h1>Arselle Relationship Ledger</h1>
-            <div className="sub">Relationships &middot; Outreach &middot; Diligence &middot; Connectors</div>
+            <div className="sub">Relationships &middot; Outreach &middot; Pipeline &middot; Data Quality</div>
           </div>
         </Link>
         <div id="identity-bar">

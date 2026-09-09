@@ -1,7 +1,7 @@
 import { FundraisingStage } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 
-// The fundraising pipeline order shown in Diligence -> Funnel. Both PASSED
+// The fundraising pipeline order shown in Pipeline -> Funnel. Both PASSED
 // variants are terminal drop-offs, not forward stages, but still worth
 // showing so the team can see how much falls out, and where.
 export const FUNDRAISING_STAGES: FundraisingStage[] = [

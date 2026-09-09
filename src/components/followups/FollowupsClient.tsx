@@ -244,7 +244,7 @@ export function FollowupsClient({
 
       <div className="helptext" style={{ marginTop: 20 }}>
         Looking for missing/stale contact data? That moved to{" "}
-        <Link href="/data-hygiene">Connectors &rarr; Data Hygiene</Link>.
+        <Link href="/data-hygiene">Data Quality &rarr; Data Hygiene</Link>.
       </div>
     </div>
   );
