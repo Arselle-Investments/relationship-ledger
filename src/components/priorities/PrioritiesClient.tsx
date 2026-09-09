@@ -27,6 +27,11 @@ export function PrioritiesClient({
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
   const [companySearch, setCompanySearch] = useState("");
   const [contactSearch, setContactSearch] = useState("");
+  // Defaults to "view" — a whole board of drag targets is an easy way to
+  // bump something to the wrong tier by accident, so reprioritizing takes a
+  // deliberate switch to Edit first.
+  const [mode, setMode] = useState<"view" | "edit">("view");
+  const canEditNow = canEdit && mode === "edit";
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
   const companiesByTier = useMemo(() => {
@@ -107,8 +112,18 @@ export function PrioritiesClient({
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          Drag a card to move it between tiers
+          {canEditNow ? "Drag a card to move it between tiers" : "View mode — switch to Edit to drag cards between tiers"}
         </div>
+        {canEdit && (
+          <div className="view-toggle">
+            <button className={mode === "view" ? "active" : ""} onClick={() => setMode("view")}>
+              View
+            </button>
+            <button className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")}>
+              Edit
+            </button>
+          </div>
+        )}
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
@@ -135,7 +150,7 @@ export function PrioritiesClient({
                 <TierCard
                   key={c.id}
                   dragId={c.id}
-                  canEdit={canEdit}
+                  canEdit={canEditNow}
                   title={c.name}
                   subtitle={c.city}
                 />
@@ -163,7 +178,7 @@ export function PrioritiesClient({
                 <TierCard
                   key={c.id}
                   dragId={c.id}
-                  canEdit={canEdit}
+                  canEdit={canEditNow}
                   title={c.name}
                   subtitle={c.org}
                   badge={FUNDRAISING_STAGE_LABELS[c.status]}
