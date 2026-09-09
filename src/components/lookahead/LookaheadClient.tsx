@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Settings, Deal, Consultant, CapitalSource } from "@prisma/client";
+import { Settings, Deal, Consultant, CapitalSource, Company } from "@prisma/client";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
@@ -29,6 +29,8 @@ export function LookaheadClient({
   activeDeals,
   stalledConsultants,
   stalledCapitalSources,
+  tier1Companies,
+  arefTargetContacts,
 }: {
   contacts: ContactWithRelations[];
   tasks: TaskWithRelations[];
@@ -38,6 +40,8 @@ export function LookaheadClient({
   activeDeals: Deal[];
   stalledConsultants: Consultant[];
   stalledCapitalSources: CapitalSource[];
+  tier1Companies: Company[];
+  arefTargetContacts: ContactWithRelations[];
 }) {
   const [windowDays, setWindowDays] = useState<14 | 30>(14);
 
@@ -96,6 +100,41 @@ export function LookaheadClient({
       <div className="eyebrow" style={{ marginBottom: 14 }}>
         At a glance for the {windowLabel} &middot; {fmtDate(bounds.start)} to {fmtDate(bounds.end)}
       </div>
+
+      <Section title="Tier 1 companies" count={tier1Companies.length} emptyMsg="No companies are marked Tier 1 yet.">
+        {tier1Companies.length > 0 && (
+          <table>
+            <tbody>
+              {tier1Companies.map((c) => (
+                <tr key={c.id}>
+                  <td className="name-cell">{c.name}</td>
+                  <td className="muted">{c.city || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      <Section
+        title="AREF I tracker targets not yet contacted"
+        count={arefTargetContacts.length}
+        emptyMsg="Nothing outstanding from the AREF I tracker."
+      >
+        {arefTargetContacts.length > 0 && (
+          <table>
+            <tbody>
+              {arefTargetContacts.map((c) => (
+                <tr key={c.id}>
+                  <td className="name-cell">{c.name}</td>
+                  <td>{c.org || <span className="muted">—</span>}</td>
+                  <td className="muted">{c.owner?.name || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
 
       <Section title="Required follow-ups (overdue now)" count={requiredCadence.length + requiredSeq.length} emptyMsg="Nothing overdue right now.">
         {requiredCadence.length + requiredSeq.length > 0 && (

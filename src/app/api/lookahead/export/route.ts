@@ -12,7 +12,7 @@ import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { safeCell } from "@/lib/excel-safety";
-import { DealStatus, FundraisingStage } from "@prisma/client";
+import { DealStatus, FundraisingStage, ContactTier } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
   try {
@@ -25,16 +25,26 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const days = searchParams.get("days") === "30" ? 30 : 14;
 
-  const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
-    prisma.task.findMany({ include: { owner: true, contact: true } }),
-    prisma.conference.findMany(),
-    prisma.travel.findMany({ include: { user: true } }),
-    getSettings(),
-    prisma.deal.findMany({ where: { status: { in: [DealStatus.ACTIVE, DealStatus.UNDER_CONTRACT] } }, orderBy: { updatedAt: "desc" } }),
-    prisma.consultant.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
-    prisma.capitalSource.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
-  ]);
+  const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
+    await Promise.all([
+      prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+      prisma.task.findMany({ include: { owner: true, contact: true } }),
+      prisma.conference.findMany(),
+      prisma.travel.findMany({ include: { user: true } }),
+      getSettings(),
+      prisma.deal.findMany({ where: { status: { in: [DealStatus.ACTIVE, DealStatus.UNDER_CONTRACT] } }, orderBy: { updatedAt: "desc" } }),
+      prisma.consultant.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
+      prisma.capitalSource.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
+      prisma.company.findMany({ where: { tier: ContactTier.TIER_1 }, orderBy: { name: "asc" } }),
+      prisma.contact.findMany({
+        where: {
+          status: FundraisingStage.NOT_STARTED,
+          correspondence: { some: { source: { in: ["aref_import", "capital_partner_untangle"] } } },
+        },
+        include: { owner: true, warmPath: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
 
   const bounds = windowBounds(days);
   const today = new Date().toISOString().slice(0, 10);
@@ -186,6 +196,27 @@ export async function GET(req: NextRequest) {
   }
   for (const cs of stalledCapitalSources) {
     emSheet.addRow({ name: safeCell(cs.name), type: "Capital source", nextStep: safeCell(cs.nextStep ?? "") });
+  }
+
+  const tier1Sheet = workbook.addWorksheet("Tier 1 Companies");
+  tier1Sheet.columns = [
+    { header: "Name", key: "name", width: 30 },
+    { header: "City", key: "city", width: 20 },
+  ];
+  tier1Sheet.getRow(1).font = { bold: true };
+  for (const c of tier1Companies) {
+    tier1Sheet.addRow({ name: safeCell(c.name), city: safeCell(c.city ?? "") });
+  }
+
+  const arefSheet = workbook.addWorksheet("AREF Targets");
+  arefSheet.columns = [
+    { header: "Name", key: "name", width: 24 },
+    { header: "Organization", key: "org", width: 26 },
+    { header: "Owner", key: "owner", width: 20 },
+  ];
+  arefSheet.getRow(1).font = { bold: true };
+  for (const c of arefTargetContacts) {
+    arefSheet.addRow({ name: safeCell(c.name), org: safeCell(c.org ?? ""), owner: safeCell(c.owner?.name ?? "") });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
