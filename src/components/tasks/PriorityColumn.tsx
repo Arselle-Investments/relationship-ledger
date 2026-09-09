@@ -12,12 +12,14 @@ export function PriorityColumn({
   canEdit,
   onCardClick,
   onMarkDone,
+  canMarkDone,
 }: {
   priority: TaskPriority;
   tasks: TaskWithRelations[];
   canEdit: boolean;
   onCardClick: (task: TaskWithRelations) => void;
   onMarkDone: (task: TaskWithRelations) => void;
+  canMarkDone: (task: TaskWithRelations) => boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: priority });
 
@@ -30,7 +32,13 @@ export function PriorityColumn({
         </span>
       </h3>
       {tasks.map((task) => (
-        <TaskCard key={task.id} task={task} canEdit={canEdit} onClick={() => onCardClick(task)} onMarkDone={() => onMarkDone(task)} />
+        <TaskCard
+          key={task.id}
+          task={task}
+          canEdit={canEdit}
+          onClick={() => onCardClick(task)}
+          onMarkDone={canEdit && canMarkDone(task) ? () => onMarkDone(task) : undefined}
+        />
       ))}
     </div>
   );

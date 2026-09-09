@@ -3,12 +3,21 @@
 import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Contact, TaskPriority, User } from "@prisma/client";
+import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
+import { quarterBounds } from "@/lib/conferences";
 import { TaskWithRelations } from "@/types/task";
 import { PriorityColumn } from "./PriorityColumn";
 import { TaskModal } from "./TaskModal";
 import { TasksCalendar } from "./TasksCalendar";
 
 const PRIORITY_COLUMNS: TaskPriority[] = [TaskPriority.HIGH, TaskPriority.MEDIUM, TaskPriority.LOW];
+const DATE_RANGE_OPTIONS = [
+  { value: "", label: "Any due date" },
+  { value: "2w", label: "Next 2 weeks" },
+  { value: "30d", label: "Next 30 days" },
+  { value: "quarter", label: "This quarter" },
+] as const;
+type DateRangeValue = (typeof DATE_RANGE_OPTIONS)[number]["value"];
 
 function byDueDateAsc(a: TaskWithRelations, b: TaskWithRelations) {
   if (!a.dueDate && !b.dueDate) return 0;
@@ -17,24 +26,63 @@ function byDueDateAsc(a: TaskWithRelations, b: TaskWithRelations) {
   return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
 }
 
+function dateRangeEnd(range: DateRangeValue, today: Date): string | null {
+  if (!range) return null;
+  if (range === "2w") {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 14);
+    return d.toISOString().slice(0, 10);
+  }
+  if (range === "30d") {
+    const d = new Date(today);
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().slice(0, 10);
+  }
+  return quarterBounds(0).end;
+}
+
 export function TasksClient({
   initialTasks,
   team,
   contacts,
   canEdit,
+  currentUserId,
+  currentUserName,
 }: {
   initialTasks: TaskWithRelations[];
   team: User[];
   contacts: Contact[];
   canEdit: boolean;
+  currentUserId: string;
+  currentUserName: string | null;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
   const [ownerFilter, setOwnerFilter] = useState("");
+  const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeValue>("");
   const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
+  // Defaults to "view" deliberately — a board full of drag targets invites
+  // an accidental reprioritization; switching to "Edit" is one click, but
+  // it has to be a deliberate one.
+  const [mode, setMode] = useState<"view" | "edit">("view");
   const [showDone, setShowDone] = useState(false);
   const [editing, setEditing] = useState<TaskWithRelations | null | "new">(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+
+  // Only the people who actually execute tasks are assignable — everyone
+  // else on the User table (an account owner, other staff not doing hands-on
+  // outreach) doesn't show up here, and "Team" means this trio, not literally
+  // every user in the system.
+  const taskTeam = useMemo(
+    () => team.filter((u) => TASK_TEAM_EMAILS.includes(u.email.toLowerCase())),
+    [team]
+  );
+
+  function isAssignedToMe(task: TaskWithRelations): boolean {
+    if (task.ownerId === currentUserId) return true;
+    if (currentUserName && task.assigneeLabel) return task.assigneeLabel.includes(currentUserName);
+    return false;
+  }
 
   const assigneeLabels = useMemo(
     () => Array.from(new Set(tasks.map((t) => t.assigneeLabel).filter((l): l is string => !!l))).sort(),
@@ -42,13 +90,26 @@ export function TasksClient({
   );
 
   const filtered = useMemo(() => {
-    if (!ownerFilter) return tasks;
-    if (ownerFilter.startsWith("label:")) {
-      const label = ownerFilter.slice("label:".length);
-      return tasks.filter((t) => t.assigneeLabel === label);
+    let list = tasks;
+    if (ownerFilter) {
+      list = ownerFilter.startsWith("label:")
+        ? list.filter((t) => t.assigneeLabel === ownerFilter.slice("label:".length))
+        : list.filter((t) => t.ownerId === ownerFilter);
     }
-    return tasks.filter((t) => t.ownerId === ownerFilter);
-  }, [tasks, ownerFilter]);
+    if (dateRangeFilter) {
+      // A literal window, not "everything overdue plus this window" — with
+      // most of this data skewing overdue already, that carve-out would
+      // make the filter show almost everything and defeat its own purpose.
+      const today = new Date().toISOString().slice(0, 10);
+      const end = dateRangeEnd(dateRangeFilter, new Date());
+      list = list.filter((t) => {
+        if (!t.dueDate) return false;
+        const due = new Date(t.dueDate).toISOString().slice(0, 10);
+        return due >= today && due <= (end as string);
+      });
+    }
+    return list;
+  }, [tasks, ownerFilter, dateRangeFilter]);
 
   // Done tasks are archived out of the active board — they're still on file
   // (and still counted, exportable, and searchable in the calendar) but
@@ -112,6 +173,8 @@ export function TasksClient({
     }
   }
 
+  const canEditNow = canEdit && mode === "edit";
+
   return (
     <div>
       <div className="toolbar">
@@ -123,6 +186,16 @@ export function TasksClient({
             Calendar
           </button>
         </div>
+        {canEdit && (
+          <div className="view-toggle" title="Edit mode is required to drag cards between priorities or mark a task done">
+            <button className={mode === "view" ? "active" : ""} onClick={() => setMode("view")}>
+              View
+            </button>
+            <button className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")}>
+              Edit
+            </button>
+          </div>
+        )}
         <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
           <option value="">All owners</option>
           {team.map((u) => (
@@ -133,6 +206,13 @@ export function TasksClient({
           {assigneeLabels.map((label) => (
             <option key={label} value={`label:${label}`}>
               {label}
+            </option>
+          ))}
+        </select>
+        <select value={dateRangeFilter} onChange={(e) => setDateRangeFilter(e.target.value as DateRangeValue)}>
+          {DATE_RANGE_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
             </option>
           ))}
         </select>
@@ -147,6 +227,12 @@ export function TasksClient({
         )}
       </div>
 
+      {!canEditNow && canEdit && (
+        <div className="helptext" style={{ marginBottom: 12 }}>
+          View mode — switch to Edit to drag cards between priorities or mark a task done.
+        </div>
+      )}
+
       {viewMode === "board" ? (
         <>
           <DndContext id="tasks-priority-board" sensors={sensors} onDragEnd={handleDragEnd}>
@@ -156,9 +242,10 @@ export function TasksClient({
                   key={priority}
                   priority={priority}
                   tasks={byPriority.get(priority) ?? []}
-                  canEdit={canEdit}
+                  canEdit={canEditNow}
                   onCardClick={setEditing}
                   onMarkDone={handleMarkDone}
+                  canMarkDone={isAssignedToMe}
                 />
               ))}
             </div>
@@ -199,7 +286,7 @@ export function TasksClient({
       {editing !== null && (
         <TaskModal
           task={editing === "new" ? null : editing}
-          team={team}
+          team={taskTeam}
           contacts={contacts}
           canEdit={canEdit}
           onClose={() => setEditing(null)}
