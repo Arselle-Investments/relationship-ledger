@@ -1,12 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ContactWithRelations } from "@/types/contact";
 import { TravelWithUser } from "@/lib/travel";
+import { buildGenericTravelEmail } from "@/lib/travel-templates";
 
 function fmtDate(d: Date | string) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
+
+// AI personalization is worth the credits for a handful of contacts; past
+// this many, default to the free generic template instead (still overridable).
+const AI_DEFAULT_THRESHOLD = 5;
 
 export function TripCard({
   trip,
@@ -27,6 +32,8 @@ export function TripCard({
   const [listName, setListName] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [draftError, setDraftError] = useState<string | null>(null);
+  const [useAI, setUseAI] = useState(true);
+  const aiTouched = useRef(false);
 
   async function toggleExpand() {
     const next = !expanded;
@@ -43,12 +50,38 @@ export function TripCard({
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      if (!aiTouched.current) setUseAI(next.size > 0 && next.size <= AI_DEFAULT_THRESHOLD);
       return next;
     });
   }
 
+  const startDateIso = new Date(trip.startDate).toISOString().slice(0, 10);
+  const endDateIso = new Date(trip.endDate).toISOString().slice(0, 10);
+  const travelerName = trip.user.name || trip.user.email || "the team";
+
+  function generateGenericDrafts() {
+    if (!matches) return;
+    const next: Record<string, string> = { ...drafts };
+    for (const id of selected) {
+      const c = matches.find((m) => m.id === id);
+      if (!c) continue;
+      next[id] = buildGenericTravelEmail({
+        contactName: c.name,
+        travelerName,
+        city: trip.city,
+        startDate: startDateIso,
+        endDate: endDateIso,
+      });
+    }
+    setDrafts(next);
+  }
+
   async function generateDrafts() {
     if (selected.size === 0) return;
+    if (!useAI) {
+      generateGenericDrafts();
+      return;
+    }
     setDraftError(null);
     setDrafting(true);
     const res = await fetch(`/api/travel/${trip.id}/draft`, {
@@ -67,6 +100,35 @@ export function TripCard({
       for (const d of json.drafts) next[d.contactId] = d.draft;
       return next;
     });
+  }
+
+  async function copyEmails() {
+    if (!matches) return;
+    const emails = matches.filter((c) => selected.has(c.id) && c.email).map((c) => c.email as string);
+    if (emails.length === 0) {
+      setMsg("None of the selected contacts have an email on file.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setMsg(`Copied ${emails.length} email${emails.length === 1 ? "" : "es"} to the clipboard.`);
+    } catch {
+      setMsg("Couldn't copy to the clipboard — check the browser's clipboard permission and try again.");
+    }
+  }
+
+  function mailtoHref(): string {
+    if (!matches) return "mailto:";
+    const emails = matches.filter((c) => selected.has(c.id) && c.email).map((c) => c.email as string);
+    const params = new URLSearchParams();
+    if (emails.length > 0) params.set("bcc", emails.join(","));
+    if (!useAI && selected.size > 0) {
+      params.set(
+        "body",
+        buildGenericTravelEmail({ contactName: "there", travelerName, city: trip.city, startDate: startDateIso, endDate: endDateIso })
+      );
+    }
+    return `mailto:?${params.toString()}`;
   }
 
   async function createList() {
@@ -151,19 +213,42 @@ export function TripCard({
               </table>
 
               {canEdit && (
-                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                  <button className="btn small primary" onClick={generateDrafts} disabled={selected.size === 0 || drafting}>
-                    {drafting ? "Drafting…" : `Draft outreach for ${selected.size || ""} selected`}
-                  </button>
-                  <input
-                    placeholder="New list name"
-                    value={listName}
-                    onChange={(e) => setListName(e.target.value)}
-                    style={{ maxWidth: 200 }}
-                  />
-                  <button className="btn small" onClick={createList} disabled={selected.size === 0 || !listName.trim()}>
-                    Add to mailing list
-                  </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>
+                    <input
+                      type="checkbox"
+                      checked={useAI}
+                      onChange={(e) => {
+                        aiTouched.current = true;
+                        setUseAI(e.target.checked);
+                      }}
+                    />
+                    Personalize with AI (uses AI credits — off by default past {AI_DEFAULT_THRESHOLD} contacts)
+                  </label>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                    <button className="btn small primary" onClick={generateDrafts} disabled={selected.size === 0 || drafting}>
+                      {drafting ? "Drafting…" : `Draft outreach for ${selected.size || ""} selected`}
+                    </button>
+                    <button className="btn small" onClick={copyEmails} disabled={selected.size === 0}>
+                      Copy emails
+                    </button>
+                    <a
+                      className="btn small"
+                      style={selected.size === 0 ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+                      href={selected.size === 0 ? undefined : mailtoHref()}
+                    >
+                      Email selected (BCC)
+                    </a>
+                    <input
+                      placeholder="New list name"
+                      value={listName}
+                      onChange={(e) => setListName(e.target.value)}
+                      style={{ maxWidth: 200 }}
+                    />
+                    <button className="btn small" onClick={createList} disabled={selected.size === 0 || !listName.trim()}>
+                      Add to mailing list
+                    </button>
+                  </div>
                 </div>
               )}
               {msg && <div className="helptext" style={{ marginTop: 8 }}>{msg}</div>}

@@ -35,6 +35,30 @@ export function ListsClient({
 }) {
   const [lists, setLists] = useState(initialLists);
   const [editing, setEditing] = useState<MailingListWithContacts | null | "new">(null);
+  const [copyMsg, setCopyMsg] = useState<string | null>(null);
+
+  function emailsFor(entry: MailingListWithContacts): string[] {
+    return entry.contacts.filter((c) => c.email).map((c) => c.email as string);
+  }
+
+  async function copyEmails(entry: MailingListWithContacts) {
+    const emails = emailsFor(entry);
+    if (emails.length === 0) {
+      setCopyMsg(`No contacts with an email on file in "${entry.list.name}".`);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(emails.join(", "));
+      setCopyMsg(`Copied ${emails.length} email${emails.length === 1 ? "" : "es"} from "${entry.list.name}".`);
+    } catch {
+      setCopyMsg("Couldn't copy to the clipboard — check the browser's clipboard permission and try again.");
+    }
+  }
+
+  function mailtoHref(entry: MailingListWithContacts): string {
+    const emails = emailsFor(entry);
+    return emails.length === 0 ? "mailto:" : `mailto:?bcc=${encodeURIComponent(emails.join(","))}`;
+  }
 
   function upsertLocal(entry: MailingListWithContacts) {
     setLists((prev) => {
@@ -85,6 +109,8 @@ export function ListsClient({
         )}
       </div>
 
+      {copyMsg && <div className="helptext" style={{ marginBottom: 12 }}>{copyMsg}</div>}
+
       {lists.length === 0 ? (
         <div className="empty">
           <h3>No mailing lists yet</h3>
@@ -116,6 +142,12 @@ export function ListsClient({
                 </span>
                 <a className="btn small" href={`/api/lists/${entry.list.id}/export`}>
                   Export
+                </a>
+                <button className="btn small" onClick={() => copyEmails(entry)}>
+                  Copy emails
+                </button>
+                <a className="btn small" href={mailtoHref(entry)}>
+                  Email (BCC)
                 </a>
                 {canEdit && (
                   <button className="btn small" onClick={() => duplicateList(entry)}>
