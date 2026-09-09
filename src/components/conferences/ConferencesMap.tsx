@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Event } from "@prisma/client";
+import { Conference } from "@prisma/client";
 import { inferState } from "@/lib/region";
 import { projectState, INSET_STATES } from "@/lib/state-centroids";
 
@@ -12,11 +12,11 @@ function radiusFor(count: number) {
   return Math.min(6 + Math.sqrt(count) * 7, 42);
 }
 
-export function EventsMap({ events }: { events: Event[] }) {
+export function ConferencesMap({ conferences }: { conferences: Conference[] }) {
   const { counts, unmapped } = useMemo(() => {
     const counts = new Map<string, number>();
     let unmapped = 0;
-    for (const ev of events) {
+    for (const ev of conferences) {
       const state = inferState(ev.name, ev.location);
       if (!state) {
         unmapped++;
@@ -25,7 +25,7 @@ export function EventsMap({ events }: { events: Event[] }) {
       counts.set(state, (counts.get(state) ?? 0) + 1);
     }
     return { counts, unmapped };
-  }, [events]);
+  }, [conferences]);
 
   const dots = useMemo(() => {
     const out: { abbr: string; x: number; y: number; count: number }[] = [];
@@ -39,11 +39,11 @@ export function EventsMap({ events }: { events: Event[] }) {
 
   const maxCount = dots.length > 0 ? dots[0].count : 0;
 
-  if (events.length === 0) {
+  if (conferences.length === 0) {
     return (
       <div className="empty">
         <h3>Nothing to show</h3>
-        <div>No events match the current filter.</div>
+        <div>No conferences match the current filter.</div>
       </div>
     );
   }
@@ -73,7 +73,7 @@ export function EventsMap({ events }: { events: Event[] }) {
               <g key={d.abbr}>
                 <circle cx={d.x} cy={d.y} r={r} fill="var(--brass)" fillOpacity={0.75} stroke="var(--brass-dark)" strokeWidth={1}>
                   <title>
-                    {d.abbr}: {d.count} event{d.count === 1 ? "" : "s"}
+                    {d.abbr}: {d.count} conference{d.count === 1 ? "" : "s"}
                   </title>
                 </circle>
                 <text
@@ -114,11 +114,11 @@ export function EventsMap({ events }: { events: Event[] }) {
         </svg>
       </div>
       <div className="helptext" style={{ marginTop: 10 }}>
-        Dot size = number of conferences in that state, inferred from each event&rsquo;s location text. Hover a dot for the exact count.
+        Dot size = number of conferences in that state, inferred from each conference&rsquo;s location text. Hover a dot for the exact count.
         {unmapped > 0 && (
           <>
             {" "}
-            {unmapped} event{unmapped === 1 ? "" : "s"} with no clear state in the location (e.g. &ldquo;TBA&rdquo;) aren&rsquo;t shown.
+            {unmapped} conference{unmapped === 1 ? "" : "s"} with no clear state in the location (e.g. &ldquo;TBA&rdquo;) aren&rsquo;t shown.
           </>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
-import { eventInputSchema } from "@/lib/event-schema";
+import { conferenceInputSchema } from "@/lib/conference-schema";
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -10,17 +10,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return errorResponse(e);
   }
   const { id } = await params;
-  const existing = await prisma.event.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Event not found." }, { status: 404 });
+  const existing = await prisma.conference.findUnique({ where: { id } });
+  if (!existing) return NextResponse.json({ error: "Conference not found." }, { status: 404 });
 
   const body = await req.json();
-  const parsed = eventInputSchema.partial().safeParse(body);
+  const parsed = conferenceInputSchema.partial().safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
   const data = parsed.data;
 
-  const event = await prisma.event.update({
+  const conference = await prisma.conference.update({
     where: { id },
     data: {
       ...(data.name !== undefined ? { name: data.name } : {}),
@@ -41,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.fitNote !== undefined ? { fitNote: data.fitNote || null } : {}),
     },
   });
-  return NextResponse.json({ event });
+  return NextResponse.json({ conference });
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -51,7 +51,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return errorResponse(e);
   }
   const { id } = await params;
-  await prisma.event.delete({ where: { id } });
+  await prisma.conference.delete({ where: { id } });
   return NextResponse.json({ ok: true });
 }
 

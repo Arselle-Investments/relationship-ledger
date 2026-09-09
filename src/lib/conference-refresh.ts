@@ -1,4 +1,4 @@
-import { Event } from "@prisma/client";
+import { Conference } from "@prisma/client";
 import { refreshConferenceInfo, ConferenceRefreshResult } from "@/lib/ai";
 
 function stripHtmlToText(html: string): string {
@@ -19,16 +19,16 @@ function isoDate(d: Date): string {
 export type ConferenceCheckResult = { ok: true; suggestion: ConferenceRefreshResult } | { ok: false; error: string };
 
 /**
- * Fetches one event's registration page, strips it to text, and asks the AI
- * what's new or changed versus what's on file. Shared by the single-event
+ * Fetches one conference's registration page, strips it to text, and asks the AI
+ * what's new or changed versus what's on file. Shared by the single-conference
  * refresh route and the bulk "refresh all" route so both fetch/parse/extract
  * exactly the same way.
  */
-export async function checkOneConference(event: Event): Promise<ConferenceCheckResult> {
-  if (!event.registrationLink) {
+export async function checkOneConference(conference: Conference): Promise<ConferenceCheckResult> {
+  if (!conference.registrationLink) {
     return { ok: false, error: "No registration link on file to check." };
   }
-  const url = /^https?:\/\//i.test(event.registrationLink) ? event.registrationLink : `https://${event.registrationLink}`;
+  const url = /^https?:\/\//i.test(conference.registrationLink) ? conference.registrationLink : `https://${conference.registrationLink}`;
 
   let pageText: string;
   try {
@@ -53,11 +53,11 @@ export async function checkOneConference(event: Event): Promise<ConferenceCheckR
 
   try {
     const suggestion = await refreshConferenceInfo({
-      eventName: event.name,
-      currentStartDate: isoDate(event.startDate),
-      currentEndDate: isoDate(event.endDate),
-      currentLocation: event.location,
-      currentRegistrationStatus: event.registrationStatus,
+      conferenceName: conference.name,
+      currentStartDate: isoDate(conference.startDate),
+      currentEndDate: isoDate(conference.endDate),
+      currentLocation: conference.location,
+      currentRegistrationStatus: conference.registrationStatus,
       pageUrl: url,
       pageText,
     });

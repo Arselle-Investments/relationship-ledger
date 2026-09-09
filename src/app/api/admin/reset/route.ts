@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireAdmin } from "@/lib/permissions";
 
-// Wipes all domain data (contacts, tasks, mailing lists, events) for onboarding
+// Wipes all domain data (contacts, tasks, mailing lists, conferences) for onboarding
 // resets. Never touches User/Account/Session rows, so nobody gets signed out or
 // loses their role. Admin-only, and requires the caller to type an exact phrase
 // to guard against an accidental click.
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   await prisma.$transaction([
     prisma.task.deleteMany(),
     prisma.mailingList.deleteMany(),
-    prisma.event.deleteMany(),
+    prisma.conference.deleteMany(),
     prisma.contact.deleteMany(),
   ]);
 

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Event, EventType, User } from "@prisma/client";
-import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { useEffect, useMemo, useState } from "react";
+import { Conference, ConferenceType, User } from "@prisma/client";
+import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 
 function isoDate(d: Date | string) {
   return new Date(d).toISOString().slice(0, 10);
@@ -20,44 +20,72 @@ type ConferenceSuggestion = {
   summary: string | null;
 };
 
-export function EventModal({
-  event,
+export function ConferenceModal({
+  conference,
+  allConferences,
   team,
   canEdit,
   onClose,
   onSaved,
   onDeleted,
+  onCreatedNext,
   autoRefresh,
 }: {
-  event: Event | null;
+  conference: Conference | null;
+  allConferences: Conference[];
   team: User[];
   canEdit: boolean;
   onClose: () => void;
-  onSaved: (event: Event) => void;
+  onSaved: (conference: Conference) => void;
   onDeleted: (id: string) => void;
+  onCreatedNext: (conference: Conference) => void;
   autoRefresh?: boolean;
 }) {
-  const isEdit = !!event;
-  const [name, setName] = useState(event?.name ?? "");
-  const [startDate, setStartDate] = useState(event ? isoDate(event.startDate) : new Date().toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(event ? isoDate(event.endDate) : new Date().toISOString().slice(0, 10));
-  const [location, setLocation] = useState(event?.location ?? "");
-  const [type, setType] = useState<EventType>(event?.type ?? EventType.OTHER);
-  const [attendeeIds, setAttendeeIds] = useState<Set<string>>(new Set(event?.attendeeIds ?? []));
-  const [goals, setGoals] = useState(event?.goals ?? "");
-  const [notes, setNotes] = useState(event?.notes ?? "");
-  const [organizer, setOrganizer] = useState(event?.organizer ?? "");
-  const [registrationLink, setRegistrationLink] = useState(event?.registrationLink ?? "");
-  const [registrationStatus, setRegistrationStatus] = useState(event?.registrationStatus ?? "");
-  const [registrationOpensAt, setRegistrationOpensAt] = useState(event?.registrationOpensAt ? isoDate(event.registrationOpensAt) : "");
-  const [dateConfidence, setDateConfidence] = useState(event?.dateConfidence ?? "");
-  const [fitNote, setFitNote] = useState(event?.fitNote ?? "");
-  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | Date | null>(event?.lastRefreshedAt ?? null);
+  const isEdit = !!conference;
+  const [name, setName] = useState(conference?.name ?? "");
+  const [startDate, setStartDate] = useState(conference ? isoDate(conference.startDate) : new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState(conference ? isoDate(conference.endDate) : new Date().toISOString().slice(0, 10));
+  const [location, setLocation] = useState(conference?.location ?? "");
+  const [type, setType] = useState<ConferenceType>(conference?.type ?? ConferenceType.OTHER);
+  const [attendeeIds, setAttendeeIds] = useState<Set<string>>(new Set(conference?.attendeeIds ?? []));
+  const [goals, setGoals] = useState(conference?.goals ?? "");
+  const [notes, setNotes] = useState(conference?.notes ?? "");
+  const [organizer, setOrganizer] = useState(conference?.organizer ?? "");
+  const [registrationLink, setRegistrationLink] = useState(conference?.registrationLink ?? "");
+  const [registrationStatus, setRegistrationStatus] = useState(conference?.registrationStatus ?? "");
+  const [registrationOpensAt, setRegistrationOpensAt] = useState(conference?.registrationOpensAt ? isoDate(conference.registrationOpensAt) : "");
+  const [dateConfidence, setDateConfidence] = useState(conference?.dateConfidence ?? "");
+  const [fitNote, setFitNote] = useState(conference?.fitNote ?? "");
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<string | Date | null>(conference?.lastRefreshedAt ?? null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState<ConferenceSuggestion | null>(null);
+  const [creatingNext, setCreatingNext] = useState(false);
+  const [nextError, setNextError] = useState<string | null>(null);
+
+  const seriesHistory = useMemo(() => {
+    if (!conference) return [];
+    const sid = conference.seriesId ?? conference.id;
+    return allConferences
+      .filter((c) => c.id !== conference.id && (c.seriesId ?? c.id) === sid)
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  }, [conference, allConferences]);
+
+  async function handleCreateNext() {
+    if (!conference) return;
+    setNextError(null);
+    setCreatingNext(true);
+    const res = await fetch(`/api/conferences/${conference.id}/next-occurrence`, { method: "POST" });
+    const json = await res.json();
+    setCreatingNext(false);
+    if (!res.ok) {
+      setNextError(json.error ?? "Something went wrong.");
+      return;
+    }
+    onCreatedNext(json.conference);
+  }
 
   function toggleAttendee(id: string) {
     setAttendeeIds((prev) => {
@@ -71,7 +99,7 @@ export function EventModal({
   async function handleSave() {
     setError(null);
     if (!name.trim()) {
-      setError("Event name is required.");
+      setError("Conference name is required.");
       return;
     }
     setSaving(true);
@@ -91,7 +119,7 @@ export function EventModal({
       dateConfidence: dateConfidence.trim() || null,
       fitNote: fitNote.trim() || null,
     };
-    const res = await fetch(isEdit ? `/api/events/${event!.id}` : "/api/events", {
+    const res = await fetch(isEdit ? `/api/conferences/${conference!.id}` : "/api/conferences", {
       method: isEdit ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -102,22 +130,22 @@ export function EventModal({
       setError(json.error ?? "Something went wrong.");
       return;
     }
-    onSaved(isEdit ? json.event : json.event);
+    onSaved(isEdit ? json.conference : json.conference);
   }
 
   async function handleDelete() {
-    if (!event) return;
-    if (!confirm(`Delete "${event.name}"? This can't be undone.`)) return;
-    const res = await fetch(`/api/events/${event.id}`, { method: "DELETE" });
-    if (res.ok) onDeleted(event.id);
+    if (!conference) return;
+    if (!confirm(`Delete "${conference.name}"? This can't be undone.`)) return;
+    const res = await fetch(`/api/conferences/${conference.id}`, { method: "DELETE" });
+    if (res.ok) onDeleted(conference.id);
   }
 
   async function handleRefresh() {
-    if (!event) return;
+    if (!conference) return;
     setRefreshError(null);
     setSuggestion(null);
     setRefreshing(true);
-    const res = await fetch(`/api/events/${event.id}/refresh`, { method: "POST" });
+    const res = await fetch(`/api/conferences/${conference.id}/refresh`, { method: "POST" });
     const json = await res.json();
     setRefreshing(false);
     if (!res.ok) {
@@ -153,7 +181,7 @@ export function EventModal({
   }
 
   useEffect(() => {
-    if (autoRefresh && event?.registrationLink) {
+    if (autoRefresh && conference?.registrationLink) {
       handleRefresh();
     }
     // Only ever run once, right when the modal opens with the auto-refresh flag set.
@@ -164,14 +192,14 @@ export function EventModal({
     <div className="overlay open" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>{isEdit ? "Edit event" : "Add event"}</h2>
+          <h2>{isEdit ? "Edit conference" : "Add conference"}</h2>
           <button className="close-x" onClick={onClose}>
             &times;
           </button>
         </div>
         <div className="modal-body">
           <div className="field">
-            <label>Event name</label>
+            <label>Conference name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} disabled={!canEdit} />
           </div>
           <div className="field-row">
@@ -191,10 +219,10 @@ export function EventModal({
             </div>
             <div className="field">
               <label>Type</label>
-              <select value={type} onChange={(e) => setType(e.target.value as EventType)} disabled={!canEdit}>
-                {Object.values(EventType).map((t) => (
+              <select value={type} onChange={(e) => setType(e.target.value as ConferenceType)} disabled={!canEdit}>
+                {Object.values(ConferenceType).map((t) => (
                   <option key={t} value={t}>
-                    {EVENT_TYPE_LABELS[t]}
+                    {CONFERENCE_TYPE_LABELS[t]}
                   </option>
                 ))}
               </select>
@@ -256,6 +284,18 @@ export function EventModal({
             <input value={fitNote} onChange={(e) => setFitNote(e.target.value)} disabled={!canEdit} placeholder="Why this does/doesn't fit our outreach" />
           </div>
 
+          {isEdit && seriesHistory.length > 0 && (
+            <div className="card" style={{ padding: 12, marginTop: 4, marginBottom: 8 }}>
+              <div className="helptext" style={{ marginBottom: 6 }}>Other years in this series</div>
+              {seriesHistory.map((c) => (
+                <div key={c.id} style={{ fontSize: 12.5, padding: "3px 0" }}>
+                  {c.name} — {isoDate(c.startDate)}
+                  {c.registrationStatus ? ` · ${c.registrationStatus}` : ""}
+                </div>
+              ))}
+            </div>
+          )}
+
           {isEdit && canEdit && (
             <div className="card" style={{ padding: 12, marginTop: 4, marginBottom: 8 }}>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
@@ -308,17 +348,23 @@ export function EventModal({
             </div>
           )}
 
+          {nextError && <div className="error-text">{nextError}</div>}
           {error && <div className="error-text">{error}</div>}
         </div>
         {canEdit && (
           <div className="modal-foot">
-            {isEdit ? (
-              <button className="btn btn-danger" onClick={handleDelete}>
-                Delete
-              </button>
-            ) : (
-              <span />
-            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              {isEdit && (
+                <button className="btn btn-danger" onClick={handleDelete}>
+                  Delete
+                </button>
+              )}
+              {isEdit && (
+                <button className="btn small ghost" onClick={handleCreateNext} disabled={creatingNext}>
+                  {creatingNext ? "Creating…" : "Create next year's occurrence"}
+                </button>
+              )}
+            </div>
             <button className="btn primary" onClick={handleSave} disabled={saving}>
               {saving ? "Saving…" : "Save"}
             </button>

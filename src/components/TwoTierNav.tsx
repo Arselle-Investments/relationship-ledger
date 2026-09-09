@@ -22,7 +22,7 @@ const SECTIONS: SectionDef[] = [
     tabs: [
       { href: "/followups", label: "Follow-ups" },
       { href: "/tasks", label: "Tasks" },
-      { href: "/events", label: "Events" },
+      { href: "/conferences", label: "Conferences" },
       { href: "/travel", label: "Travel" },
       { href: "/lookahead", label: "Look Ahead" },
     ],

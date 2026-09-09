@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Event } from "@prisma/client";
+import { Conference } from "@prisma/client";
 
 type ConferenceRefreshResult = {
   startDate: string | null;
@@ -16,8 +16,8 @@ type ConferenceRefreshResult = {
 };
 
 type ResultItem = {
-  eventId: string;
-  eventName: string;
+  conferenceId: string;
+  conferenceName: string;
   suggestion: ConferenceRefreshResult | null;
   error: string | null;
 };
@@ -35,23 +35,23 @@ const FIELD_DEFS: { key: keyof ConferenceRefreshResult; label: string }[] = [
 
 export function BulkConferenceRefreshModal({
   onClose,
-  onEventUpdated,
+  onConferenceUpdated,
 }: {
   onClose: () => void;
-  onEventUpdated: (event: Event) => void;
+  onConferenceUpdated: (conference: Conference) => void;
 }) {
   const [checking, setChecking] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [checked, setChecked] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
-  const [failed, setFailed] = useState<{ eventId: string; eventName: string; error: string | null }[]>([]);
+  const [failed, setFailed] = useState<{ conferenceId: string; conferenceName: string; error: string | null }[]>([]);
   const [items, setItems] = useState<ResultItem[]>([]);
   const [appliedKeys, setAppliedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const res = await fetch("/api/events/refresh-all", { method: "POST" });
+      const res = await fetch("/api/conferences/refresh-all", { method: "POST" });
       const json = await res.json();
       if (cancelled) return;
       setChecking(false);
@@ -72,18 +72,18 @@ export function BulkConferenceRefreshModal({
   async function applyField(item: ResultItem, key: keyof ConferenceRefreshResult) {
     const value = item.suggestion?.[key];
     if (value === null || value === undefined) return;
-    const res = await fetch(`/api/events/${item.eventId}`, {
+    const res = await fetch(`/api/conferences/${item.conferenceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ [key]: value }),
     });
     if (!res.ok) return;
     const json = await res.json();
-    onEventUpdated(json.event);
-    setAppliedKeys((prev) => new Set(prev).add(`${item.eventId}:${key}`));
+    onConferenceUpdated(json.conference);
+    setAppliedKeys((prev) => new Set(prev).add(`${item.conferenceId}:${key}`));
   }
 
-  async function applyAllForEvent(item: ResultItem) {
+  async function applyAllForConference(item: ResultItem) {
     if (!item.suggestion) return;
     const data: Record<string, unknown> = {};
     for (const { key } of FIELD_DEFS) {
@@ -91,17 +91,17 @@ export function BulkConferenceRefreshModal({
       if (value !== null && value !== undefined) data[key] = value;
     }
     if (Object.keys(data).length === 0) return;
-    const res = await fetch(`/api/events/${item.eventId}`, {
+    const res = await fetch(`/api/conferences/${item.conferenceId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
     if (!res.ok) return;
     const json = await res.json();
-    onEventUpdated(json.event);
+    onConferenceUpdated(json.conference);
     setAppliedKeys((prev) => {
       const next = new Set(prev);
-      FIELD_DEFS.forEach(({ key }) => next.add(`${item.eventId}:${key}`));
+      FIELD_DEFS.forEach(({ key }) => next.add(`${item.conferenceId}:${key}`));
       return next;
     });
   }
@@ -134,8 +134,8 @@ export function BulkConferenceRefreshModal({
                   </summary>
                   <div style={{ marginTop: 8 }}>
                     {failed.map((f) => (
-                      <div key={f.eventId} style={{ fontSize: 12.5, padding: "4px 0" }}>
-                        <strong>{f.eventName}:</strong> <span className="muted">{f.error}</span>
+                      <div key={f.conferenceId} style={{ fontSize: 12.5, padding: "4px 0" }}>
+                        <strong>{f.conferenceName}:</strong> <span className="muted">{f.error}</span>
                       </div>
                     ))}
                   </div>
@@ -149,10 +149,10 @@ export function BulkConferenceRefreshModal({
                 </div>
               ) : (
                 items.map((item) => (
-                  <div key={item.eventId} className="card" style={{ padding: 14, marginBottom: 12 }}>
+                  <div key={item.conferenceId} className="card" style={{ padding: 14, marginBottom: 12 }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 8 }}>
-                      <strong style={{ fontSize: 13 }}>{item.eventName}</strong>
-                      <button className="btn small ghost" onClick={() => applyAllForEvent(item)}>
+                      <strong style={{ fontSize: 13 }}>{item.conferenceName}</strong>
+                      <button className="btn small ghost" onClick={() => applyAllForConference(item)}>
                         Use all
                       </button>
                     </div>
@@ -162,7 +162,7 @@ export function BulkConferenceRefreshModal({
                       </div>
                     )}
                     {FIELD_DEFS.filter(({ key }) => item.suggestion?.[key] != null).map(({ key, label }) => {
-                      const applied = appliedKeys.has(`${item.eventId}:${key}`);
+                      const applied = appliedKeys.has(`${item.conferenceId}:${key}`);
                       return (
                         <div
                           key={key}

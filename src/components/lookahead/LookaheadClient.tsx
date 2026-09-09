@@ -5,14 +5,14 @@ import { Settings } from "@prisma/client";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
-import { eventOverlapsWindow } from "@/lib/events";
-import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { conferenceOverlapsWindow } from "@/lib/conferences";
+import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { TravelWithUser } from "@/lib/travel";
 import { ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
-import { Event as EventModel } from "@prisma/client";
+import { Conference as ConferenceModel } from "@prisma/client";
 
 function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
@@ -21,13 +21,13 @@ function fmtDate(d: string | Date) {
 export function LookaheadClient({
   contacts,
   tasks,
-  events,
+  conferences,
   travel,
   settings,
 }: {
   contacts: ContactWithRelations[];
   tasks: TaskWithRelations[];
-  events: EventModel[];
+  conferences: ConferenceModel[];
   travel: TravelWithUser[];
   settings: Settings;
 }) {
@@ -50,17 +50,17 @@ export function LookaheadClient({
         .sort((a, b) => (a.dueDate ? new Date(a.dueDate).getTime() : 0) - (b.dueDate ? new Date(b.dueDate).getTime() : 0)),
     [tasks, bounds]
   );
-  const conferences = useMemo(
+  const upcomingConferences = useMemo(
     () =>
-      events
-        .filter((ev) => eventOverlapsWindow(ev, bounds))
+      conferences
+        .filter((ev) => conferenceOverlapsWindow(ev, bounds))
         .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
-    [events, bounds]
+    [conferences, bounds]
   );
   const upcomingTravel = useMemo(
     () =>
       travel
-        .filter((t) => eventOverlapsWindow(t, bounds))
+        .filter((t) => conferenceOverlapsWindow(t, bounds))
         .map((t) => ({ ...t, matches: contacts.filter((c) => contactMatchesCity(c, t.city)) }))
         .sort((a, b) => new Date(a.startDate).getTime() - new Date(b.startDate).getTime()),
     [travel, contacts, bounds]
@@ -187,11 +187,11 @@ export function LookaheadClient({
         )}
       </Section>
 
-      <Section title="Conferences & events" count={conferences.length} emptyMsg="No conferences or events in this window.">
-        {conferences.length > 0 && (
+      <Section title="Conferences" count={upcomingConferences.length} emptyMsg="No conferences in this window.">
+        {upcomingConferences.length > 0 && (
           <table>
             <tbody>
-              {conferences.map((ev) => (
+              {upcomingConferences.map((ev) => (
                 <tr key={ev.id}>
                   <td className="name-cell">{ev.name}</td>
                   <td className="muted">
@@ -202,7 +202,7 @@ export function LookaheadClient({
                   </td>
                   <td className="muted">{ev.location}</td>
                   <td>
-                    <span className="tag">{EVENT_TYPE_LABELS[ev.type]}</span>
+                    <span className="tag">{CONFERENCE_TYPE_LABELS[ev.type]}</span>
                   </td>
                 </tr>
               ))}

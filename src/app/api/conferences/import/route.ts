@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { getField, normalizeDate, parseAllSheets } from "@/lib/excel-import";
-import { inferEventType } from "@/lib/event-constants";
+import { inferConferenceType } from "@/lib/conference-constants";
 
 export async function POST(req: NextRequest) {
   try {
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     if (link) noteParts.push(`Ref: ${link}`);
     const notes = noteParts.join(" · ");
 
-    const existing = await prisma.event.findFirst({
+    const existing = await prisma.conference.findFirst({
       where: {
         name: { equals: name, mode: "insensitive" },
         startDate: new Date(startDate),
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
-      await prisma.event.update({
+      await prisma.conference.update({
         where: { id: existing.id },
         data: {
           endDate: new Date(endDate),
@@ -65,13 +65,13 @@ export async function POST(req: NextRequest) {
       });
       updated++;
     } else {
-      await prisma.event.create({
+      await prisma.conference.create({
         data: {
           name,
           startDate: new Date(startDate),
           endDate: new Date(endDate),
           location: location || null,
-          type: inferEventType(name),
+          type: inferConferenceType(name),
           attendeeIds: [],
           goals: "",
           notes,

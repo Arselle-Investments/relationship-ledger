@@ -10,14 +10,14 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     return errorResponse(e);
   }
   const { id } = await params;
-  const event = await prisma.event.findUnique({ where: { id } });
-  if (!event) return NextResponse.json({ error: "Event not found." }, { status: 404 });
+  const conference = await prisma.conference.findUnique({ where: { id } });
+  if (!conference) return NextResponse.json({ error: "Conference not found." }, { status: 404 });
 
-  const result = await checkOneConference(event);
+  const result = await checkOneConference(conference);
   if (!result.ok) {
     return NextResponse.json({ error: result.error }, { status: 502 });
   }
-  await prisma.event.update({ where: { id }, data: { lastRefreshedAt: new Date() } });
+  await prisma.conference.update({ where: { id }, data: { lastRefreshedAt: new Date() } });
   return NextResponse.json({ suggestion: result.suggestion });
 }
 

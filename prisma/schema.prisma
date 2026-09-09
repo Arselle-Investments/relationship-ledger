@@ -468,25 +468,25 @@ model MailingList {
   updatedAt DateTime @updatedAt
 }
 
-enum EventType {
+enum ConferenceType {
   CONFERENCE
   NETWORKING
   ROADSHOW
   OTHER
 }
 
-model Event {
-  id          String    @id @default(cuid())
+model Conference {
+  id          String         @id @default(cuid())
   name        String
-  startDate   DateTime  @db.Date
-  endDate     DateTime  @db.Date
+  startDate   DateTime       @db.Date
+  endDate     DateTime       @db.Date
   location    String?
-  type        EventType @default(OTHER)
-  attendeeIds String[]  @default([])
-  goals       String?   @default("")
-  notes       String?   @default("")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  type        ConferenceType @default(OTHER)
+  attendeeIds String[]       @default([])
+  goals       String?        @default("")
+  notes       String?        @default("")
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   // --- Research-tracker fields (from the Emerging Managers conference
   // tracker), all optional so plain manually-added events are unaffected ---
@@ -501,7 +501,14 @@ model Event {
   // to re-read it — never applied automatically, just what the last check found.
   lastRefreshedAt     DateTime?
 
+  // --- Year-over-year recurrence: instances of the same recurring conference
+  // share a seriesId (the first occurrence's own id) so the team can see past
+  // years at a glance and spin up next year's entry without re-researching it
+  // from scratch. Plain one-off events leave this null. ---
+  seriesId String?
+
   @@index([startDate])
+  @@index([seriesId])
 }
 
 // One upcoming trip for one team member. City is free text, matched against

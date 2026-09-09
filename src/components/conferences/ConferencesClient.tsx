@@ -1,29 +1,30 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Event, User } from "@prisma/client";
-import { quarterBounds, eventInQuarter } from "@/lib/events";
+import { Conference, User } from "@prisma/client";
+import { quarterBounds, conferenceInQuarter } from "@/lib/conferences";
 import { REGIONS, Region, inferRegion } from "@/lib/region";
-import { EventsGrid } from "./EventsGrid";
-import { EventsCalendar } from "./EventsCalendar";
-import { EventsMap } from "./EventsMap";
-import { EventModal } from "./EventModal";
+import { ConferencesGrid } from "./ConferencesGrid";
+import { ConferencesCalendar } from "./ConferencesCalendar";
+import { ConferencesMap } from "./ConferencesMap";
+import { ConferenceModal } from "./ConferenceModal";
 import { BulkConferenceRefreshModal } from "./BulkConferenceRefreshModal";
 
-export function EventsClient({
-  initialEvents,
+export function ConferencesClient({
+  initialConferences,
   team,
   canEdit,
 }: {
-  initialEvents: Event[];
+  initialConferences: Conference[];
   team: User[];
   canEdit: boolean;
 }) {
-  const [events, setEvents] = useState(initialEvents);
+  const [conferences, setConferences] = useState(initialConferences);
   const [viewMode, setViewMode] = useState<"cards" | "calendar" | "map">("cards");
   const [cardsFilter, setCardsFilter] = useState<"all" | "quarter">("all");
+  const [exportPreset, setExportPreset] = useState<"all" | "quarter" | "year" | "confirmed">("all");
   const [regionFilter, setRegionFilter] = useState<Region | "all">("all");
-  const [editing, setEditing] = useState<Event | null | "new">(null);
+  const [editing, setEditing] = useState<Conference | null | "new">(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [bulkRefreshOpen, setBulkRefreshOpen] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -33,38 +34,38 @@ export function EventsClient({
   const attendeeNamesById = useMemo(() => new Map(team.map((u) => [u.id, u.name || u.email || ""])), [team]);
 
   const byRegion = useMemo(() => {
-    if (regionFilter === "all") return events;
-    return events.filter((ev) => inferRegion(ev.name, ev.location) === regionFilter);
-  }, [events, regionFilter]);
+    if (regionFilter === "all") return conferences;
+    return conferences.filter((ev) => inferRegion(ev.name, ev.location) === regionFilter);
+  }, [conferences, regionFilter]);
 
   const filteredCards = useMemo(() => {
     if (cardsFilter !== "quarter") return byRegion;
     const bounds = quarterBounds(0);
-    return byRegion.filter((ev) => eventInQuarter(ev, bounds));
+    return byRegion.filter((ev) => conferenceInQuarter(ev, bounds));
   }, [byRegion, cardsFilter]);
 
-  function upsertLocal(event: Event) {
-    setEvents((prev) => {
-      const exists = prev.some((e) => e.id === event.id);
-      return exists ? prev.map((e) => (e.id === event.id ? event : e)) : [...prev, event];
+  function upsertLocal(conference: Conference) {
+    setConferences((prev) => {
+      const exists = prev.some((e) => e.id === conference.id);
+      return exists ? prev.map((e) => (e.id === conference.id ? conference : e)) : [...prev, conference];
     });
     setEditing(null);
     setAutoRefresh(false);
   }
 
   function removeLocal(id: string) {
-    setEvents((prev) => prev.filter((e) => e.id !== id));
+    setConferences((prev) => prev.filter((e) => e.id !== id));
     setEditing(null);
     setAutoRefresh(false);
   }
 
-  function openForRefresh(event: Event) {
-    setEditing(event);
+  function openForRefresh(conference: Conference) {
+    setEditing(conference);
     setAutoRefresh(true);
   }
 
-  function updateEventLocal(event: Event) {
-    setEvents((prev) => prev.map((e) => (e.id === event.id ? event : e)));
+  function updateConferenceLocal(conference: Conference) {
+    setConferences((prev) => prev.map((e) => (e.id === conference.id ? conference : e)));
   }
 
   async function handleImportFile(file: File) {
@@ -72,7 +73,7 @@ export function EventsClient({
     setImportMsg(null);
     const form = new FormData();
     form.append("file", file);
-    const res = await fetch("/api/events/import", { method: "POST", body: form });
+    const res = await fetch("/api/conferences/import", { method: "POST", body: form });
     const json = await res.json();
     setImporting(false);
     if (!res.ok) {
@@ -80,8 +81,8 @@ export function EventsClient({
       return;
     }
     setImportMsg(`Imported: ${json.added} added, ${json.updated} updated, ${json.skipped} skipped.`);
-    const refreshed = await fetch("/api/events").then((r) => r.json());
-    setEvents(refreshed.events);
+    const refreshed = await fetch("/api/conferences").then((r) => r.json());
+    setConferences(refreshed.conferences);
   }
 
   return (
@@ -101,7 +102,7 @@ export function EventsClient({
         {viewMode === "cards" && (
           <div className="view-toggle">
             <button className={cardsFilter === "all" ? "active" : ""} onClick={() => setCardsFilter("all")}>
-              All events
+              All conferences
             </button>
             <button className={cardsFilter === "quarter" ? "active" : ""} onClick={() => setCardsFilter("quarter")}>
               This quarter
@@ -117,7 +118,13 @@ export function EventsClient({
           ))}
         </select>
         <div className="spacer" />
-        <a className="btn" href={`/api/events/export${viewMode === "cards" ? `?filter=${cardsFilter}` : ""}`}>
+        <select value={exportPreset} onChange={(e) => setExportPreset(e.target.value as typeof exportPreset)} title="Export preset">
+          <option value="all">Export: all conferences</option>
+          <option value="quarter">Export: this quarter</option>
+          <option value="year">Export: this year</option>
+          <option value="confirmed">Export: confirmed with registration</option>
+        </select>
+        <a className="btn" href={`/api/conferences/export?filter=${exportPreset}`}>
           Export to Excel
         </a>
         {canEdit && (
@@ -137,7 +144,7 @@ export function EventsClient({
               {importing ? "Importing…" : "Import"}
             </button>
             <button className="btn primary" onClick={() => setEditing("new")}>
-              Add event
+              Add conference
             </button>
             <button className="btn" onClick={() => setBulkRefreshOpen(true)}>
               Refresh all conferences
@@ -149,16 +156,18 @@ export function EventsClient({
       {importMsg && <div className="helptext" style={{ marginBottom: 12 }}>{importMsg}</div>}
 
       {viewMode === "cards" ? (
-        <EventsGrid events={filteredCards} attendeeNamesById={attendeeNamesById} onClickEvent={setEditing} onRefreshEvent={openForRefresh} />
+        <ConferencesGrid conferences={filteredCards} attendeeNamesById={attendeeNamesById} onClickConference={setEditing} onRefreshConference={openForRefresh} />
       ) : viewMode === "calendar" ? (
-        <EventsCalendar events={byRegion} />
+        <ConferencesCalendar conferences={byRegion} />
       ) : (
-        <EventsMap events={byRegion} />
+        <ConferencesMap conferences={byRegion} />
       )}
 
       {editing !== null && (
-        <EventModal
-          event={editing === "new" ? null : editing}
+        <ConferenceModal
+          key={editing === "new" ? "new" : editing.id}
+          conference={editing === "new" ? null : editing}
+          allConferences={conferences}
           team={team}
           canEdit={canEdit}
           onClose={() => {
@@ -167,12 +176,16 @@ export function EventsClient({
           }}
           onSaved={upsertLocal}
           onDeleted={removeLocal}
+          onCreatedNext={(c) => {
+            upsertLocal(c);
+            setEditing(c);
+          }}
           autoRefresh={autoRefresh}
         />
       )}
 
       {bulkRefreshOpen && (
-        <BulkConferenceRefreshModal onClose={() => setBulkRefreshOpen(false)} onEventUpdated={updateEventLocal} />
+        <BulkConferenceRefreshModal onClose={() => setBulkRefreshOpen(false)} onConferenceUpdated={updateConferenceLocal} />
       )}
     </div>
   );

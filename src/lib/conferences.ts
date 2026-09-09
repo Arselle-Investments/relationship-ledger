@@ -19,14 +19,25 @@ export function quarterBounds(offset = 0): QuarterBounds {
   return { start: start.toISOString().slice(0, 10), end: end.toISOString().slice(0, 10) };
 }
 
-export function eventInQuarter(ev: { startDate: Date | string; endDate: Date | string }, bounds: QuarterBounds): boolean {
+/** Bounds of the current calendar year, as yyyy-mm-dd strings. */
+export function yearBounds(offset = 0): QuarterBounds {
+  const y = new Date().getFullYear() + offset;
+  return { start: `${y}-01-01`, end: `${y}-12-31` };
+}
+
+/** Has a registration link on file and a non-empty status — i.e. we know enough to actually register someone. */
+export function conferenceIsConfirmedWithRegistration(ev: { registrationLink: string | null; registrationStatus: string | null }): boolean {
+  return Boolean(ev.registrationLink?.trim() && ev.registrationStatus?.trim());
+}
+
+export function conferenceInQuarter(ev: { startDate: Date | string; endDate: Date | string }, bounds: QuarterBounds): boolean {
   const s = toISO(ev.startDate);
   const e = toISO(ev.endDate) || s;
   if (!s) return false;
   return s <= bounds.end && e >= bounds.start;
 }
 
-export function eventOverlapsWindow(
+export function conferenceOverlapsWindow(
   ev: { startDate: Date | string; endDate: Date | string },
   bounds: { start: string; end: string }
 ): boolean {

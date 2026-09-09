@@ -6,8 +6,8 @@ import { getSettings } from "@/lib/settings";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
-import { eventOverlapsWindow } from "@/lib/events";
-import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { conferenceOverlapsWindow } from "@/lib/conferences";
+import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { safeCell } from "@/lib/excel-safety";
@@ -23,10 +23,10 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const days = searchParams.get("days") === "30" ? 30 : 14;
 
-  const [contacts, tasks, events, travel, settings] = await Promise.all([
+  const [contacts, tasks, conferences, travel, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     prisma.task.findMany({ include: { owner: true, contact: true } }),
-    prisma.event.findMany(),
+    prisma.conference.findMany(),
     prisma.travel.findMany({ include: { user: true } }),
     getSettings(),
   ]);
@@ -41,11 +41,11 @@ export async function GET(req: NextRequest) {
   const milestones = tasks
     .filter((t) => t.status !== "DONE" && t.dueDate && t.dueDate.toISOString().slice(0, 10) <= bounds.end)
     .sort((a, b) => (a.dueDate?.getTime() ?? 0) - (b.dueDate?.getTime() ?? 0));
-  const conferences = events
-    .filter((ev) => eventOverlapsWindow(ev, bounds))
+  const upcomingConferences = conferences
+    .filter((ev) => conferenceOverlapsWindow(ev, bounds))
     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
   const upcomingTravel = travel
-    .filter((t) => eventOverlapsWindow(t, bounds))
+    .filter((t) => conferenceOverlapsWindow(t, bounds))
     .sort((a, b) => a.startDate.getTime() - b.startDate.getTime());
 
   const workbook = new ExcelJS.Workbook();
@@ -119,22 +119,22 @@ export async function GET(req: NextRequest) {
     });
   }
 
-  const eventsSheet = workbook.addWorksheet("Conferences");
-  eventsSheet.columns = [
+  const conferencesSheet = workbook.addWorksheet("Conferences");
+  conferencesSheet.columns = [
     { header: "Name", key: "name", width: 30 },
     { header: "Start Date", key: "start", width: 14 },
     { header: "End Date", key: "end", width: 14 },
     { header: "Location", key: "location", width: 24 },
     { header: "Type", key: "type", width: 16 },
   ];
-  eventsSheet.getRow(1).font = { bold: true };
-  for (const ev of conferences) {
-    eventsSheet.addRow({
+  conferencesSheet.getRow(1).font = { bold: true };
+  for (const ev of upcomingConferences) {
+    conferencesSheet.addRow({
       name: safeCell(ev.name),
       start: ev.startDate.toISOString().slice(0, 10),
       end: ev.endDate.toISOString().slice(0, 10),
       location: safeCell(ev.location ?? ""),
-      type: EVENT_TYPE_LABELS[ev.type],
+      type: CONFERENCE_TYPE_LABELS[ev.type],
     });
   }
 

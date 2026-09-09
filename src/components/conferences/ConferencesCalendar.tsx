@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { Event } from "@prisma/client";
-import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { Conference } from "@prisma/client";
+import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 
 function isoDate(d: Date | string) {
   return new Date(d).toISOString().slice(0, 10);
 }
 
-function eventsOnDate(events: Event[], dateStr: string): Event[] {
-  return events.filter((ev) => {
+function conferencesOnDate(conferences: Conference[], dateStr: string): Conference[] {
+  return conferences.filter((ev) => {
     const start = isoDate(ev.startDate);
     const end = ev.endDate ? isoDate(ev.endDate) : start;
     return start && dateStr >= start && dateStr <= end;
@@ -23,13 +23,13 @@ function quarterStartMonth(m: number) {
 function MonthGrid({
   year,
   month,
-  events,
+  conferences,
   onDayClick,
 }: {
   year: number;
   month: number;
-  events: Event[];
-  onDayClick: (dateStr: string, dayEvents: Event[]) => void;
+  conferences: Conference[];
+  onDayClick: (dateStr: string, dayConferences: Conference[]) => void;
 }) {
   const first = new Date(year, month, 1);
   const startDay = first.getDay();
@@ -41,18 +41,18 @@ function MonthGrid({
   for (let i = 0; i < startDay; i++) cells.push(<div key={`pad-${i}`} className="cal-day pad" />);
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-    const dayEvents = eventsOnDate(events, dateStr);
+    const dayConferences = conferencesOnDate(conferences, dateStr);
     const isToday = dateStr === today;
     cells.push(
       <div
         key={dateStr}
-        className={`cal-day ${dayEvents.length ? "has-event" : ""} ${isToday ? "today" : ""}`}
-        onClick={dayEvents.length ? () => onDayClick(dateStr, dayEvents) : undefined}
+        className={`cal-day ${dayConferences.length ? "has-conference" : ""} ${isToday ? "today" : ""}`}
+        onClick={dayConferences.length ? () => onDayClick(dateStr, dayConferences) : undefined}
       >
         <span>{d}</span>
-        {dayEvents.length > 0 && (
+        {dayConferences.length > 0 && (
           <div className="dots">
-            {dayEvents.slice(0, 3).map((_, i) => (
+            {dayConferences.slice(0, 3).map((_, i) => (
               <span key={i} />
             ))}
           </div>
@@ -80,10 +80,10 @@ function MonthGrid({
   );
 }
 
-export function EventsCalendar({ events }: { events: Event[] }) {
+export function ConferencesCalendar({ conferences }: { conferences: Conference[] }) {
   const [span, setSpan] = useState<"quarter" | "year">("quarter");
   const [anchor, setAnchor] = useState(() => new Date());
-  const [dayModal, setDayModal] = useState<{ dateStr: string; events: Event[] } | null>(null);
+  const [dayModal, setDayModal] = useState<{ dateStr: string; conferences: Conference[] } | null>(null);
 
   const year = anchor.getFullYear();
   const months = span === "quarter" ? [0, 1, 2].map((i) => quarterStartMonth(anchor.getMonth()) + i) : Array.from({ length: 12 }, (_, i) => i);
@@ -121,8 +121,8 @@ export function EventsCalendar({ events }: { events: Event[] }) {
             key={m}
             year={year}
             month={m}
-            events={events}
-            onDayClick={(dateStr, dayEvents) => setDayModal({ dateStr, events: dayEvents })}
+            conferences={conferences}
+            onDayClick={(dateStr, dayConferences) => setDayModal({ dateStr, conferences: dayConferences })}
           />
         ))}
       </div>
@@ -137,11 +137,11 @@ export function EventsCalendar({ events }: { events: Event[] }) {
               </button>
             </div>
             <div className="modal-body">
-              {dayModal.events.map((ev) => (
+              {dayModal.conferences.map((ev) => (
                 <div key={ev.id} style={{ padding: "8px 0", borderBottom: "1px solid var(--line)" }}>
                   <div style={{ fontWeight: 600 }}>{ev.name}</div>
                   <div className="muted" style={{ fontSize: 12 }}>
-                    {ev.location} &middot; {EVENT_TYPE_LABELS[ev.type]}
+                    {ev.location} &middot; {CONFERENCE_TYPE_LABELS[ev.type]}
                   </div>
                 </div>
               ))}

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
-import { quarterBounds, eventInQuarter } from "@/lib/events";
-import { EVENT_TYPE_LABELS } from "@/lib/event-constants";
+import { quarterBounds, yearBounds, conferenceInQuarter, conferenceIsConfirmedWithRegistration } from "@/lib/conferences";
+import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
@@ -17,15 +17,22 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const filter = searchParams.get("filter");
 
-  const [allEvents, team] = await Promise.all([
-    prisma.event.findMany({ orderBy: { startDate: "asc" } }),
+  const [allConferences, team] = await Promise.all([
+    prisma.conference.findMany({ orderBy: { startDate: "asc" } }),
     prisma.user.findMany(),
   ]);
   const teamById = new Map(team.map((u) => [u.id, u.name || u.email]));
-  const events = filter === "quarter" ? allEvents.filter((ev) => eventInQuarter(ev, quarterBounds(0))) : allEvents;
+  const conferences =
+    filter === "quarter"
+      ? allConferences.filter((ev) => conferenceInQuarter(ev, quarterBounds(0)))
+      : filter === "year"
+        ? allConferences.filter((ev) => conferenceInQuarter(ev, yearBounds(0)))
+        : filter === "confirmed"
+          ? allConferences.filter(conferenceIsConfirmedWithRegistration)
+          : allConferences;
 
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("Events");
+  const sheet = workbook.addWorksheet("Conferences");
   sheet.columns = [
     { header: "Name", key: "name", width: 30 },
     { header: "Start Date", key: "startDate", width: 14 },
@@ -33,18 +40,22 @@ export async function GET(req: NextRequest) {
     { header: "Location", key: "location", width: 24 },
     { header: "Type", key: "type", width: 16 },
     { header: "Attendees", key: "attendees", width: 30 },
+    { header: "Registration Status", key: "registrationStatus", width: 22 },
+    { header: "Registration Link", key: "registrationLink", width: 30 },
     { header: "Goals", key: "goals", width: 30 },
     { header: "Notes", key: "notes", width: 40 },
   ];
   sheet.getRow(1).font = { bold: true };
-  for (const ev of events) {
+  for (const ev of conferences) {
     sheet.addRow({
       name: safeCell(ev.name),
       startDate: ev.startDate.toISOString().slice(0, 10),
       endDate: ev.endDate.toISOString().slice(0, 10),
       location: safeCell(ev.location ?? ""),
-      type: EVENT_TYPE_LABELS[ev.type],
+      type: CONFERENCE_TYPE_LABELS[ev.type],
       attendees: safeCell(ev.attendeeIds.map((id) => teamById.get(id) ?? "").join(", ")),
+      registrationStatus: safeCell(ev.registrationStatus ?? ""),
+      registrationLink: safeCell(ev.registrationLink ?? ""),
       goals: safeCell(ev.goals ?? ""),
       notes: safeCell(ev.notes ?? ""),
     });
@@ -54,7 +65,7 @@ export async function GET(req: NextRequest) {
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="arselle-events-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      "Content-Disposition": `attachment; filename="arselle-conferences-${new Date().toISOString().slice(0, 10)}.xlsx"`,
     },
   });
 }

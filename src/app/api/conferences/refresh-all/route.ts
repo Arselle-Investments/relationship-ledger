@@ -7,8 +7,8 @@ import { ConferenceRefreshResult } from "@/lib/ai";
 const CONCURRENCY = 3;
 
 export type BulkRefreshResultItem = {
-  eventId: string;
-  eventName: string;
+  conferenceId: string;
+  conferenceName: string;
   suggestion: ConferenceRefreshResult | null;
   error: string | null;
 };
@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest) {
     return NextResponse.json({ error: "Unexpected error." }, { status: 500 });
   }
 
-  const events = await prisma.event.findMany({
+  const conferences = await prisma.conference.findMany({
     where: { registrationLink: { not: null } },
     orderBy: { startDate: "asc" },
   });
@@ -30,20 +30,20 @@ export async function POST(_req: NextRequest) {
   const results: BulkRefreshResultItem[] = [];
   let cursor = 0;
   async function worker() {
-    while (cursor < events.length) {
-      const event = events[cursor];
+    while (cursor < conferences.length) {
+      const conference = conferences[cursor];
       cursor += 1;
-      const result = await checkOneConference(event);
-      await prisma.event.update({ where: { id: event.id }, data: { lastRefreshedAt: new Date() } });
+      const result = await checkOneConference(conference);
+      await prisma.conference.update({ where: { id: conference.id }, data: { lastRefreshedAt: new Date() } });
       results.push({
-        eventId: event.id,
-        eventName: event.name,
+        conferenceId: conference.id,
+        conferenceName: conference.name,
         suggestion: result.ok ? result.suggestion : null,
         error: result.ok ? null : result.error,
       });
     }
   }
-  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, events.length) }, () => worker()));
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, conferences.length) }, () => worker()));
 
   const withUpdates = results.filter((r) => r.suggestion && conferenceSuggestionHasAnything(r.suggestion));
   const failed = results.filter((r) => r.error);
@@ -52,6 +52,6 @@ export async function POST(_req: NextRequest) {
     checked: results.length,
     withUpdates,
     failedCount: failed.length,
-    failed: failed.map((f) => ({ eventId: f.eventId, eventName: f.eventName, error: f.error })),
+    failed: failed.map((f) => ({ conferenceId: f.conferenceId, conferenceName: f.conferenceName, error: f.error })),
   });
 }

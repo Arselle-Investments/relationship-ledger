@@ -277,7 +277,7 @@ const CONFERENCE_REFRESH_TOOL = {
  * field, same as every other AI-assisted feature in this app.
  */
 export async function refreshConferenceInfo(params: {
-  eventName: string;
+  conferenceName: string;
   currentStartDate: string; // YYYY-MM-DD
   currentEndDate: string; // YYYY-MM-DD
   currentLocation: string | null;
@@ -296,7 +296,7 @@ export async function refreshConferenceInfo(params: {
         role: "user",
         content: `This is the text content of a conference's registration/info page. Compare it against what we currently have on file and report only what's new, changed, or newly confirmed. Leave a field null if the page doesn't say anything different from what's already on file, or doesn't mention it at all.
 
-Conference: ${params.eventName}
+Conference: ${params.conferenceName}
 Page checked: ${params.pageUrl}
 Currently on file — dates: ${params.currentStartDate} to ${params.currentEndDate}, location: ${params.currentLocation ?? "(none)"}, registration status: ${params.currentRegistrationStatus ?? "(none)"}
 

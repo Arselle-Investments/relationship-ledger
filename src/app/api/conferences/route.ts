@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
-import { eventInputSchema } from "@/lib/event-schema";
+import { conferenceInputSchema } from "@/lib/conference-schema";
 
 export async function GET() {
   try {
@@ -9,8 +9,8 @@ export async function GET() {
   } catch (e) {
     return errorResponse(e);
   }
-  const events = await prisma.event.findMany({ orderBy: { startDate: "asc" } });
-  return NextResponse.json({ events });
+  const conferences = await prisma.conference.findMany({ orderBy: { startDate: "asc" } });
+  return NextResponse.json({ conferences });
 }
 
 export async function POST(req: NextRequest) {
@@ -20,12 +20,12 @@ export async function POST(req: NextRequest) {
     return errorResponse(e);
   }
   const body = await req.json();
-  const parsed = eventInputSchema.safeParse(body);
+  const parsed = conferenceInputSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
   const data = parsed.data;
-  const event = await prisma.event.create({
+  const conference = await prisma.conference.create({
     data: {
       name: data.name,
       startDate: new Date(data.startDate),
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       notes: data.notes ?? "",
     },
   });
-  return NextResponse.json({ event }, { status: 201 });
+  return NextResponse.json({ conference }, { status: 201 });
 }
 
 function errorResponse(e: unknown) {
