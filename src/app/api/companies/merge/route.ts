@@ -75,9 +75,17 @@ export async function POST(req: NextRequest) {
     let city = primary.city;
     let tier = primary.tier;
     let type = primary.type;
+    let sources = primary.sources;
+    let website = primary.website;
+    let linkedinUrl = primary.linkedinUrl;
+    let aum = primary.aum;
+    let founded = primary.founded;
+    let priorityQuarter = primary.priorityQuarter;
+    const preservedNotes: string[] = [];
 
     for (const s of secondaries) {
       tags = mergeArrays(tags, s.tags);
+      sources = mergeArrays(sources, s.sources);
       targetAssetClasses = mergeArrays(targetAssetClasses, s.targetAssetClasses);
       investmentStructures = mergeArrays(investmentStructures, s.investmentStructures);
       investmentStrategies = mergeArrays(investmentStrategies, s.investmentStrategies);
@@ -93,11 +101,25 @@ export async function POST(req: NextRequest) {
       if (!city && s.city) city = s.city;
       if (!tier && s.tier) tier = s.tier;
       if (type === "OTHER" && s.type !== "OTHER") type = s.type;
+      if (!website && s.website) website = s.website;
+      if (!linkedinUrl && s.linkedinUrl) linkedinUrl = s.linkedinUrl;
+      if (!aum && s.aum) aum = s.aum;
+      else if (aum && s.aum && s.aum.trim() !== aum.trim()) preservedNotes.push(`Alternate AUM figure on a merged duplicate (${s.name}): ${s.aum}`);
+      if (!founded && s.founded) founded = s.founded;
+      if (!priorityQuarter && s.priorityQuarter) priorityQuarter = s.priorityQuarter;
+      // A secondary's own name (the one not kept) is worth staying findable
+      // by — otherwise a search for "Oaktree Capital Management" goes cold
+      // once "Oaktree" absorbs it.
+      if (s.name.trim().toLowerCase() !== primary.name.trim().toLowerCase()) preservedNotes.push(`Also known as: ${s.name}`);
     }
+    if (preservedNotes.length) notes = [notes, ...preservedNotes].filter(Boolean).join("\n");
 
     await tx.company.update({
       where: { id: primaryId },
-      data: { tags, notes, targetAssetClasses, investmentStructures, investmentStrategies, investmentSizeMin, investmentSizeMax, city, tier, type },
+      data: {
+        tags, notes, targetAssetClasses, investmentStructures, investmentStrategies, investmentSizeMin, investmentSizeMax,
+        city, tier, type, sources, website, linkedinUrl, aum, founded, priorityQuarter,
+      },
     });
 
     await tx.company.deleteMany({ where: { id: { in: secondaryIds } } });
