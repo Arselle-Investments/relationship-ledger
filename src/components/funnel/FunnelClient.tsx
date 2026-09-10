@@ -20,16 +20,29 @@ export function FunnelClient({
   const [contacts, setContacts] = useState(initialContacts);
   const counts = useMemo(() => buildFunnelCounts(contacts), [contacts]);
   const max = Math.max(1, ...counts.map((c) => c.count));
-  const [expanded, setExpanded] = useState<FundraisingStage | null>(null);
-  const [creatingList, setCreatingList] = useState(false);
-  const [createdListId, setCreatedListId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<FundraisingStage>>(new Set());
+  const [creatingListFor, setCreatingListFor] = useState<FundraisingStage | null>(null);
+  const [createdListFor, setCreatedListFor] = useState<Set<FundraisingStage>>(new Set());
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
 
-  const matches = useMemo(() => (expanded ? contacts.filter((c) => c.status === expanded) : []), [contacts, expanded]);
+  const matchesByStage = useMemo(() => {
+    const map = new Map<FundraisingStage, ContactWithRelations[]>();
+    for (const status of expanded) {
+      map.set(
+        status,
+        contacts.filter((c) => c.status === status).sort((a, b) => a.name.localeCompare(b.name))
+      );
+    }
+    return map;
+  }, [contacts, expanded]);
 
   function toggleStage(status: FundraisingStage) {
-    setExpanded((prev) => (prev === status ? null : status));
-    setCreatedListId(null);
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
   }
 
   function handleContactSaved(contact: ContactWithRelations) {
@@ -42,24 +55,21 @@ export function FunnelClient({
     setEditingContact(null);
   }
 
-  async function createListForStage() {
-    if (!expanded) return;
-    setCreatingList(true);
-    setCreatedListId(null);
+  async function createListForStage(status: FundraisingStage) {
+    setCreatingListFor(status);
     const res = await fetch("/api/lists", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: `${FUNDRAISING_STAGE_LABELS[expanded]} (auto-refreshing)`,
-        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[expanded]}". Created from the Funnel view; refreshes automatically as stages change.`,
+        name: `${FUNDRAISING_STAGE_LABELS[status]} (auto-refreshing)`,
+        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[status]}". Created from the Funnel view; refreshes automatically as stages change.`,
         mode: "DYNAMIC",
-        filterStatus: expanded,
+        filterStatus: status,
       }),
     });
-    setCreatingList(false);
+    setCreatingListFor(null);
     if (res.ok) {
-      const json = await res.json();
-      setCreatedListId(json.list.id);
+      setCreatedListFor((prev) => new Set(prev).add(status));
     }
   }
 
@@ -75,7 +85,8 @@ export function FunnelClient({
         {counts.map(({ status, count }) => {
           const widthPct = Math.max(4, Math.round((count / max) * 100));
           const color = FUNDRAISING_STAGE_COLORS[status];
-          const isOpen = expanded === status;
+          const isOpen = expanded.has(status);
+          const matches = matchesByStage.get(status) ?? [];
           return (
             <div key={status} style={{ marginBottom: 14 }}>
               <div
@@ -113,14 +124,18 @@ export function FunnelClient({
                 >
                   {canEdit && (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-                      {createdListId ? (
+                      {createdListFor.has(status) ? (
                         <div className="helptext" style={{ margin: 0 }}>
                           Created. <Link href="/lists">View in Mailing Lists</Link>. It&rsquo;ll stay current as
                           contacts move through this stage.
                         </div>
                       ) : (
-                        <button className="btn small" onClick={createListForStage} disabled={creatingList}>
-                          {creatingList ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
+                        <button
+                          className="btn small"
+                          onClick={() => createListForStage(status)}
+                          disabled={creatingListFor === status}
+                        >
+                          {creatingListFor === status ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
                         </button>
                       )}
                     </div>

@@ -63,9 +63,11 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
 // editable `.field`, just a static value instead of an input.
 function ViewField({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="field" style={{ marginBottom: 12 }}>
-      <label>{label}</label>
-      <div style={{ fontSize: 13.5, whiteSpace: "pre-wrap" }}>{value}</div>
+    <div style={{ marginBottom: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--ink-soft)", marginBottom: 3 }}>
+        {label}
+      </div>
+      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink)", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{value}</div>
     </div>
   );
 }
