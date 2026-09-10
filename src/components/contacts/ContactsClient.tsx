@@ -2,8 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { User, ContactType, ContactTier } from "@prisma/client";
+import { User, ContactType, ContactTier, RecordContext } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
+import { RECORD_CONTEXT_LABELS, RECORD_CONTEXT_TAG_CLASS } from "@/lib/record-context";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "./ContactModal";
 import { AdvancedFilters, ContactsFilterModal, EMPTY_ADVANCED_FILTERS, countActiveAdvancedFilters } from "./ContactsFilterModal";
@@ -24,6 +25,7 @@ export function ContactsClient({
   const [tierFilter, setTierFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
   const [agoraTypeFilter, setAgoraTypeFilter] = useState("");
+  const [contextFilter, setContextFilter] = useState<RecordContext | "">("");
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [editing, setEditing] = useState<ContactWithRelations | null | "new">(null);
@@ -49,6 +51,7 @@ export function ContactsClient({
     return contacts.filter((c) => {
       if (typeFilter && c.type !== typeFilter) return false;
       if (tierFilter && c.tier !== tierFilter) return false;
+      if (contextFilter && c.recordContext !== contextFilter) return false;
       if (ownerFilter && c.ownerId !== ownerFilter) return false;
       if (agoraTypeFilter && c.agoraType !== agoraTypeFilter) return false;
       if (advancedFilters.status && c.status !== advancedFilters.status) return false;
@@ -68,7 +71,7 @@ export function ContactsClient({
       }
       return true;
     });
-  }, [contacts, search, typeFilter, tierFilter, ownerFilter, agoraTypeFilter, advancedFilters]);
+  }, [contacts, search, typeFilter, tierFilter, ownerFilter, agoraTypeFilter, contextFilter, advancedFilters]);
 
   function upsertLocal(contact: ContactWithRelations) {
     setContacts((prev) => {
@@ -98,6 +101,21 @@ export function ContactsClient({
 
   return (
     <div>
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <span className="helptext" style={{ margin: 0 }}>Fund vs. Deal:</span>
+        <div className="view-toggle">
+          <button className={contextFilter === "" ? "active" : ""} onClick={() => setContextFilter("")}>
+            All
+          </button>
+          <button className={contextFilter === "FUND" ? "active" : ""} onClick={() => setContextFilter("FUND")}>
+            Fund
+          </button>
+          <button className={contextFilter === "DEAL" ? "active" : ""} onClick={() => setContextFilter("DEAL")}>
+            Deal
+          </button>
+        </div>
+      </div>
+
       <div className="toolbar">
         <input
           type="text"
@@ -158,6 +176,7 @@ export function ContactsClient({
 
       <div className="helptext" style={{ marginBottom: 12 }}>
         Showing {filtered.length} of {contacts.length} contacts.
+        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]}-side only` : ""}
       </div>
 
       {listMsg && (
@@ -178,6 +197,7 @@ export function ContactsClient({
               <th>Name</th>
               <th>Organization</th>
               <th>Type</th>
+              <th>Fund/Deal</th>
               <th>Location</th>
               <th>Owner</th>
               <th>Tags</th>
@@ -189,6 +209,15 @@ export function ContactsClient({
                 <td className="name-cell">{c.name}</td>
                 <td>{c.org || <span className="muted">—</span>}</td>
                 <td>{c.agoraType || CONTACT_TYPE_LABELS[c.type]}</td>
+                <td>
+                  {c.recordContext ? (
+                    <span className={`tag ${RECORD_CONTEXT_TAG_CLASS[c.recordContext]}`}>
+                      {RECORD_CONTEXT_LABELS[c.recordContext]}
+                    </span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
                 <td>{c.primaryLocation || c.city || <span className="muted">—</span>}</td>
                 <td>{c.owner?.name || <span className="muted">—</span>}</td>
                 <td>

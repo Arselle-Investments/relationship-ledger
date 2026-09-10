@@ -2,9 +2,10 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
+import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, RecordContext, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
+import { RECORD_CONTEXT_LABELS, RECORD_CONTEXT_TAG_CLASS } from "@/lib/record-context";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import {
@@ -41,6 +42,7 @@ export function CompaniesClient({
   const [assetClassFilter, setAssetClassFilter] = useState("");
   const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
+  const [contextFilter, setContextFilter] = useState<RecordContext | "">("");
   const [exporting, setExporting] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<CompanyAdvancedFilters>(EMPTY_COMPANY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
@@ -127,6 +129,7 @@ export function CompaniesClient({
       if (tierFilter === "UNTIERED" && g.company?.tier) return false;
       if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
       if (typeFilter && g.company?.type !== typeFilter) return false;
+      if (contextFilter && g.company?.recordContext !== contextFilter) return false;
       if (advancedFilters.sources.length > 0 && !advancedFilters.sources.every((s) => (g.company?.sources ?? []).includes(s))) return false;
       if (advancedFilters.agoraStatus === "PENDING" && g.company?.agoraExportedAt) return false;
       if (advancedFilters.agoraStatus === "EXPORTED" && !g.company?.agoraExportedAt) return false;
@@ -141,7 +144,7 @@ export function CompaniesClient({
       if (advancedFilters.hasDealActivity && !((g.company?.outreach.length ?? 0) > 0 || (g.company?.feedback.length ?? 0) > 0)) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter, tierFilter, typeFilter, advancedFilters]);
+  }, [groups, search, assetClassFilter, tierFilter, typeFilter, contextFilter, advancedFilters]);
 
   async function exportFiltered() {
     const companyIds = filtered.map((g) => g.company?.id).filter((id): id is string => !!id);
@@ -185,6 +188,21 @@ export function CompaniesClient({
 
   return (
     <div>
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <span className="helptext" style={{ margin: 0 }}>Fund vs. Deal:</span>
+        <div className="view-toggle">
+          <button className={contextFilter === "" ? "active" : ""} onClick={() => setContextFilter("")}>
+            All
+          </button>
+          <button className={contextFilter === "FUND" ? "active" : ""} onClick={() => setContextFilter("FUND")}>
+            Fund
+          </button>
+          <button className={contextFilter === "DEAL" ? "active" : ""} onClick={() => setContextFilter("DEAL")}>
+            Deal
+          </button>
+        </div>
+      </div>
+
       <div className="toolbar" style={{ marginBottom: 10 }}>
         <span className="helptext" style={{ margin: 0 }}>Tier:</span>
         <div className="view-toggle">
@@ -242,6 +260,7 @@ export function CompaniesClient({
         {assetClassFilter ? ` · filtered to ${assetClassFilter} investors` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
+        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]}-side only` : ""}
         {advancedFilters.sources.length > 0 ? ` · sourced from ${advancedFilters.sources.join(" + ")}` : ""}
         {advancedFilters.agoraStatus === "PENDING" ? " · not yet in Agora" : advancedFilters.agoraStatus === "EXPORTED" ? " · already in Agora" : ""}
         {activeAdvancedCount > 0 ? ` · ${activeAdvancedCount} more filter${activeAdvancedCount === 1 ? "" : "s"}` : ""}
@@ -258,6 +277,7 @@ export function CompaniesClient({
             <tr>
               <th>Company</th>
               <th>Contacts</th>
+              <th>Fund/Deal</th>
               <th>Target asset classes</th>
               <th>Deal feedback</th>
               <th>Sources</th>
@@ -268,6 +288,15 @@ export function CompaniesClient({
               <tr key={g.name} onClick={() => setSelectedCompany(g.name)}>
                 <td className="name-cell">{g.name}</td>
                 <td>{g.contacts.length}</td>
+                <td>
+                  {g.company?.recordContext ? (
+                    <span className={`tag ${RECORD_CONTEXT_TAG_CLASS[g.company.recordContext]}`}>
+                      {RECORD_CONTEXT_LABELS[g.company.recordContext]}
+                    </span>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </td>
                 <td className="muted">{(g.company?.targetAssetClasses ?? []).join(", ") || "—"}</td>
                 <td className="muted">{g.company?.feedback.length || 0}</td>
                 <td>

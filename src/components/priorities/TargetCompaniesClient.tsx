@@ -18,25 +18,27 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
   const canEditNow = canEdit && mode === "edit";
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  const byTier = useMemo(() => {
+  const filteredCompanies = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filtered = q
+    return q
       ? companies.filter((c) => c.name.toLowerCase().includes(q) || (c.city ?? "").toLowerCase().includes(q))
       : companies;
-    const map = new Map<ContactTier, Company[]>();
-    for (const t of TIERS) map.set(t, []);
-    for (const c of filtered) if (c.tier) map.get(c.tier)?.push(c);
-    for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
-    return map;
   }, [companies, search]);
 
-  const untieredCount = companies.filter((c) => !c.tier).length;
+  const byTier = useMemo(() => {
+    const map = new Map<ContactTier, Company[]>();
+    for (const t of TIERS) map.set(t, []);
+    for (const c of filteredCompanies) if (c.tier) map.get(c.tier)?.push(c);
+    for (const t of TIERS) map.get(t)?.sort((a, b) => a.name.localeCompare(b.name));
+    return map;
+  }, [filteredCompanies]);
 
-  async function handleDragEnd(event: DragEndEvent) {
-    const { active, over } = event;
-    if (!over) return;
-    const companyId = active.id as string;
-    const newTier = over.id as ContactTier;
+  const untiered = useMemo(
+    () => filteredCompanies.filter((c) => !c.tier).sort((a, b) => a.name.localeCompare(b.name)),
+    [filteredCompanies]
+  );
+
+  async function setTier(companyId: string, newTier: ContactTier) {
     const company = companies.find((c) => c.id === companyId);
     if (!company || company.tier === newTier) return;
 
@@ -49,6 +51,12 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
     if (!res.ok) {
       setCompanies((prev) => prev.map((c) => (c.id === companyId ? { ...c, tier: company.tier } : c)));
     }
+  }
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over) return;
+    setTier(active.id as string, over.id as ContactTier);
   }
 
   return (
@@ -82,8 +90,8 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
       <div className="helptext" style={{ marginBottom: 10 }}>
         Priority for the AREF I fund raise specifically. Deal-level capital sources live under Deal Capital;
         Emerging Managers allocators live under Emerging Managers.
-        {untieredCount > 0 &&
-          ` ${untieredCount} compan${untieredCount === 1 ? "y has" : "ies have"} no tier set yet and aren't shown here. Set a tier from the Companies page to bring one onto this board.`}
+        {untiered.length > 0 &&
+          ` ${untiered.length} compan${untiered.length === 1 ? "y hasn't" : "ies haven't"} been tiered yet — listed below the board.`}
       </div>
       <DndContext id="target-companies-board" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="tier-board">
@@ -96,6 +104,46 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
           ))}
         </div>
       </DndContext>
+
+      {untiered.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <h3 style={{ fontSize: 14, marginBottom: 4 }}>No tier set yet</h3>
+          <div className="helptext" style={{ marginBottom: 10 }}>
+            Set a tier to bring one of these onto the board above.
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>City</th>
+                {canEdit && <th>Set tier</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {untiered.map((c) => (
+                <tr key={c.id}>
+                  <td className="name-cell">{c.name}</td>
+                  <td className="muted">{c.city || "—"}</td>
+                  {canEdit && (
+                    <td onClick={(e) => e.stopPropagation()}>
+                      <select value="" onChange={(e) => setTier(c.id, e.target.value as ContactTier)}>
+                        <option value="" disabled>
+                          Choose a tier…
+                        </option>
+                        {TIERS.map((t) => (
+                          <option key={t} value={t}>
+                            {t.replace("TIER_", "Tier ")}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
