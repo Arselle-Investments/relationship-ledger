@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
@@ -36,6 +36,19 @@ export function ListsClient({
   const [lists, setLists] = useState(initialLists);
   const [editing, setEditing] = useState<MailingListWithContacts | null | "new">(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
+  const [contactSearch, setContactSearch] = useState("");
+  const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
+
+  const contactMatches = useMemo(() => {
+    const q = contactSearch.trim().toLowerCase();
+    if (!q) return [];
+    return allContacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [allContacts, contactSearch]);
+
+  const listsContainingLookup = useMemo(() => {
+    if (!lookupContact) return [];
+    return lists.filter((entry) => entry.contacts.some((c) => c.id === lookupContact.id));
+  }, [lists, lookupContact]);
 
   function emailsFor(entry: MailingListWithContacts): string[] {
     return entry.contacts.filter((c) => c.email).map((c) => c.email as string);
@@ -115,6 +128,89 @@ export function ListsClient({
 
   return (
     <div>
+      <div className="card" style={{ padding: 16, marginBottom: 20 }}>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Which lists is a contact in?</div>
+        <div style={{ position: "relative", maxWidth: 360 }}>
+          <input
+            type="text"
+            placeholder="Search a contact by name…"
+            value={lookupContact ? lookupContact.name : contactSearch}
+            onChange={(e) => {
+              setContactSearch(e.target.value);
+              setLookupContact(null);
+            }}
+          />
+          {contactMatches.length > 0 && !lookupContact && (
+            <div
+              className="card"
+              style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                zIndex: 5,
+                marginTop: 4,
+                padding: 4,
+                maxHeight: 220,
+                overflow: "auto",
+              }}
+            >
+              {contactMatches.map((c) => (
+                <div
+                  key={c.id}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    padding: "7px 10px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    fontSize: 13,
+                  }}
+                  className="lookup-row"
+                  onClick={() => {
+                    setLookupContact(c);
+                    setContactSearch("");
+                  }}
+                >
+                  {c.name} {c.org ? <span className="muted">({c.org})</span> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {lookupContact && (
+          <div style={{ marginTop: 12 }}>
+            {listsContainingLookup.length === 0 ? (
+              <div className="helptext" style={{ margin: 0 }}>
+                {lookupContact.name} isn&rsquo;t in any mailing list yet.
+              </div>
+            ) : (
+              <div className="helptext" style={{ margin: 0 }}>
+                {lookupContact.name} is in {listsContainingLookup.length} list{listsContainingLookup.length === 1 ? "" : "s"}:{" "}
+                {listsContainingLookup.map((entry, i) => (
+                  <span key={entry.list.id}>
+                    <strong>{entry.list.name}</strong>
+                    {i < listsContainingLookup.length - 1 ? ", " : ""}
+                  </span>
+                ))}
+              </div>
+            )}
+            <button
+              className="btn small ghost"
+              style={{ marginTop: 8 }}
+              onClick={() => {
+                setLookupContact(null);
+                setContactSearch("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+
       <div className="toolbar">
         <div className="spacer" />
         {canEdit && (

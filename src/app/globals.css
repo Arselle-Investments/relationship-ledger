@@ -96,6 +96,7 @@ table tbody tr:hover{background:#F3F6F5;}
 table tbody tr{cursor:pointer;}
 .tag{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:var(--slate-bg);color:var(--slate);margin:1px 3px 1px 0;}
 .tag.brass{background:var(--brass-bg);color:var(--brass-dark);}
+.lookup-row:hover{background:var(--slate-bg);}
 .tag.forest{background:var(--forest-bg);color:var(--forest);}
 .tag.rust{background:var(--rust-bg);color:var(--rust);}
 .name-cell{font-weight:600;}

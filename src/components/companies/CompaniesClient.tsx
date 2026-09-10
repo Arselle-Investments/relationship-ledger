@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, ContactTier, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
+import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
 import { ContactWithRelations } from "@/types/contact";
@@ -34,6 +34,8 @@ export function CompaniesClient({
   const [search, setSearch] = useState("");
   const [assetClassFilter, setAssetClassFilter] = useState("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
+  const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
 
@@ -95,12 +97,15 @@ export function CompaniesClient({
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return groups.filter((g) => {
-      if (q && !g.name.toLowerCase().includes(q)) return false;
+      if (q && !g.name.toLowerCase().includes(q) && !(g.company?.city ?? "").toLowerCase().includes(q)) return false;
       if (assetClassFilter && !(g.company?.targetAssetClasses ?? []).includes(assetClassFilter)) return false;
       if (sourceFilter && !(g.company?.sources ?? []).includes(sourceFilter)) return false;
+      if (tierFilter === "UNTIERED" && g.company?.tier) return false;
+      if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
+      if (typeFilter && g.company?.type !== typeFilter) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter, sourceFilter]);
+  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter]);
 
   const activeGroup = selectedCompany ? groups.find((g) => g.name === selectedCompany) ?? null : null;
   const activeCompany = activeGroup?.company
@@ -122,6 +127,23 @@ export function CompaniesClient({
 
   return (
     <div>
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <span className="helptext" style={{ margin: 0 }}>Tier:</span>
+        <div className="view-toggle">
+          <button className={tierFilter === "" ? "active" : ""} onClick={() => setTierFilter("")}>
+            All
+          </button>
+          {Object.values(ContactTier).map((t) => (
+            <button key={t} className={tierFilter === t ? "active" : ""} onClick={() => setTierFilter(t)}>
+              {CONTACT_TIER_LABELS[t]}
+            </button>
+          ))}
+          <button className={tierFilter === "UNTIERED" ? "active" : ""} onClick={() => setTierFilter("UNTIERED")}>
+            No tier
+          </button>
+        </div>
+      </div>
+
       {allSources.length > 0 && (
         <div className="toolbar" style={{ marginBottom: 10 }}>
           <span className="helptext" style={{ margin: 0 }}>Source:</span>
@@ -141,10 +163,18 @@ export function CompaniesClient({
       <div className="toolbar">
         <input
           type="text"
-          placeholder="Search company name..."
+          placeholder="Search company name or city..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "")}>
+          <option value="">All types</option>
+          {Object.values(ContactType).map((t) => (
+            <option key={t} value={t}>
+              {CONTACT_TYPE_LABELS[t]}
+            </option>
+          ))}
+        </select>
         {assetClasses.length > 0 && (
           <select value={assetClassFilter} onChange={(e) => setAssetClassFilter(e.target.value)}>
             <option value="">All asset classes</option>
@@ -163,6 +193,8 @@ export function CompaniesClient({
         {noOrgCount > 0 ? ` · ${noOrgCount} contact${noOrgCount === 1 ? "" : "s"} with no organization on file` : ""}
         {assetClassFilter ? ` · filtered to ${assetClassFilter} investors` : ""}
         {sourceFilter ? ` · sourced from ${sourceFilter}` : ""}
+        {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
+        {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
       </div>
 
       {filtered.length === 0 ? (
