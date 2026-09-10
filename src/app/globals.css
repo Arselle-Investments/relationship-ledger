@@ -108,20 +108,25 @@ table tbody tr{cursor:pointer;}
 .timeline{display:flex;flex-direction:column;max-height:420px;overflow-y:auto;padding-right:4px;}
 .timeline-row{display:flex;gap:10px;}
 .timeline-rail{display:flex;flex-direction:column;align-items:center;width:12px;flex:none;}
-.timeline-rail:before{content:"";flex:1;width:1px;background:var(--line);}
-.timeline-row:first-child .timeline-rail:before{background:transparent;}
-.timeline-dot{width:9px;height:9px;border-radius:50%;flex:none;margin-top:4px;background:var(--slate);border:2px solid var(--paper-raised);box-shadow:0 0 0 1px var(--line);}
+/* Dot comes first in the rail (column-flex) so it sits flush with this row's
+   own date, not pinned to the row's bottom; the connecting line is a
+   flex:1 :after that fills the rest of the rail down to the next dot. */
+.timeline-rail:after{content:"";flex:1;width:1px;background:var(--line);}
+.timeline-row:last-child .timeline-rail:after{background:transparent;}
+.timeline-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:3px;background:var(--slate);border:2px solid var(--paper-raised);box-shadow:0 0 0 1px var(--line);}
 .timeline-dot.correspondence{background:var(--paper-raised);border-color:var(--ink-soft);}
-.timeline-dot.milestone{background:var(--forest);}
+.timeline-dot.milestone{background:var(--forest);border-color:var(--forest);box-shadow:0 0 0 1px var(--forest);}
 .timeline-content{flex:1;padding-bottom:14px;min-width:0;}
 .timeline-row:last-child .timeline-content{padding-bottom:2px;}
-.timeline-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.timeline-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:16px;}
 .timeline-date{font-size:10.5px;font-weight:700;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;white-space:nowrap;}
 .timeline-subject{font-size:13px;font-weight:600;color:var(--ink);}
 .timeline-stage-change{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .timeline-body{font-size:12px;color:var(--ink-soft);margin-top:3px;white-space:pre-wrap;line-height:1.45;}
 .timeline-expand{background:none;border:none;padding:0;font:inherit;font-size:12px;font-weight:600;color:var(--brass-dark);cursor:pointer;text-decoration:underline;}
-.timeline-row.milestone .timeline-content{background:#F3F6F5;border-radius:8px;padding:8px 10px;margin-top:-4px;}
+.timeline-row.milestone .timeline-content{background:#F3F6F5;border-radius:8px;padding:8px 10px;}
+.timeline-row.milestone .timeline-dot{margin-top:11px;}
+.timeline-row.milestone .timeline-dot{margin-top:13px;}
 
 /* Empty state */
 .empty{padding:50px 20px;text-align:center;color:var(--ink-soft);border:1px dashed var(--line);border-radius:var(--radius);background:var(--paper-raised);}

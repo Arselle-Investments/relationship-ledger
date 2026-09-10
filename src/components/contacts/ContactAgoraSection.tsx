@@ -1,17 +1,17 @@
 "use client";
 
-import { Fragment, useState } from "react";
 import { ContactWithRelations } from "@/types/contact";
+import { ViewField } from "./ViewField";
 
 // Columns already surfaced as their own fields/sections elsewhere in the
 // modal — repeating them in the raw dump below would just be noise.
 const ALREADY_SHOWN = new Set([
-  "TITLE", "FIRST NAME", "LAST NAME", "EMAIL", "PHONE NO.", "COMPANY", "TAGS",
+  "TITLE", "JOB TITLE", "FIRST NAME", "LAST NAME", "EMAIL", "PHONE NO.", "COMPANY", "TAGS",
   "STAFF MEMBERS", "TYPE", "NOTES", "PRIMARY LOCATION", "CITY",
   "LOW COMMITMENT (EST.)", "HIGH COMMITMENT (EST.)", "TIER FOR EMAIL TRACKING",
 ]);
 
-function isBlank(v: unknown): boolean {
+export function isBlank(v: unknown): boolean {
   if (v == null) return true;
   const t = String(v).trim().replace(/^'/, "").trim();
   return t === "" || t === "-" || t.toLowerCase() === "n/a";
@@ -21,12 +21,21 @@ function titleCase(header: string): string {
   return header.charAt(0) + header.slice(1).toLowerCase();
 }
 
+// Every Agora-sourced field, shown unconditionally in the same label/value
+// format as the contact's own fields above — no separate compact grid, no
+// "show more" toggle to hide behind.
 export function ContactAgoraSection({ contact }: { contact: ContactWithRelations }) {
-  const [expanded, setExpanded] = useState(false);
   const raw = (contact.agoraRaw as unknown as Record<string, string> | null) ?? null;
-  if (!raw) return null;
+  const extraFields = raw ? Object.entries(raw).filter(([header, v]) => !ALREADY_SHOWN.has(header) && !isBlank(v)) : [];
 
-  const extraFields = Object.entries(raw).filter(([header, v]) => !ALREADY_SHOWN.has(header) && !isBlank(v));
+  const hasCore =
+    contact.agoraType ||
+    contact.primaryLocation ||
+    contact.staffNames.length > 0 ||
+    contact.commitmentLow != null ||
+    contact.commitmentHigh != null ||
+    contact.emailTier != null;
+  if (!hasCore && extraFields.length === 0) return null;
 
   return (
     <div className="activity-log">
@@ -43,59 +52,21 @@ export function ContactAgoraSection({ contact }: { contact: ContactWithRelations
       >
         Agora profile
       </label>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", fontSize: 12.5 }}>
-        {contact.agoraType && (
-          <>
-            <span className="muted">Agora type</span>
-            <span>{contact.agoraType}</span>
-          </>
-        )}
-        {contact.primaryLocation && (
-          <>
-            <span className="muted">Primary location</span>
-            <span>{contact.primaryLocation}</span>
-          </>
-        )}
-        {contact.staffNames.length > 0 && (
-          <>
-            <span className="muted">Staff members</span>
-            <span>{contact.staffNames.join(", ")}</span>
-          </>
-        )}
-        {(contact.commitmentLow != null || contact.commitmentHigh != null) && (
-          <>
-            <span className="muted">Est. commitment</span>
-            <span>
-              {contact.commitmentLow != null ? `$${contact.commitmentLow}mm` : "?"} –{" "}
-              {contact.commitmentHigh != null ? `$${contact.commitmentHigh}mm` : "?"}
-            </span>
-          </>
-        )}
-        {contact.emailTier != null && (
-          <>
-            <span className="muted">Email tracking tier</span>
-            <span>Tier {contact.emailTier}</span>
-          </>
-        )}
-      </div>
-
-      {extraFields.length > 0 && (
-        <>
-          <button type="button" className="btn small ghost" style={{ marginTop: 10 }} onClick={() => setExpanded((v) => !v)}>
-            {expanded ? "Hide" : "Show"} all Agora fields ({extraFields.length})
-          </button>
-          {expanded && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 16px", fontSize: 12.5, marginTop: 10 }}>
-              {extraFields.map(([header, v]) => (
-                <Fragment key={header}>
-                  <span className="muted">{titleCase(header)}</span>
-                  <span style={{ whiteSpace: "pre-wrap" }}>{v}</span>
-                </Fragment>
-              ))}
-            </div>
-          )}
-        </>
+      {contact.agoraType && <ViewField label="Agora type" value={contact.agoraType} />}
+      {contact.primaryLocation && <ViewField label="Primary location" value={contact.primaryLocation} />}
+      {contact.staffNames.length > 0 && <ViewField label="Staff members" value={contact.staffNames.join(", ")} />}
+      {(contact.commitmentLow != null || contact.commitmentHigh != null) && (
+        <ViewField
+          label="Est. commitment"
+          value={`${contact.commitmentLow != null ? `$${contact.commitmentLow}mm` : "?"} – ${
+            contact.commitmentHigh != null ? `$${contact.commitmentHigh}mm` : "?"
+          }`}
+        />
       )}
+      {contact.emailTier != null && <ViewField label="Email tracking tier" value={`Tier ${contact.emailTier}`} />}
+      {extraFields.map(([header, v]) => (
+        <ViewField key={header} label={titleCase(header)} value={v} />
+      ))}
     </div>
   );
 }

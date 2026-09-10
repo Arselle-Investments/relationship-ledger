@@ -12,7 +12,8 @@ import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ContactResearchSection } from "./ContactResearchSection";
-import { ContactAgoraSection } from "./ContactAgoraSection";
+import { ContactAgoraSection, isBlank } from "./ContactAgoraSection";
+import { ViewField } from "./ViewField";
 import { TaskModal } from "@/components/tasks/TaskModal";
 
 const TYPE_OPTIONS = Object.values(ContactType);
@@ -58,15 +59,40 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
   };
 }
 
-// Plain label+value row for View mode — same label typography as the
-// editable `.field`, just a static value instead of an input.
-function ViewField({ label, value }: { label: string; value: React.ReactNode }) {
+function EmailValue({ email }: { email: string }) {
+  const [copied, setCopied] = useState(false);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(email);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // Clipboard access can fail (permissions, non-secure context) — the
+      // email is still right there to select by hand.
+    }
+  }
   return (
-    <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--ink-soft)", marginBottom: 3 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 15, fontWeight: 500, color: "var(--ink)", lineHeight: 1.4, whiteSpace: "pre-wrap" }}>{value}</div>
+    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+      <span>{email}</span>
+      <button type="button" className="btn small ghost" style={{ padding: "1px 8px", fontSize: 11 }} onClick={copy}>
+        {copied ? "Copied" : "Copy"}
+      </button>
+    </div>
+  );
+}
+
+function TagBubbles({ tags }: { tags: string }) {
+  const list = tags
+    .split(",")
+    .map((t) => t.trim())
+    .filter(Boolean);
+  return (
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      {list.map((t, i) => (
+        <span key={i} className="tag">
+          {t}
+        </span>
+      ))}
     </div>
   );
 }
@@ -193,6 +219,9 @@ export function ContactModal({
 
   const owner = team.find((u) => u.id === values.ownerId);
   const warmPath = team.find((u) => u.id === values.warmPathId);
+  const agoraRaw = (liveContact?.agoraRaw ?? contact?.agoraRaw) as unknown as Record<string, string> | null;
+  const jobTitle = agoraRaw?.["JOB TITLE"];
+  const hasJobTitle = jobTitle != null && !isBlank(jobTitle);
 
   return (
     <>
@@ -223,11 +252,12 @@ export function ContactModal({
 
           {effectiveMode === "view" ? (
             <>
+              {hasJobTitle && <ViewField label="Job title" value={jobTitle} />}
+              {values.org && <ViewField label="Organization" value={values.org} />}
               <ViewField label="Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
-              {values.org && <ViewField label="Organization" value={values.org} />}
-              {values.email && <ViewField label="Email" value={values.email} />}
+              {values.email && <ViewField label="Email" value={<EmailValue email={values.email} />} />}
               {values.phone && <ViewField label="Phone" value={values.phone} />}
               {values.city && <ViewField label="City / region" value={values.city} />}
               {owner && <ViewField label="Owner" value={owner.name || owner.email} />}
@@ -237,7 +267,7 @@ export function ContactModal({
                 <ViewField label="Cadence override" value={`${values.cadenceOverrideDays} days`} />
               )}
               {values.priorityQuarter && <ViewField label="Priority quarter" value={values.priorityQuarter} />}
-              {values.tags && <ViewField label="Tags" value={values.tags} />}
+              {values.tags && <ViewField label="Tags" value={<TagBubbles tags={values.tags} />} />}
               {values.notes && <ViewField label="Notes" value={values.notes} />}
             </>
           ) : (
