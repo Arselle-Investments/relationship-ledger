@@ -7,6 +7,12 @@ import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constant
 import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
+import {
+  CompaniesFilterModal,
+  CompanyAdvancedFilters,
+  EMPTY_COMPANY_ADVANCED_FILTERS,
+  countActiveCompanyFilters,
+} from "./CompaniesFilterModal";
 
 type FeedbackWithRelations = DealFeedback & { deal: Deal; contact: Contact | null };
 type OutreachWithDeal = DealOutreach & { deal: Deal };
@@ -36,6 +42,8 @@ export function CompaniesClient({
   const [sourceFilter, setSourceFilter] = useState("");
   const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
+  const [advancedFilters, setAdvancedFilters] = useState<CompanyAdvancedFilters>(EMPTY_COMPANY_ADVANCED_FILTERS);
+  const [showAllFilters, setShowAllFilters] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
 
@@ -59,6 +67,21 @@ export function CompaniesClient({
     () => Array.from(new Set(companies.flatMap((c) => c.targetAssetClasses))).sort(),
     [companies]
   );
+
+  const investmentStructures = useMemo(
+    () => Array.from(new Set(companies.flatMap((c) => c.investmentStructures))).sort(),
+    [companies]
+  );
+  const investmentStrategies = useMemo(
+    () => Array.from(new Set(companies.flatMap((c) => c.investmentStrategies))).sort(),
+    [companies]
+  );
+  const allTags = useMemo(() => Array.from(new Set(companies.flatMap((c) => c.tags))).sort(), [companies]);
+  const priorityQuarters = useMemo(
+    () => Array.from(new Set(companies.map((c) => c.priorityQuarter).filter((v): v is string => !!v))).sort(),
+    [companies]
+  );
+  const activeAdvancedCount = countActiveCompanyFilters(advancedFilters);
 
   // Every source that's contributed to at least one company on file —
   // drives the filter row below. A company can carry more than one of these
@@ -96,6 +119,8 @@ export function CompaniesClient({
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const sizeMin = advancedFilters.sizeMin ? Number(advancedFilters.sizeMin) : null;
+    const sizeMax = advancedFilters.sizeMax ? Number(advancedFilters.sizeMax) : null;
     return groups.filter((g) => {
       if (q && !g.name.toLowerCase().includes(q) && !(g.company?.city ?? "").toLowerCase().includes(q)) return false;
       if (assetClassFilter && !(g.company?.targetAssetClasses ?? []).includes(assetClassFilter)) return false;
@@ -103,9 +128,18 @@ export function CompaniesClient({
       if (tierFilter === "UNTIERED" && g.company?.tier) return false;
       if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
       if (typeFilter && g.company?.type !== typeFilter) return false;
+      if (advancedFilters.investmentStructure && !(g.company?.investmentStructures ?? []).includes(advancedFilters.investmentStructure)) return false;
+      if (advancedFilters.investmentStrategy && !(g.company?.investmentStrategies ?? []).includes(advancedFilters.investmentStrategy)) return false;
+      if (advancedFilters.tag && !(g.company?.tags ?? []).includes(advancedFilters.tag)) return false;
+      if (advancedFilters.priorityQuarter && g.company?.priorityQuarter !== advancedFilters.priorityQuarter) return false;
+      if (sizeMin !== null && (g.company?.investmentSizeMax == null || g.company.investmentSizeMax < sizeMin)) return false;
+      if (sizeMax !== null && (g.company?.investmentSizeMin == null || g.company.investmentSizeMin > sizeMax)) return false;
+      if (advancedFilters.hasWebsite && !g.company?.website) return false;
+      if (advancedFilters.hasAum && !g.company?.aum) return false;
+      if (advancedFilters.hasDealActivity && !((g.company?.outreach.length ?? 0) > 0 || (g.company?.feedback.length ?? 0) > 0)) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter]);
+  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter, advancedFilters]);
 
   const activeGroup = selectedCompany ? groups.find((g) => g.name === selectedCompany) ?? null : null;
   const activeCompany = activeGroup?.company
@@ -185,6 +219,9 @@ export function CompaniesClient({
             ))}
           </select>
         )}
+        <button className="btn" onClick={() => setShowAllFilters(true)}>
+          All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
+        </button>
         <div className="spacer" />
       </div>
 
@@ -195,6 +232,7 @@ export function CompaniesClient({
         {sourceFilter ? ` · sourced from ${sourceFilter}` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
+        {activeAdvancedCount > 0 ? ` · ${activeAdvancedCount} more filter${activeAdvancedCount === 1 ? "" : "s"}` : ""}
       </div>
 
       {filtered.length === 0 ? (
@@ -436,6 +474,18 @@ export function CompaniesClient({
           onClose={() => setEditingContact(null)}
           onSaved={handleContactSaved}
           onDeleted={handleContactDeleted}
+        />
+      )}
+
+      {showAllFilters && (
+        <CompaniesFilterModal
+          filters={advancedFilters}
+          onChange={setAdvancedFilters}
+          onClose={() => setShowAllFilters(false)}
+          investmentStructures={investmentStructures}
+          investmentStrategies={investmentStrategies}
+          tags={allTags}
+          priorityQuarters={priorityQuarters}
         />
       )}
     </div>

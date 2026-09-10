@@ -129,7 +129,7 @@ export function ListsClient({
   return (
     <div>
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Which lists is a contact in?</div>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search for a contact in mailing lists</div>
         <div style={{ position: "relative", maxWidth: 360 }}>
           <input
             type="text"
