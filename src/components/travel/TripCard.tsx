@@ -126,7 +126,7 @@ export function TripCard({
       await navigator.clipboard.writeText(emails.join(", "));
       setMsg(`Copied ${emails.length} email${emails.length === 1 ? "" : "es"} to the clipboard.`);
     } catch {
-      setMsg("Couldn't copy to the clipboard — check the browser's clipboard permission and try again.");
+      setMsg("Couldn't copy to the clipboard. Check the browser's clipboard permission and try again.");
     }
   }
 
@@ -257,7 +257,7 @@ export function TripCard({
                         setUseAI(e.target.checked);
                       }}
                     />
-                    Personalize with AI (uses AI credits — off by default past {AI_DEFAULT_THRESHOLD} contacts
+                    Personalize with AI (uses AI credits, off by default past {AI_DEFAULT_THRESHOLD} contacts
                     {combine ? ", unavailable when combining into one email" : ""})
                   </label>
                   <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5 }}>

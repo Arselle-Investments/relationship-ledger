@@ -65,7 +65,7 @@ export function ContactSequenceSection({
     <div className="activity-log">
       <div className="eyebrow" style={{ marginBottom: 8 }}>
         Outreach sequence
-        {activeSequence ? ` — ${activeSequence.templateName}${activeSequence.completed ? " (complete)" : ""}` : ""}
+        {activeSequence ? `: ${activeSequence.templateName}${activeSequence.completed ? " (complete)" : ""}` : ""}
       </div>
 
       {activeSequence ? (
@@ -101,7 +101,7 @@ export function ContactSequenceSection({
           </div>
         ) : templates.length === 0 ? (
           <div className="muted" style={{ fontSize: 12.5 }}>
-            No sequence templates yet — add one in Settings.
+            No sequence templates yet. Add one in Settings.
           </div>
         ) : (
           <div style={{ display: "flex", gap: 8 }}>

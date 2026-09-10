@@ -72,7 +72,7 @@ export function TargetContactsClient({
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          {canEditNow ? "Drag a card to move it between tiers" : "View mode — switch to Edit to drag cards between tiers"}
+          {canEditNow ? "Drag a card to move it between tiers" : "View mode. Switch to Edit to drag cards between tiers"}
         </div>
         {canEdit && (
           <div className="view-toggle">

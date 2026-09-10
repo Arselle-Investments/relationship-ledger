@@ -60,7 +60,7 @@ export function CadenceSection({ settings, canEdit }: { settings: Settings; canE
           disabled={!canEdit}
           style={{ maxWidth: 140 }}
         />
-        <div className="helptext">Drives the Stuck Contacts list — contacts whose pipeline stage hasn&rsquo;t changed in this long.</div>
+        <div className="helptext">Drives the Stuck Contacts list: contacts whose pipeline stage hasn&rsquo;t changed in this long.</div>
       </div>
       {canEdit && (
         <button className="btn primary" onClick={handleSave} disabled={saving}>

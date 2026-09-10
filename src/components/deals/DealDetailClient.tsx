@@ -256,7 +256,7 @@ export function DealDetailClient({
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 4, fontSize: 14 }}>Sent to ({deal.outreach.length} of {companies.length})</h3>
         <div className="helptext" style={{ marginBottom: 12 }}>
-          Tracks who this deal was actually sent to, separate from feedback — use this even when a company hasn&rsquo;t responded with anything worth logging yet. Search to confirm whether a specific company got it.
+          Tracks who this deal was actually sent to, separate from feedback. Use this even when a company hasn&rsquo;t responded with anything worth logging yet. Search to confirm whether a specific company got it.
         </div>
         <input
           type="text"
@@ -301,7 +301,7 @@ export function DealDetailClient({
               <div>
                 <div style={{ fontWeight: 600, fontSize: 13.5 }}>
                   {f.company?.name}
-                  {f.contact ? ` — ${f.contact.name}` : ""}
+                  {f.contact ? ` · ${f.contact.name}` : ""}
                 </div>
                 <div className="muted" style={{ fontSize: 11.5, marginTop: 2 }}>
                   {new Date(f.createdAt).toLocaleDateString()}

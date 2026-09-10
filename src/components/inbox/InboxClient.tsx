@@ -39,7 +39,7 @@ function EmlImportSection({ canEdit }: { canEdit: boolean }) {
         <div>
           <div style={{ fontWeight: 600, fontSize: 13.5 }}>Import historical emails</div>
           <div className="helptext" style={{ marginTop: 2 }}>
-            Upload saved .eml files from before the Teams channel was connected — each one runs through the same
+            Upload saved .eml files from before the Teams channel was connected. Each one runs through the same
             contact-matching pipeline as a live message.
           </div>
         </div>
@@ -140,7 +140,7 @@ function StageSuggestionCard({
       {item.suggestedStatus && (
         <div style={{ marginTop: 10, padding: "8px 10px", background: "var(--forest-bg)", borderRadius: 6, fontSize: 12.5 }}>
           AI suggests <strong>{FUNDRAISING_STAGE_LABELS[item.suggestedStatus]}</strong>
-          {item.suggestionRationale ? ` — ${item.suggestionRationale}` : ""}
+          {item.suggestionRationale ? `: ${item.suggestionRationale}` : ""}
         </div>
       )}
       {canEdit ? (
@@ -165,7 +165,7 @@ function StageSuggestionCard({
         </div>
       ) : (
         <div className="helptext" style={{ marginTop: 10 }}>
-          View-only — an editor needs to resolve this.
+          View-only. An editor needs to resolve this.
         </div>
       )}
     </div>
@@ -242,7 +242,7 @@ export function InboxClient({
 
       <h3 style={{ marginBottom: 10 }}>Suggested stage changes</h3>
       <div className="eyebrow" style={{ marginBottom: 14 }}>
-        Correspondence that looks like it signals a pipeline move — review before anything on the contact changes
+        Correspondence that looks like it signals a pipeline move. Review before anything on the contact changes
       </div>
       {stageSuggestions.length === 0 ? (
         <div className="empty">

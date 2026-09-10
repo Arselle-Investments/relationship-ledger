@@ -26,7 +26,7 @@ export function ContactResearchSection({
     setLoading(false);
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setError(json.error ?? "Research failed — try again in a moment.");
+      setError(json.error ?? "Research failed. Try again in a moment.");
       return;
     }
     const json = await res.json();
@@ -56,12 +56,12 @@ export function ContactResearchSection({
 
       {!hasRun && !loading && (
         <div className="helptext">
-          Pulls a short bio and any recent news mentions from public web search — coverage varies a lot by how
+          Pulls a short bio and any recent news mentions from public web search. Coverage varies a lot by how
           publicly visible this person is.
         </div>
       )}
 
-      {loading && <div className="helptext">Searching the web and summarizing — this can take up to 30 seconds…</div>}
+      {loading && <div className="helptext">Searching the web and summarizing. This can take up to 30 seconds…</div>}
 
       {error && <div className="error-text">{error}</div>}
 

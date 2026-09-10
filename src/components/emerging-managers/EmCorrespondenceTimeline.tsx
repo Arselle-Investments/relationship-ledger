@@ -69,12 +69,12 @@ export function EmCorrespondenceTimeline({
       </label>
       {items.map((item) => (
         <div key={item.id} className="activity-item">
-          <span className="when">{new Date(item.receivedAt).toLocaleDateString()}</span> — {item.subject || "(no subject)"}
+          <span className="when">{new Date(item.receivedAt).toLocaleDateString()}</span> &middot; {item.subject || "(no subject)"}
           {item.suggestionState === "PENDING" && item.suggestedStatus && (
             <div style={{ marginTop: 4, padding: "6px 8px", background: "var(--forest-bg)", borderRadius: 6 }}>
               <div style={{ fontSize: 12, color: "var(--ink)" }}>
                 AI suggests: move to <strong>{FUNDRAISING_STAGE_LABELS[item.suggestedStatus]}</strong>
-                {item.suggestionRationale ? ` — ${item.suggestionRationale}` : ""}
+                {item.suggestionRationale ? ` · ${item.suggestionRationale}` : ""}
               </div>
               {canEdit && (
                 <div style={{ display: "flex", gap: 6, marginTop: 6 }}>

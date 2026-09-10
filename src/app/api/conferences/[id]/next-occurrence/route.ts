@@ -47,7 +47,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       organizer: source.organizer,
       registrationLink: source.registrationLink,
       registrationStatus: source.registrationLink ? "Not yet open" : null,
-      dateConfidence: "Estimate — based on last year's date",
+      dateConfidence: "Estimate: based on last year's date",
       fitNote: source.fitNote,
       seriesId,
     },

@@ -233,7 +233,7 @@ export function TasksClient({
 
       {!canEditNow && canEdit && (
         <div className="helptext" style={{ marginBottom: 12 }}>
-          View mode — switch to Edit to drag cards between priorities or mark a task done.
+          View mode. Switch to Edit to drag cards between priorities or mark a task done.
         </div>
       )}
 

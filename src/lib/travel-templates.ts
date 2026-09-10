@@ -52,7 +52,7 @@ export function buildGenericTravelEmail(params: {
   const dateRange = formatDateRange(params.startDate, params.endDate);
   return `${greeting}
 
-I'll be in ${params.city} from ${dateRange} and would welcome the chance to connect while I'm in town — happy to meet for coffee or a call, whichever works best for you.
+I'll be in ${params.city} from ${dateRange} and would welcome the chance to connect while I'm in town. Happy to meet for coffee or a call, whichever works best for you.
 
 Let me know if you have some time.
 

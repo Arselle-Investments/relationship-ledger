@@ -123,7 +123,7 @@ export function BulkConferenceRefreshModal({
             <>
               <div className="helptext" style={{ marginBottom: 14 }}>
                 Checked {checked} conference{checked === 1 ? "" : "s"}
-                {failedCount > 0 ? ` — ${failedCount} couldn't be checked` : ""}. {items.length} have new or changed
+                {failedCount > 0 ? `, ${failedCount} couldn't be checked` : ""}. {items.length} have new or changed
                 information below.
               </div>
 

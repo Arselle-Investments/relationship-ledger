@@ -102,7 +102,7 @@ export function TaskModal({
         <div className="modal-body">
           {!canEdit && (
             <div className="locked-msg" style={{ display: "block" }}>
-              View-only — you can browse this task but not change it.
+              View-only. You can browse this task but not change it.
             </div>
           )}
           <div className="field">

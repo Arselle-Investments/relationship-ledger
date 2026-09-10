@@ -79,7 +79,7 @@ export function FollowupsClient({
     const json = await res.json();
     setTaskMsg(
       json.created === 0
-        ? "No new tasks created — the selected follow-ups already had one open."
+        ? "No new tasks created. The selected follow-ups already had one open."
         : `Created ${json.created} task${json.created === 1 ? "" : "s"}${json.skipped > 0 ? ` (${json.skipped} already had one open)` : ""}.`
     );
     setSelectedCadence(new Set());

@@ -51,7 +51,7 @@ export function ListsClient({
       await navigator.clipboard.writeText(emails.join(", "));
       setCopyMsg(`Copied ${emails.length} email${emails.length === 1 ? "" : "es"} from "${entry.list.name}".`);
     } catch {
-      setCopyMsg("Couldn't copy to the clipboard — check the browser's clipboard permission and try again.");
+      setCopyMsg("Couldn't copy to the clipboard. Check the browser's clipboard permission and try again.");
     }
   }
 

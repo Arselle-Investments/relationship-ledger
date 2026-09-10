@@ -51,7 +51,7 @@ export function EditLogClient({
         A running record of who changed what, on contacts and companies
       </div>
       <div className="helptext" style={{ marginBottom: 20 }}>
-        Every field-level change made through the app shows up here — undo puts the field back to what it was, and
+        Every field-level change made through the app shows up here. Undo puts the field back to what it was, and
         logs that as a change too, so the record stays honest.
       </div>
 
@@ -92,7 +92,7 @@ export function EditLogClient({
             <div style={{ flex: 1, fontSize: 13 }}>
               <strong>{entry.changedByName ?? "Someone"}</strong> changed <strong>{fieldLabel(entry.field)}</strong> on{" "}
               <strong>{entry.entityLabel}</strong>
-              <span className="muted"> — &ldquo;{fmt(entry.oldValue)}&rdquo; &rarr; &ldquo;{fmt(entry.newValue)}&rdquo;</span>
+              <span className="muted"> &middot; &ldquo;{fmt(entry.oldValue)}&rdquo; &rarr; &ldquo;{fmt(entry.newValue)}&rdquo;</span>
               <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
                 {entry.entityType} &middot; {new Date(entry.createdAt).toLocaleString()}
                 {entry.undone ? " · undone" : ""}

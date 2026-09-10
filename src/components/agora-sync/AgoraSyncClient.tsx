@@ -51,7 +51,7 @@ export function AgoraSyncClient({ pendingCount, canEdit }: { pendingCount: numbe
       <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 6 }}>Export new contacts for Agora</h3>
         <div className="helptext" style={{ marginBottom: 14 }}>
-          Contacts added here — manually, or confirmed from Data Quality &rarr; New Contacts — that haven&rsquo;t been
+          Contacts added here (manually, or confirmed from Data Quality &rarr; New Contacts) that haven&rsquo;t been
           sent to Agora yet. Downloads a spreadsheet formatted for Agora import and marks everything included as
           exported, so the next export only picks up what&rsquo;s new since this one.
         </div>
@@ -81,8 +81,8 @@ export function AgoraSyncClient({ pendingCount, canEdit }: { pendingCount: numbe
         <h3 style={{ marginBottom: 6 }}>Compare against Agora</h3>
         <div className="helptext" style={{ marginBottom: 14 }}>
           After fixing something in Agora itself (a missing org, a placeholder email, etc.), upload a fresh export
-          here to compare organization, phone, city, and notes against what&rsquo;s on file — review and apply just
-          the differences, one field at a time. Nothing changes until you choose to apply it.
+          here to compare organization, phone, city, and notes against what&rsquo;s on file, then review and apply
+          just the differences, one field at a time. Nothing changes until you choose to apply it.
         </div>
         <input
           ref={verifyFileInputRef}

@@ -149,7 +149,7 @@ export function ActivityTimeline({
                     <div style={{ marginTop: 6, padding: "6px 8px", background: "var(--forest-bg)", borderRadius: 6 }}>
                       <div style={{ fontSize: 12, color: "var(--ink)" }}>
                         AI suggests: move to <strong>{FUNDRAISING_STAGE_LABELS[entry.data.suggestedStatus]}</strong>
-                        {entry.data.suggestionRationale ? ` — ${entry.data.suggestionRationale}` : ""}
+                        {entry.data.suggestionRationale ? ` · ${entry.data.suggestionRationale}` : ""}
                       </div>
                       {canEdit && (
                         <div style={{ display: "flex", gap: 6, marginTop: 6 }}>

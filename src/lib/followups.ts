@@ -76,7 +76,7 @@ export function getStaleContacts(
       // Agora's own placeholder convention for "we don't actually have this
       // person's email" — e.g. "tbd@needemail.com", "needemail2@firm.com".
       if (c.email?.toLowerCase().includes("needemail")) {
-        reasons.push({ code: "placeholder_email", label: "placeholder email — needs a real address" });
+        reasons.push({ code: "placeholder_email", label: "placeholder email, needs a real address" });
       }
       return { ...c, staleReasons: reasons };
     })

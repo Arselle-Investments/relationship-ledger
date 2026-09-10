@@ -55,7 +55,7 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          {canEditNow ? "Drag a card to move it between tiers" : "View mode — switch to Edit to drag cards between tiers"}
+          {canEditNow ? "Drag a card to move it between tiers" : "View mode. Switch to Edit to drag cards between tiers"}
         </div>
         {canEdit && (
           <div className="view-toggle">
@@ -80,10 +80,10 @@ export function TargetCompaniesClient({ companies: initialCompanies, canEdit }: 
         />
       </div>
       <div className="helptext" style={{ marginBottom: 10 }}>
-        Priority for the AREF I fund raise specifically — not deal-level capital sources (see Deal Capital) or
-        Emerging Managers allocators (see Emerging Managers).
+        Priority for the AREF I fund raise specifically. Deal-level capital sources live under Deal Capital;
+        Emerging Managers allocators live under Emerging Managers.
         {untieredCount > 0 &&
-          ` ${untieredCount} compan${untieredCount === 1 ? "y has" : "ies have"} no tier set yet and aren't shown here — set a tier from the Companies page to bring one onto this board.`}
+          ` ${untieredCount} compan${untieredCount === 1 ? "y has" : "ies have"} no tier set yet and aren't shown here. Set a tier from the Companies page to bring one onto this board.`}
       </div>
       <DndContext id="target-companies-board" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="tier-board">

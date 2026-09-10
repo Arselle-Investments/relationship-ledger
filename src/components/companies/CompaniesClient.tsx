@@ -295,7 +295,7 @@ export function CompaniesClient({
                 </>
               ) : (
                 <div className="helptext" style={{ marginBottom: 16 }}>
-                  No company record on file yet for this organization — tier and priority quarter aren&rsquo;t set-able until one exists.
+                  No company record on file yet for this organization, so tier and priority quarter aren&rsquo;t set-able until one exists.
                 </div>
               )}
               {activeCompany && (

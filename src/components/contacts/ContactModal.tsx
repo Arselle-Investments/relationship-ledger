@@ -118,7 +118,7 @@ export function ContactModal({
     }
     const statusChanged = !contact || contact.status !== values.status;
     if (values.status !== FundraisingStage.NOT_STARTED && statusChanged && !values.notes.trim()) {
-      setError(`Add a quick note before marking this contact "${FUNDRAISING_STAGE_LABELS[values.status]}" — what's the context?`);
+      setError(`Add a quick note before marking this contact "${FUNDRAISING_STAGE_LABELS[values.status]}": what's the context?`);
       return;
     }
 
@@ -177,7 +177,7 @@ export function ContactModal({
         <div className="modal-body">
           {!canEdit && (
             <div className="locked-msg" style={{ display: "block" }}>
-              View-only — you can browse this record but not change it.
+              View-only. You can browse this record but not change it.
             </div>
           )}
           <div className="field">
@@ -309,7 +309,7 @@ export function ContactModal({
               </label>
               {linkedTasks.map((t) => (
                 <div key={t.id} className="activity-item">
-                  {t.title} — {TASK_STATUS_LABELS[t.status]}
+                  {t.title} &middot; {TASK_STATUS_LABELS[t.status]}
                   {t.dueDate ? ` · due ${new Date(t.dueDate).toISOString().slice(0, 10)}` : ""}
                 </div>
               ))}

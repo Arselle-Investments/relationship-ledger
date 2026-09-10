@@ -53,7 +53,7 @@ export function ConferencesGrid({
           <div className="loc">
             {ev.location} &middot; <span className="tag">{CONFERENCE_TYPE_LABELS[ev.type]}</span>
             {seriesSize > 1 && (
-              <span className="tag forest" title="This conference recurs — other years are tracked as separate entries linked to this one">
+              <span className="tag forest" title="This conference recurs. Other years are tracked as separate entries linked to this one">
                 Recurring &middot; {seriesSize} years on file
               </span>
             )}

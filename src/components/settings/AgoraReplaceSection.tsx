@@ -26,7 +26,7 @@ export function AgoraReplaceSection() {
     }
     setConfirmText("");
     setMsg(
-      `Replaced the roster with ${json.imported} contacts from Agora${json.skipped ? ` (${json.skipped} rows skipped)` : ""}${json.listsCleared ? ` — ${json.listsCleared} mailing list(s) were cleared` : ""}.`
+      `Replaced the roster with ${json.imported} contacts from Agora${json.skipped ? ` (${json.skipped} rows skipped)` : ""}${json.listsCleared ? `. ${json.listsCleared} mailing list(s) were cleared` : ""}.`
     );
     router.refresh();
   }
@@ -35,10 +35,10 @@ export function AgoraReplaceSection() {
     <div className="card" style={{ padding: 22, maxWidth: 640, marginBottom: 20 }}>
       <h3 style={{ marginBottom: 6 }}>Replace all contacts from Agora</h3>
       <div className="helptext" style={{ marginBottom: 14 }}>
-        Deletes every contact and recreates the roster from a fresh Agora export — including anything local-only,
+        Deletes every contact and recreates the roster from a fresh Agora export, including anything local-only,
         like a contact confirmed from a Teams message that hasn&rsquo;t been pushed back to Agora yet, or notes/tags
-        added here. Meant for a full re-baseline, not routine updates — for a handful of new entries, use
-        &ldquo;Import from Agora&rdquo; above instead, which only adds/refreshes and never deletes.
+        added here. Meant for a full re-baseline. For a handful of new entries, use
+        &ldquo;Import from Agora&rdquo; above, which only adds/refreshes and never deletes.
       </div>
       <div className="field">
         <label>Type REPLACE to confirm</label>

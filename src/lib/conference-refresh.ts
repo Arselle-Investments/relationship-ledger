@@ -64,7 +64,7 @@ export async function checkOneConference(conference: Conference): Promise<Confer
     return { ok: true, suggestion };
   } catch (e) {
     console.error(e);
-    return { ok: false, error: "AI check failed — try again in a bit." };
+    return { ok: false, error: "AI check failed. Try again in a bit." };
   }
 }
 

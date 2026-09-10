@@ -51,9 +51,9 @@ export function ContactImportSection() {
       <h3 style={{ marginBottom: 6 }}>Import contacts</h3>
       <div className="helptext" style={{ marginBottom: 14 }}>
         &ldquo;Import&rdquo; adds/updates contacts from a plain spreadsheet. &ldquo;Import from Agora&rdquo; is the
-        everyday sync from an Agora export — it only adds new contacts and refreshes Agora-owned fields on existing
+        everyday sync from an Agora export. It only adds new contacts and refreshes Agora-owned fields on existing
         ones, and never deletes. For exporting new contacts back to Agora, or verifying against a fresh Agora export,
-        see Data Quality &rarr; Agora Sync. For a full re-baseline instead, see &ldquo;Replace all contacts from
+        see Data Quality &rarr; Agora Sync. For a full re-baseline, see &ldquo;Replace all contacts from
         Agora&rdquo; below.
       </div>
 

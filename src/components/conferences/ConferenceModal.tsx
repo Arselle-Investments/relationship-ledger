@@ -157,7 +157,7 @@ export function ConferenceModal({
     const hasAnything =
       s.startDate || s.endDate || s.location || s.registrationStatus || s.registrationLink || s.registrationOpensAt || s.dateConfidence || s.fitNote || s.summary;
     if (!hasAnything) {
-      setRefreshError("Checked the registration page — nothing new or different from what's on file.");
+      setRefreshError("Checked the registration page. Nothing new or different from what's on file.");
       return;
     }
     setSuggestion(s);
@@ -289,7 +289,7 @@ export function ConferenceModal({
               <div className="helptext" style={{ marginBottom: 6 }}>Other years in this series</div>
               {seriesHistory.map((c) => (
                 <div key={c.id} style={{ fontSize: 12.5, padding: "3px 0" }}>
-                  {c.name} — {isoDate(c.startDate)}
+                  {c.name} &middot; {isoDate(c.startDate)}
                   {c.registrationStatus ? ` · ${c.registrationStatus}` : ""}
                 </div>
               ))}

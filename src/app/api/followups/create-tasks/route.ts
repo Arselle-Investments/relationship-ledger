@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   for (const c of overdueSequence) {
     if (existingKey(c.id, SEQUENCE_PREFIX)) continue;
     toCreate.push({
-      title: `${SEQUENCE_PREFIX} ${c.step.title} — ${c.name}`,
+      title: `${SEQUENCE_PREFIX} ${c.step.title} (${c.name})`,
       contactId: c.id,
       ownerId: c.ownerId,
       priority: TaskPriority.MEDIUM,

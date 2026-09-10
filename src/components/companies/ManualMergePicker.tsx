@@ -80,7 +80,7 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
         <div>
           <div style={{ fontWeight: 600, fontSize: 13.5 }}>Merge companies manually</div>
           <div className="helptext" style={{ marginTop: 2 }}>
-            For duplicates that weren&rsquo;t automatically clustered above — search and pick any two or more.
+            For duplicates that weren&rsquo;t automatically clustered above. Search and pick any two or more.
           </div>
         </div>
         <button className="btn small" onClick={() => (open ? reset() : setOpen(true))}>
@@ -112,7 +112,7 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
                   {c.name}
                   {c.city && (
                     <span className="muted" style={{ fontSize: 11.5 }}>
-                      — {c.city}
+                      &middot; {c.city}
                     </span>
                   )}
                 </label>
@@ -123,7 +123,7 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
           {selected.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div className="helptext" style={{ marginBottom: 6 }}>
-                {selected.length} selected — pick which one to keep as the primary record:
+                {selected.length} selected. Pick which one to keep as the primary record:
               </div>
               {selected.map((c) => (
                 <label key={c.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "3px 0" }}>

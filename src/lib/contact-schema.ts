@@ -33,7 +33,7 @@ export function validateStatusNoteRule(params: {
   const { previousStatus, nextStatus, notes } = params;
   const statusChanged = previousStatus === null || previousStatus !== nextStatus;
   if (nextStatus !== FundraisingStage.NOT_STARTED && statusChanged && !notes?.trim()) {
-    return `Add a quick note before marking this contact "${nextStatus}" — what's the context?`;
+    return `Add a quick note before marking this contact "${nextStatus}": what's the context?`;
   }
   return null;
 }

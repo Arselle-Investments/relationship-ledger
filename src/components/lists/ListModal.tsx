@@ -120,8 +120,8 @@ export function ListModal({
           <div className="field">
             <label>Type</label>
             <select value={mode} onChange={(e) => setMode(e.target.value as MailingListMode)}>
-              <option value={MailingListMode.STATIC}>Static — pick specific contacts</option>
-              <option value={MailingListMode.DYNAMIC}>Smart — saved filter, always current</option>
+              <option value={MailingListMode.STATIC}>Static (pick specific contacts)</option>
+              <option value={MailingListMode.DYNAMIC}>Smart (saved filter, always current)</option>
             </select>
           </div>
 
@@ -136,7 +136,7 @@ export function ListModal({
                       checked={contactIds.has(c.id)}
                       onChange={() => toggleContact(c.id)}
                     />
-                    {c.name} {c.org ? `— ${c.org}` : ""}
+                    {c.name} {c.org ? `(${c.org})` : ""}
                   </label>
                 ))}
               </div>

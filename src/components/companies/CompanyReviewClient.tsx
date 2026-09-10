@@ -124,14 +124,14 @@ export function CompanyReviewClient({
                 <div style={{ marginBottom: 10 }}>
                   <span className="tag brass">Possible match</span>{" "}
                   <span className="helptext" style={{ marginLeft: 4 }}>
-                    Names share the same core once generic words (Capital, Partners, Group, etc.) are set aside —
-                    double check these are really the same firm before merging.
+                    Names share the same core once generic words (Capital, Partners, Group, etc.) are set aside.
+                    Double check these are really the same firm before merging.
                   </span>
                 </div>
               )}
               {agoraCount === 0 && (
                 <div className="helptext" style={{ marginBottom: 10, color: "var(--rust)" }}>
-                  None of these match an existing Agora record — pick the name to keep manually.
+                  None of these match an existing Agora record. Pick the name to keep manually.
                 </div>
               )}
               <table style={{ marginBottom: 12 }}>

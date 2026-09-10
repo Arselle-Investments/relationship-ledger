@@ -25,7 +25,7 @@ export function DevLoginButtons({ callbackUrl }: { callbackUrl: string }) {
   return (
     <div style={{ marginTop: 24, paddingTop: 20, borderTop: "1px dashed var(--line)" }}>
       <div className="eyebrow" style={{ marginBottom: 10 }}>
-        Dev preview — sign in as
+        Dev preview: sign in as
       </div>
       <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
         {DEV_TEAM.map((member) => (
@@ -40,7 +40,7 @@ export function DevLoginButtons({ callbackUrl }: { callbackUrl: string }) {
         ))}
       </div>
       <div className="helptext" style={{ marginTop: 10 }}>
-        Only available in local development — disabled automatically in production.
+        Only available in local development. Disabled automatically in production.
       </div>
     </div>
   );

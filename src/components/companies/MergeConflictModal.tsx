@@ -29,7 +29,7 @@ export function MergeConflictModal({
         </div>
         <div className="modal-body">
           <div className="helptext" style={{ marginBottom: 14 }}>
-            These companies disagree on the fields below — pick which value to keep. Everything else (tags, sources,
+            These companies disagree on the fields below. Pick which value to keep. Everything else (tags, sources,
             notes, asset classes, deals) is combined automatically; nothing is lost.
           </div>
           {conflicts.map((c) => (

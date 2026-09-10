@@ -167,7 +167,7 @@ export function HomeClient({
         {greeting()}, {firstName}
       </h2>
       <div className="helptext" style={{ marginBottom: 24 }}>
-        Here&rsquo;s what&rsquo;s on your plate — {fmtDate(today)} to {fmtDate(twoWeeksOut)}.
+        Here&rsquo;s what&rsquo;s on your plate: {fmtDate(today)} to {fmtDate(twoWeeksOut)}.
       </div>
 
       <div className="stat-row">

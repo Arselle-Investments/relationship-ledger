@@ -154,11 +154,11 @@ export function ConferencesClient({
       </div>
 
       <div className="helptext" style={{ marginBottom: 16 }}>
-        Recurring conferences aren&rsquo;t detected automatically — open a past occurrence and use{" "}
+        Recurring conferences aren&rsquo;t detected automatically. Open a past occurrence and use{" "}
         <strong>Create next year&rsquo;s occurrence</strong> to carry its details forward (marked{" "}
         <span className="tag forest" style={{ verticalAlign: "middle" }}>Recurring</span> on the card once it has more than one year on file).
         A conference with a registration link gets checked for updates via <strong>Check for updates</strong> on its
-        card, or all at once with <strong>Refresh all conferences</strong> above — nothing runs on a schedule, since
+        card, or all at once with <strong>Refresh all conferences</strong> above. Nothing runs on a schedule, since
         registration pages rarely change often enough to be worth polling automatically.
       </div>
 

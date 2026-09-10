@@ -170,7 +170,7 @@ function CorrespondenceCard({
 
       {!canEdit ? (
         <div className="helptext" style={{ marginTop: 10 }}>
-          View-only — an editor needs to resolve this.
+          View-only. An editor needs to resolve this.
         </div>
       ) : linking ? (
         <div style={{ marginTop: 12 }}>
@@ -181,7 +181,7 @@ function CorrespondenceCard({
                 <option value="">— choose —</option>
                 {contacts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name} {c.org ? `— ${c.org}` : ""}
+                    {c.name} {c.org ? `(${c.org})` : ""}
                   </option>
                 ))}
               </select>
@@ -341,7 +341,7 @@ export function NewContactsClient({
     }
     setContactBulkBusy(false);
     setContactBulkMsg(
-      `Created ${created} contact${created === 1 ? "" : "s"}${skipped > 0 ? ` — ${skipped} skipped (missing name or failed)` : ""}.`
+      `Created ${created} contact${created === 1 ? "" : "s"}${skipped > 0 ? ` (${skipped} skipped: missing name or failed)` : ""}.`
     );
   }
 

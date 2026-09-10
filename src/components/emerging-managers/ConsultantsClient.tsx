@@ -48,7 +48,7 @@ export function ConsultantsClient({
   return (
     <div>
       <div className="eyebrow" style={{ marginBottom: 14 }}>
-        Consultants that gate access to capital sources — intake process, known contacts, and which sources each one covers.
+        Consultants that gate access to capital sources: intake process, known contacts, and which sources each one covers.
       </div>
       <div className="toolbar">
         <div className="spacer" />

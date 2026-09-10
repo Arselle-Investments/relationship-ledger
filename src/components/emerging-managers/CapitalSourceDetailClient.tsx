@@ -175,8 +175,8 @@ export function CapitalSourceDetailClient({
           {field("programManager", "Program manager", false)}
           {field("consultantSource", "Consultant source", false)}
         </div>
-        {field("knownCommitmentsCompetitors", "Known commitments — competitors")}
-        {field("knownCommitmentsOperators", "Known commitments — operators")}
+        {field("knownCommitmentsCompetitors", "Known commitments (competitors)")}
+        {field("knownCommitmentsOperators", "Known commitments (operators)")}
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
@@ -187,11 +187,11 @@ export function CapitalSourceDetailClient({
           {field("minimumFundSize", "Minimum fund size", false)}
           {field("typicalCheckSize", "Typical check size", false)}
         </div>
-        {field("minimumFundSizeSource", "Minimum fund size — source")}
-        {field("typicalCheckSizeSource", "Typical check size — source")}
+        {field("minimumFundSizeSource", "Minimum fund size (source)")}
+        {field("typicalCheckSizeSource", "Typical check size (source)")}
         {field("timeline", "Timeline")}
         {field("capitalStatus", "Capital status (their own program, not our outreach)")}
-        {field("capitalStatusSource", "Capital status — source")}
+        {field("capitalStatusSource", "Capital status (source)")}
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>

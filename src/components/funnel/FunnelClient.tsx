@@ -46,7 +46,7 @@ export function FunnelClient({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: `${FUNDRAISING_STAGE_LABELS[selected]} (auto-refreshing)`,
-        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[selected]}" — created from the Funnel view, refreshes automatically as stages change.`,
+        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[selected]}". Created from the Funnel view; refreshes automatically as stages change.`,
         mode: "DYNAMIC",
         filterStatus: selected,
       }),
@@ -115,7 +115,7 @@ export function FunnelClient({
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
                   {createdListId ? (
                     <div className="helptext" style={{ margin: 0 }}>
-                      Created — <Link href="/lists">view in Mailing Lists</Link>. It&rsquo;ll stay current as contacts move
+                      Created. <Link href="/lists">View in Mailing Lists</Link>. It&rsquo;ll stay current as contacts move
                       through this stage.
                     </div>
                   ) : (
