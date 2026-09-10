@@ -7,7 +7,6 @@ import {
   CONTACT_TIER_LABELS,
   FUNDRAISING_STAGE_LABELS,
 } from "@/lib/contact-constants";
-import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
 import { ActivityTimeline } from "./ActivityTimeline";
@@ -121,6 +120,7 @@ export function ContactModal({
   const [linkedTasks, setLinkedTasks] = useState<TaskWithRelations[] | null>(null);
   const [liveContact, setLiveContact] = useState<ContactWithRelations | null>(contact);
   const [addingTask, setAddingTask] = useState(false);
+  const [editingTask, setEditingTask] = useState<TaskWithRelations | null>(null);
   const isEdit = !!contact;
   // Defaults to View for an existing record — most visits are "what does this
   // say," not "let me change something." A brand-new contact has nothing to
@@ -155,6 +155,16 @@ export function ContactModal({
   function handleTaskCreated(task: TaskWithRelations) {
     setLinkedTasks((prev) => [task, ...(prev ?? [])]);
     setAddingTask(false);
+  }
+
+  function handleTaskUpdated(task: TaskWithRelations) {
+    setLinkedTasks((prev) => (prev ?? []).map((t) => (t.id === task.id ? task : t)));
+    setEditingTask(null);
+  }
+
+  function handleTaskDeleted(id: string) {
+    setLinkedTasks((prev) => (prev ?? []).filter((t) => t.id !== id));
+    setEditingTask(null);
   }
 
   function set<K extends keyof ContactFormValues>(key: K, value: ContactFormValues[K]) {
@@ -398,16 +408,45 @@ export function ContactModal({
           )}
 
           {isEdit && linkedTasks !== null && linkedTasks.length > 0 && (
-            <div className="activity-log">
+            <div className="activity-log" style={{ marginBottom: 20 }}>
               <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--ink-soft)", marginBottom: 8 }}>
                 Linked tasks
               </label>
-              {linkedTasks.map((t) => (
-                <div key={t.id} className="activity-item">
-                  {t.title} &middot; {TASK_STATUS_LABELS[t.status]}
-                  {t.dueDate ? ` · due ${new Date(t.dueDate).toISOString().slice(0, 10)}` : ""}
-                </div>
-              ))}
+              {linkedTasks.map((t) => {
+                const isOverdue = t.status !== "DONE" && t.dueDate && new Date(t.dueDate) < new Date(new Date().toDateString());
+                const priorityClass = t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium";
+                return (
+                  <div
+                    key={t.id}
+                    className={`task-card pri-${priorityClass}`}
+                    style={{ cursor: "pointer" }}
+                    onClick={() => setEditingTask(t)}
+                  >
+                    <div className="t">
+                      {t.title}
+                      {t.status === "DONE" && (
+                        <span className="tag forest" style={{ marginLeft: 6 }}>
+                          Done
+                        </span>
+                      )}
+                      {t.status === "IN_PROGRESS" && (
+                        <span className="tag brass" style={{ marginLeft: 6 }}>
+                          In progress
+                        </span>
+                      )}
+                    </div>
+                    <div className="meta">
+                      <span>
+                        <span className={`pri-dot pri-${priorityClass}`} />
+                        {t.assigneeLabel || t.owner?.name || "Unassigned"}
+                      </span>
+                      <span className={isOverdue ? "overdue-text" : undefined}>
+                        {t.dueDate ? new Date(t.dueDate).toISOString().slice(0, 10) : ""}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
           {isEdit && contact && (
@@ -453,6 +492,18 @@ export function ContactModal({
         onClose={() => setAddingTask(false)}
         onSaved={handleTaskCreated}
         onDeleted={() => setAddingTask(false)}
+      />
+    )}
+
+    {editingTask && contact && (
+      <TaskModal
+        task={editingTask}
+        team={team}
+        contacts={liveContact ? [liveContact] : [contact]}
+        canEdit={canEdit}
+        onClose={() => setEditingTask(null)}
+        onSaved={handleTaskUpdated}
+        onDeleted={handleTaskDeleted}
       />
     )}
     </>
