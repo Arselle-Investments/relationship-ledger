@@ -7,6 +7,7 @@ import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
+import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
 
 export function FunnelClient({
   contacts: initialContacts,
@@ -19,11 +20,17 @@ export function FunnelClient({
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const counts = useMemo(() => buildFunnelCounts(contacts), [contacts]);
-  const max = Math.max(1, ...counts.map((c) => c.count));
+  // NOT_STARTED is excluded from the scale and always drawn full — with it
+  // included, its huge head-of-funnel count squashes every other stage into a
+  // sliver. Every other bar still scales true-to-count against each other.
+  const maxActive = Math.max(1, ...counts.filter((c) => c.status !== FundraisingStage.NOT_STARTED).map((c) => c.count));
   const [expanded, setExpanded] = useState<Set<FundraisingStage>>(new Set());
   const [creatingListFor, setCreatingListFor] = useState<FundraisingStage | null>(null);
   const [createdListFor, setCreatedListFor] = useState<Set<FundraisingStage>>(new Set());
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
+  const [selectedByStage, setSelectedByStage] = useState<Map<FundraisingStage, Set<string>>>(new Map());
+  const [bulkTaskStage, setBulkTaskStage] = useState<FundraisingStage | null>(null);
+  const [bulkTaskMsg, setBulkTaskMsg] = useState<string | null>(null);
 
   const matchesByStage = useMemo(() => {
     const map = new Map<FundraisingStage, ContactWithRelations[]>();
@@ -43,6 +50,40 @@ export function FunnelClient({
       else next.add(status);
       return next;
     });
+  }
+
+  function selectedFor(status: FundraisingStage): Set<string> {
+    return selectedByStage.get(status) ?? new Set();
+  }
+
+  function toggleContact(status: FundraisingStage, id: string) {
+    setSelectedByStage((prev) => {
+      const next = new Map(prev);
+      const current = new Set<string>(next.get(status) ?? []);
+      if (current.has(id)) current.delete(id);
+      else current.add(id);
+      next.set(status, current);
+      return next;
+    });
+  }
+
+  function toggleAllForStage(status: FundraisingStage, ids: string[]) {
+    setSelectedByStage((prev) => {
+      const next = new Map(prev);
+      const current = next.get(status) ?? new Set();
+      next.set(status, current.size === ids.length ? new Set() : new Set(ids));
+      return next;
+    });
+  }
+
+  function handleTasksCreated(status: FundraisingStage, count: number) {
+    setBulkTaskStage(null);
+    setSelectedByStage((prev) => {
+      const next = new Map(prev);
+      next.set(status, new Set());
+      return next;
+    });
+    setBulkTaskMsg(`Created ${count} task${count === 1 ? "" : "s"}.`);
   }
 
   function handleContactSaved(contact: ContactWithRelations) {
@@ -81,12 +122,16 @@ export function FunnelClient({
         </div>
       </div>
 
+      {bulkTaskMsg && <div className="helptext" style={{ marginBottom: 12 }}>{bulkTaskMsg}</div>}
+
       <div className="card" style={{ padding: 22 }}>
         {counts.map(({ status, count }) => {
-          const widthPct = Math.max(4, Math.round((count / max) * 100));
+          const widthPct =
+            status === FundraisingStage.NOT_STARTED ? 100 : Math.max(4, Math.round((count / maxActive) * 100));
           const color = FUNDRAISING_STAGE_COLORS[status];
           const isOpen = expanded.has(status);
           const matches = matchesByStage.get(status) ?? [];
+          const selected = selectedFor(status);
           return (
             <div key={status} style={{ marginBottom: 14 }}>
               <div
@@ -123,7 +168,7 @@ export function FunnelClient({
                   }}
                 >
                   {canEdit && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
                       {createdListFor.has(status) ? (
                         <div className="helptext" style={{ margin: 0 }}>
                           Created. <Link href="/lists">View in Mailing Lists</Link>. It&rsquo;ll stay current as
@@ -138,6 +183,11 @@ export function FunnelClient({
                           {creatingListFor === status ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
                         </button>
                       )}
+                      {selected.size > 0 && (
+                        <button className="btn small primary" onClick={() => setBulkTaskStage(status)}>
+                          Create task for {selected.size} selected
+                        </button>
+                      )}
                     </div>
                   )}
                   {matches.length === 0 ? (
@@ -145,11 +195,27 @@ export function FunnelClient({
                   ) : (
                     <>
                       <div className="helptext" style={{ marginBottom: 8 }}>
-                        Click a contact to see their details and correspondence.
+                        Click a contact&rsquo;s name to see their details and correspondence
+                        {canEdit ? "; check a box to select them for a bulk task." : "."}
                       </div>
                       <table>
                         <thead>
                           <tr>
+                            {canEdit && (
+                              <th>
+                                <input
+                                  type="checkbox"
+                                  checked={selected.size > 0 && selected.size === matches.length}
+                                  onChange={() =>
+                                    toggleAllForStage(
+                                      status,
+                                      matches.map((c) => c.id)
+                                    )
+                                  }
+                                  title="Select all"
+                                />
+                              </th>
+                            )}
                             <th>Name</th>
                             <th>Organization</th>
                             <th>Owner</th>
@@ -157,8 +223,19 @@ export function FunnelClient({
                         </thead>
                         <tbody>
                           {matches.map((c) => (
-                            <tr key={c.id} onClick={() => setEditingContact(c)}>
-                              <td className="name-cell">{c.name}</td>
+                            <tr key={c.id}>
+                              {canEdit && (
+                                <td onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={selected.has(c.id)}
+                                    onChange={() => toggleContact(status, c.id)}
+                                  />
+                                </td>
+                              )}
+                              <td className="name-cell" onClick={() => setEditingContact(c)} style={{ cursor: "pointer" }}>
+                                {c.name}
+                              </td>
                               <td>{c.org || <span className="muted">—</span>}</td>
                               <td className="muted">{c.owner?.name || "—"}</td>
                             </tr>
@@ -182,6 +259,16 @@ export function FunnelClient({
           onClose={() => setEditingContact(null)}
           onSaved={handleContactSaved}
           onDeleted={handleContactDeleted}
+        />
+      )}
+
+      {bulkTaskStage && (
+        <BulkTaskModal
+          contactIds={Array.from(selectedFor(bulkTaskStage))}
+          contactCount={selectedFor(bulkTaskStage).size}
+          team={team}
+          onClose={() => setBulkTaskStage(null)}
+          onCreated={(count) => handleTasksCreated(bulkTaskStage, count)}
         />
       )}
     </div>

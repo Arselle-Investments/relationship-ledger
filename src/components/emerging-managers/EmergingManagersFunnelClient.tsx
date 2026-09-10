@@ -21,7 +21,10 @@ export function EmergingManagersFunnelClient({
   const items: { id: string; name: string; outreachStatus: FundraisingStage }[] =
     kind === "capital-sources" ? capitalSources : consultants;
   const counts = useMemo(() => buildStatusFunnelCounts(items), [items]);
-  const max = Math.max(1, ...counts.map((c) => c.count));
+  // NOT_STARTED is excluded from the scale and always drawn full — with it
+  // included, its huge head-of-funnel count squashes every other stage into a
+  // sliver. Every other bar still scales true-to-count against each other.
+  const maxActive = Math.max(1, ...counts.filter((c) => c.status !== FundraisingStage.NOT_STARTED).map((c) => c.count));
 
   const matchesByStage = useMemo(() => {
     const map = new Map<FundraisingStage, typeof items>();
@@ -67,7 +70,8 @@ export function EmergingManagersFunnelClient({
 
       <div className="card" style={{ padding: 22 }}>
         {counts.map(({ status, count }) => {
-          const widthPct = Math.max(4, Math.round((count / max) * 100));
+          const widthPct =
+            status === FundraisingStage.NOT_STARTED ? 100 : Math.max(4, Math.round((count / maxActive) * 100));
           const isOpen = expanded.has(status);
           const matches = matchesByStage.get(status) ?? [];
           return (

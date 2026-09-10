@@ -68,3 +68,40 @@ export function getUpcomingSequenceItems<T extends ContactWithActiveSequence>(
     })
     .sort((a, b) => a.step.dueDate.localeCompare(b.step.dueDate));
 }
+
+export type ActiveSequenceEntry<T extends ContactWithActiveSequence> = T & {
+  step: SequenceStepState;
+  templateName: string;
+  progress: { done: number; total: number };
+  overdue: boolean;
+};
+
+/** Builds the display entry for one contact's active (incomplete) sequence, or null if it has none. */
+export function buildActiveSequenceEntry<T extends ContactWithActiveSequence>(
+  contact: T,
+  today: string = new Date().toISOString().slice(0, 10)
+): ActiveSequenceEntry<T> | null {
+  const seq = contact.activeSequence as ActiveSequence | null;
+  const step = nextPendingSequenceStep(seq);
+  if (!seq || !step) return null;
+  return {
+    ...contact,
+    step,
+    templateName: seq.templateName,
+    progress: { done: seq.steps.filter((s) => s.done).length, total: seq.steps.length },
+    overdue: step.dueDate < today,
+  };
+}
+
+/** Every contact with an active (incomplete) sequence, overdue ones first — the full management list for Follow-ups. */
+export function getActiveSequenceContacts<T extends ContactWithActiveSequence>(
+  contacts: T[],
+  today: string = new Date().toISOString().slice(0, 10)
+): ActiveSequenceEntry<T>[] {
+  return contacts
+    .flatMap((c) => {
+      const entry = buildActiveSequenceEntry(c, today);
+      return entry ? [entry] : [];
+    })
+    .sort((a, b) => (a.overdue === b.overdue ? a.step.dueDate.localeCompare(b.step.dueDate) : a.overdue ? -1 : 1));
+}

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/AppShell";
 import { prisma } from "@/lib/prisma";
 import { FollowupsClient } from "@/components/followups/FollowupsClient";
 import { getOverdueContacts } from "@/lib/followups";
-import { getOverdueSequenceContacts } from "@/lib/sequences";
+import { getActiveSequenceContacts } from "@/lib/sequences";
 import { getSettings } from "@/lib/settings";
 import { Role } from "@prisma/client";
 
@@ -19,13 +19,14 @@ export default async function FollowupsPage() {
   ]);
 
   const overdue = getOverdueContacts(contacts, settings.defaultCadenceDays);
-  const overdueSequences = getOverdueSequenceContacts(contacts);
+  const activeSequences = getActiveSequenceContacts(contacts);
 
   return (
     <AppShell activeHref="/followups" user={user}>
       <FollowupsClient
         initialOverdue={overdue}
-        initialOverdueSequences={overdueSequences}
+        initialActiveSequences={activeSequences}
+        contacts={contacts.map((c) => ({ id: c.id, name: c.name })).sort((a, b) => a.name.localeCompare(b.name))}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

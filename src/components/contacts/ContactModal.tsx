@@ -10,7 +10,6 @@ import {
 import { TASK_STATUS_LABELS } from "@/lib/task-constants";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
-import { ContactSequenceSection } from "./ContactSequenceSection";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ContactResearchSection } from "./ContactResearchSection";
 import { ContactAgoraSection } from "./ContactAgoraSection";
@@ -383,9 +382,6 @@ export function ContactModal({
           )}
           {isEdit && contact && (
             <ActivityTimeline contactId={contact.id} canEdit={canEdit} onContactChanged={handleSuggestionConfirmed} />
-          )}
-          {isEdit && liveContact && (
-            <ContactSequenceSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
           )}
           {isEdit && liveContact && (
             <ContactResearchSection contact={liveContact} canEdit={canEdit} onUpdated={handleSequenceUpdated} />
