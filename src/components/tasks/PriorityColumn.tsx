@@ -1,7 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { TaskPriority } from "@prisma/client";
+import { TaskPriority, User } from "@prisma/client";
 import { TASK_PRIORITY_LABELS } from "@/lib/task-constants";
 import { TaskWithRelations } from "@/types/task";
 import { TaskCard } from "./TaskCard";
@@ -9,6 +9,7 @@ import { TaskCard } from "./TaskCard";
 export function PriorityColumn({
   priority,
   tasks,
+  team,
   canEdit,
   onCardClick,
   onMarkDone,
@@ -16,6 +17,7 @@ export function PriorityColumn({
 }: {
   priority: TaskPriority;
   tasks: TaskWithRelations[];
+  team: User[];
   canEdit: boolean;
   onCardClick: (task: TaskWithRelations) => void;
   onMarkDone: (task: TaskWithRelations) => void;
@@ -35,6 +37,7 @@ export function PriorityColumn({
         <TaskCard
           key={task.id}
           task={task}
+          team={team}
           canEdit={canEdit}
           onClick={() => onCardClick(task)}
           onMarkDone={canEdit && canMarkDone(task) ? () => onMarkDone(task) : undefined}

@@ -9,7 +9,7 @@ import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { conferenceOverlapsWindow, quarterBounds } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
-import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS } from "@/lib/task-constants";
+import { TASK_STATUS_LABELS, TASK_PRIORITY_LABELS, formatAssignees } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { safeCell } from "@/lib/excel-safety";
 import { DealStatus, FundraisingStage, ContactTier } from "@prisma/client";
@@ -26,10 +26,11 @@ export async function GET(req: NextRequest) {
   const daysParam = searchParams.get("days");
   const days = daysParam === "30" ? 30 : daysParam === "quarter" ? "quarter" : 14;
 
-  const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
+  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
     await Promise.all([
       prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
-      prisma.task.findMany({ include: { owner: true, contact: true } }),
+      prisma.task.findMany({ include: { contact: true } }),
+      prisma.user.findMany(),
       prisma.conference.findMany(),
       prisma.travel.findMany({ include: { user: true } }),
       getSettings(),
@@ -128,7 +129,7 @@ export async function GET(req: NextRequest) {
   for (const t of milestones) {
     milestonesSheet.addRow({
       title: safeCell(t.title),
-      owner: safeCell(t.assigneeLabel ?? t.owner?.name ?? ""),
+      owner: safeCell(formatAssignees(t.assigneeIds, team)),
       due: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],

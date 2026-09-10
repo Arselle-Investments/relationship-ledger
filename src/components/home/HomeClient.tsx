@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Conference, Contact, Travel, User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
+import { formatAssignees } from "@/lib/task-constants";
 import { OverdueContact } from "@/lib/followups";
 import { ConferenceModal } from "@/components/conferences/ConferenceModal";
 import { TaskModal } from "@/components/tasks/TaskModal";
@@ -22,8 +23,6 @@ function greeting(): string {
 export function HomeClient({
   currentUserId,
   userName,
-  currentUserName,
-  isOnTaskTeam,
   tasks: initialTasks,
   travel: initialTravel,
   conferences: initialConferences,
@@ -35,8 +34,6 @@ export function HomeClient({
 }: {
   currentUserId: string;
   userName: string;
-  currentUserName: string | null;
-  isOnTaskTeam: boolean;
   tasks: TaskWithRelations[];
   travel: Travel[];
   conferences: Conference[];
@@ -83,9 +80,7 @@ export function HomeClient({
   }
 
   function isMine(task: TaskWithRelations): boolean {
-    if (task.ownerId === currentUserId) return true;
-    if (task.assigneeLabel === "Team") return isOnTaskTeam;
-    return !!(currentUserName && task.assigneeLabel?.includes(currentUserName));
+    return task.assigneeIds.includes(currentUserId);
   }
 
   function handleTaskSaved(task: TaskWithRelations) {
@@ -224,6 +219,7 @@ export function HomeClient({
           <thead>
             <tr>
               <th>Title</th>
+              <th>Assigned to</th>
               <th>Contact</th>
               <th>Due</th>
               {canEdit && <th></th>}
@@ -238,6 +234,7 @@ export function HomeClient({
                     <span className={`pri-dot pri-${t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium"}`} />
                     {t.title}
                   </td>
+                  <td className="muted">{formatAssignees(t.assigneeIds, team)}</td>
                   <td className="muted">{t.contact?.name || "—"}</td>
                   <td className={isOverdue ? "overdue-text" : "muted"}>{t.dueDate ? fmtDate(t.dueDate) : "—"}</td>
                   {canEdit && (

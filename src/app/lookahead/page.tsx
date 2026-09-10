@@ -11,10 +11,11 @@ export default async function LookaheadPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, tasks, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
+  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
     await Promise.all([
       prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
-      prisma.task.findMany({ include: { owner: true, contact: true } }),
+      prisma.task.findMany({ include: { contact: true } }),
+      prisma.user.findMany(),
       prisma.conference.findMany(),
       prisma.travel.findMany({ include: { user: true } }),
       getSettings(),
@@ -45,6 +46,7 @@ export default async function LookaheadPage() {
         stalledCapitalSources={stalledCapitalSources}
         tier1Companies={tier1Companies}
         arefTargetContacts={arefTargetContacts}
+        team={team}
       />
     </AppShell>
   );

@@ -1,6 +1,5 @@
-import { Contact, Task, User } from "@prisma/client";
+import { Contact, Task } from "@prisma/client";
 
 export type TaskWithRelations = Task & {
-  owner: User | null;
   contact: Contact | null;
 };

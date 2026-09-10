@@ -4,7 +4,6 @@ import { AppShell } from "@/components/AppShell";
 import { prisma } from "@/lib/prisma";
 import { HomeClient } from "@/components/home/HomeClient";
 import { Role, TaskStatus } from "@prisma/client";
-import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
 import { quarterBounds } from "@/lib/conferences";
 import { getSettings } from "@/lib/settings";
 import { getOverdueContacts } from "@/lib/followups";
@@ -19,7 +18,7 @@ export default async function HomePage() {
   const [allOpenTasks, travel, upcomingConferences, allConferences, team, contacts, settings] = await Promise.all([
     prisma.task.findMany({
       where: { status: { not: TaskStatus.DONE } },
-      include: { owner: true, contact: true },
+      include: { contact: true },
       orderBy: { dueDate: "asc" },
     }),
     // Capped at the end of this quarter — Home is a "what's soon" dashboard,
@@ -43,16 +42,8 @@ export default async function HomePage() {
     getSettings(),
   ]);
 
-  // "Mine" — either the sole owner, or named in a joint assigneeLabel (e.g.
-  // "Aaron Greeno or Kev Zoryan"). "Team" is a sentinel meaning all three
-  // task-team members jointly, not literal text — only counts as "mine" when
-  // the signed-in user is actually one of the three.
-  const isOnTaskTeam = !!user.email && TASK_TEAM_EMAILS.includes(user.email.toLowerCase());
-  const myTasks = allOpenTasks.filter((t) => {
-    if (t.ownerId === user.id) return true;
-    if (t.assigneeLabel === "Team") return isOnTaskTeam;
-    return !!(user.name && t.assigneeLabel?.includes(user.name));
-  });
+  // "Mine" — this user is one of possibly several people a task is jointly assigned to.
+  const myTasks = allOpenTasks.filter((t) => t.assigneeIds.includes(user.id));
 
   const myOverdueContacts = getOverdueContacts(
     contacts.filter((c) => c.ownerId === user.id),
@@ -64,8 +55,6 @@ export default async function HomePage() {
       <HomeClient
         currentUserId={user.id}
         userName={user.name ?? user.email ?? "there"}
-        currentUserName={user.name ?? null}
-        isOnTaskTeam={isOnTaskTeam}
         tasks={myTasks}
         travel={travel}
         conferences={upcomingConferences}

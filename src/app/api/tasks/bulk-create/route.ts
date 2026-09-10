@@ -7,8 +7,7 @@ import { TaskPriority, TaskStatus } from "@prisma/client";
 const schema = z.object({
   contactIds: z.array(z.string()).min(1, "Select at least one contact."),
   title: z.string().trim().min(1, "Title is required."),
-  ownerId: z.string().trim().optional().nullable(),
-  assigneeLabel: z.string().trim().optional().nullable(),
+  assigneeIds: z.array(z.string()).default([]),
   dueDate: z.string().trim().optional().nullable(),
   status: z.nativeEnum(TaskStatus).default(TaskStatus.OPEN),
   priority: z.nativeEnum(TaskPriority).default(TaskPriority.MEDIUM),
@@ -34,14 +33,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
   const data = parsed.data;
-  const ownerId = data.assigneeLabel ? null : data.ownerId || actingUser.id;
+  const assigneeIds = data.assigneeIds.length > 0 ? data.assigneeIds : [actingUser.id];
 
   const result = await prisma.task.createMany({
     data: data.contactIds.map((contactId) => ({
       title: data.title,
       contactId,
-      ownerId,
-      assigneeLabel: data.assigneeLabel || null,
+      assigneeIds,
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       status: data.status,
       priority: data.priority,

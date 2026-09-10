@@ -54,14 +54,14 @@ export async function POST(req: NextRequest) {
   );
   const overdueSequence = getOverdueSequenceContacts(contacts).filter((c) => sequenceContactIds.includes(c.id));
 
-  const toCreate: { title: string; contactId: string; ownerId: string | null; priority: TaskPriority }[] = [];
+  const toCreate: { title: string; contactId: string; assigneeIds: string[]; priority: TaskPriority }[] = [];
 
   for (const c of overdueCadence) {
     if (existingKey(c.id, CADENCE_PREFIX)) continue;
     toCreate.push({
       title: `${CADENCE_PREFIX} ${c.name}`,
       contactId: c.id,
-      ownerId: c.ownerId,
+      assigneeIds: c.ownerId ? [c.ownerId] : [],
       priority: TaskPriority.MEDIUM,
     });
   }
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     toCreate.push({
       title: `${SEQUENCE_PREFIX} ${c.step.title} (${c.name})`,
       contactId: c.id,
-      ownerId: c.ownerId,
+      assigneeIds: c.ownerId ? [c.ownerId] : [],
       priority: TaskPriority.MEDIUM,
     });
   }
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
       data: toCreate.map((t) => ({
         title: t.title,
         contactId: t.contactId,
-        ownerId: t.ownerId,
+        assigneeIds: t.assigneeIds,
         priority: t.priority,
         status: TaskStatus.OPEN,
         dueDate: new Date(),

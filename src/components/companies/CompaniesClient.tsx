@@ -261,7 +261,6 @@ export function CompaniesClient({
               <th>Target asset classes</th>
               <th>Deal feedback</th>
               <th>Sources</th>
-              <th>Agora</th>
             </tr>
           </thead>
           <tbody>
@@ -280,15 +279,6 @@ export function CompaniesClient({
                     ))
                   ) : (
                     <span className="muted">—</span>
-                  )}
-                </td>
-                <td>
-                  {g.company?.agoraExportedAt ? (
-                    <span className="tag forest" style={{ fontSize: 10 }}>
-                      In Agora
-                    </span>
-                  ) : (
-                    <span className="muted">Not yet</span>
                   )}
                 </td>
               </tr>

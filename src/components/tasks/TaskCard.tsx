@@ -1,15 +1,19 @@
 "use client";
 
 import { useDraggable } from "@dnd-kit/core";
+import { User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
+import { formatAssignees } from "@/lib/task-constants";
 
 export function TaskCard({
   task,
+  team,
   canEdit,
   onClick,
   onMarkDone,
 }: {
   task: TaskWithRelations;
+  team: User[];
   canEdit: boolean;
   onClick: () => void;
   onMarkDone?: () => void;
@@ -43,7 +47,7 @@ export function TaskCard({
       <div className="meta">
         <span>
           <span className={`pri-dot pri-${priorityClass}`} />
-          {task.assigneeLabel || task.owner?.name || "Unassigned"}
+          {formatAssignees(task.assigneeIds, team)}
         </span>
         <span className={isOverdue ? "overdue-text" : undefined}>
           {task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 10) : ""}

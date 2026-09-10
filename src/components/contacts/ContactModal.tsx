@@ -9,6 +9,7 @@ import {
 } from "@/lib/contact-constants";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
+import { formatAssignees } from "@/lib/task-constants";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ContactResearchSection } from "./ContactResearchSection";
 import { ContactAgoraSection, isBlank } from "./ContactAgoraSection";
@@ -442,7 +443,7 @@ export function ContactModal({
                     <div className="meta">
                       <span>
                         {!isDone && <span className={`pri-dot pri-${priorityClass}`} />}
-                        {t.assigneeLabel || t.owner?.name || "Unassigned"}
+                        {formatAssignees(t.assigneeIds, team)}
                       </span>
                       <span className={isOverdue ? "overdue-text" : undefined}>
                         {t.dueDate ? new Date(t.dueDate).toISOString().slice(0, 10) : ""}

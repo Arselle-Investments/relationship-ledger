@@ -19,16 +19,22 @@ export function BulkTaskModal({
   onCreated: (count: number) => void;
 }) {
   const [title, setTitle] = useState("");
-  const pairOptions = team.flatMap((a, i) =>
-    team.slice(i + 1).map((b) => ({ value: `pair:${a.id},${b.id}`, label: `${a.name || a.email} or ${b.name || b.email}` }))
-  );
-  const [assignee, setAssignee] = useState("");
+  const [assigneeIds, setAssigneeIds] = useState<Set<string>>(new Set());
   const [dueDate, setDueDate] = useState("");
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.OPEN);
   const [priority, setPriority] = useState<TaskPriority>(TaskPriority.MEDIUM);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  function toggleAssignee(id: string) {
+    setAssigneeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   async function handleSave() {
     setError(null);
@@ -37,23 +43,13 @@ export function BulkTaskModal({
       return;
     }
     setSaving(true);
-    let ownerId: string | null = null;
-    let assigneeLabel: string | null = null;
-    if (assignee === "team") {
-      assigneeLabel = "Team";
-    } else if (assignee.startsWith("pair:")) {
-      assigneeLabel = pairOptions.find((p) => p.value === assignee)?.label ?? null;
-    } else if (assignee) {
-      ownerId = assignee;
-    }
     const res = await fetch("/api/tasks/bulk-create", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         contactIds,
         title: title.trim(),
-        ownerId,
-        assigneeLabel,
+        assigneeIds: Array.from(assigneeIds),
         dueDate: dueDate || null,
         status,
         priority,
@@ -86,30 +82,22 @@ export function BulkTaskModal({
             <label>Title</label>
             <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus />
           </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Assigned to</label>
-              <select value={assignee} onChange={(e) => setAssignee(e.target.value)}>
-                <option value="">— none —</option>
-                {team.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.email}
-                  </option>
-                ))}
-                <option value="team">Team (everyone)</option>
-                {pairOptions.map((p) => (
-                  <option key={p.value} value={p.value}>
-                    {p.label}
-                  </option>
-                ))}
-              </select>
+          <div className="field">
+            <label>Assigned to ({assigneeIds.size} selected)</label>
+            <div className="checkbox-list" style={{ maxHeight: 160 }}>
+              {team.map((u) => (
+                <label key={u.id}>
+                  <input type="checkbox" checked={assigneeIds.has(u.id)} onChange={() => toggleAssignee(u.id)} />
+                  {u.name || u.email}
+                </label>
+              ))}
             </div>
+          </div>
+          <div className="field-row">
             <div className="field">
               <label>Due date</label>
               <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
-          </div>
-          <div className="field-row">
             <div className="field">
               <label>Priority</label>
               <select value={priority} onChange={(e) => setPriority(e.target.value as TaskPriority)}>
@@ -120,16 +108,16 @@ export function BulkTaskModal({
                 ))}
               </select>
             </div>
-            <div className="field">
-              <label>Status</label>
-              <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
-                {Object.values(TaskStatus).map((s) => (
-                  <option key={s} value={s}>
-                    {TASK_STATUS_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </div>
+          </div>
+          <div className="field">
+            <label>Status</label>
+            <select value={status} onChange={(e) => setStatus(e.target.value as TaskStatus)}>
+              {Object.values(TaskStatus).map((s) => (
+                <option key={s} value={s}>
+                  {TASK_STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label>Notes</label>

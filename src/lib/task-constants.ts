@@ -12,8 +12,18 @@ export const TASK_PRIORITY_LABELS: Record<TaskPriority, string> = {
   LOW: "Low",
 };
 
-// The people who actually pick up and execute tasks day to day — everyone
-// else on the User table (an account owner, other staff not doing hands-on
-// outreach) shouldn't show up as an assignable task owner, and "Team" means
-// this trio specifically rather than literally every User row.
-export const TASK_TEAM_EMAILS = ["aaron@arselleinvestments.com", "kev@arselleinvestments.com", "bianca@arselleinvestments.com"];
+type NamedUser = { id: string; name: string | null; email: string };
+
+/** Resolves assigneeIds against a team roster into display names, in the order given. */
+export function assigneeNames(assigneeIds: string[], team: NamedUser[]): string[] {
+  return assigneeIds.map((id) => {
+    const u = team.find((u) => u.id === id);
+    return u?.name || u?.email || "Former team member";
+  });
+}
+
+/** "Unassigned" / "Aaron Greeno" / "Aaron Greeno, Kev Zoryan" for a task card, table cell, or export. */
+export function formatAssignees(assigneeIds: string[], team: NamedUser[]): string {
+  const names = assigneeNames(assigneeIds, team);
+  return names.length > 0 ? names.join(", ") : "Unassigned";
+}

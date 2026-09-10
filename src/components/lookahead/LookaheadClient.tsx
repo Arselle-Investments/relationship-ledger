@@ -2,14 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Settings, Deal, Consultant, CapitalSource, Company } from "@prisma/client";
+import { Settings, Deal, Consultant, CapitalSource, Company, User } from "@prisma/client";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
 import { conferenceOverlapsWindow, quarterBounds } from "@/lib/conferences";
 import { CONFERENCE_TYPE_LABELS } from "@/lib/conference-constants";
 import { DEAL_STATUS_LABELS } from "@/lib/deal-constants";
-import { TASK_STATUS_LABELS } from "@/lib/task-constants";
+import { TASK_STATUS_LABELS, formatAssignees } from "@/lib/task-constants";
 import { contactMatchesCity } from "@/lib/travel-match";
 import { TravelWithUser } from "@/lib/travel";
 import { ContactWithRelations } from "@/types/contact";
@@ -31,9 +31,11 @@ export function LookaheadClient({
   stalledCapitalSources,
   tier1Companies,
   arefTargetContacts,
+  team,
 }: {
   contacts: ContactWithRelations[];
   tasks: TaskWithRelations[];
+  team: User[];
   conferences: ConferenceModel[];
   travel: TravelWithUser[];
   settings: Settings;
@@ -250,7 +252,7 @@ export function LookaheadClient({
                       <span className={`pri-dot pri-${t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium"}`} />
                       {t.title}
                     </td>
-                    <td className="muted">{t.assigneeLabel || t.owner?.name || "—"}</td>
+                    <td className="muted">{formatAssignees(t.assigneeIds, team)}</td>
                     <td className="muted">{t.contact?.name || "—"}</td>
                     <td className="muted">{TASK_STATUS_LABELS[t.status]}</td>
                   </tr>

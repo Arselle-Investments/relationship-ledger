@@ -11,7 +11,7 @@ export default async function TasksPage() {
   const user = session.user as { id: string; name?: string | null; email?: string | null; role: Role };
 
   const [tasks, team, contacts] = await Promise.all([
-    prisma.task.findMany({ include: { owner: true, contact: true }, orderBy: { createdAt: "desc" } }),
+    prisma.task.findMany({ include: { contact: true }, orderBy: { createdAt: "desc" } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     prisma.contact.findMany({ orderBy: { name: "asc" } }),
   ]);
@@ -24,7 +24,6 @@ export default async function TasksPage() {
         contacts={contacts}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
         currentUserId={user.id}
-        currentUserName={user.name ?? null}
       />
     </AppShell>
   );

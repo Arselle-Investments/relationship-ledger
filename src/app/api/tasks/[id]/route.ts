@@ -25,14 +25,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data: {
       ...(data.title !== undefined ? { title: data.title } : {}),
       ...(data.contactId !== undefined ? { contactId: data.contactId || null } : {}),
-      ...(data.ownerId !== undefined ? { ownerId: data.ownerId || null } : {}),
-      ...(data.assigneeLabel !== undefined ? { assigneeLabel: data.assigneeLabel || null } : {}),
+      ...(data.assigneeIds !== undefined ? { assigneeIds: data.assigneeIds } : {}),
       ...(data.dueDate !== undefined ? { dueDate: data.dueDate ? new Date(data.dueDate) : null } : {}),
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.priority !== undefined ? { priority: data.priority } : {}),
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
     },
-    include: { owner: true, contact: true },
+    include: { contact: true },
   });
   return NextResponse.json({ task });
 }

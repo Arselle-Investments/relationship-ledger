@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
+import { formatAssignees } from "@/lib/task-constants";
 
 function isoDate(d: Date | string) {
   return new Date(d).toISOString().slice(0, 10);
@@ -78,9 +80,11 @@ function MonthGrid({
 
 export function TasksCalendar({
   tasks,
+  team,
   onTaskClick,
 }: {
   tasks: TaskWithRelations[];
+  team: User[];
   onTaskClick: (task: TaskWithRelations) => void;
 }) {
   const [span, setSpan] = useState<"quarter" | "year">("quarter");
@@ -153,7 +157,7 @@ export function TasksCalendar({
                     {t.status === "DONE" && <span className="tag forest" style={{ marginLeft: 6 }}>Done</span>}
                   </div>
                   <div className="muted" style={{ fontSize: 12 }}>
-                    {t.assigneeLabel || t.owner?.name || "Unassigned"}
+                    {formatAssignees(t.assigneeIds, team)}
                     {t.contact ? ` · ${t.contact.name}` : ""}
                   </div>
                 </div>

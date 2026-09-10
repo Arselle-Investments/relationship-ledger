@@ -10,12 +10,12 @@ export async function GET(req: NextRequest) {
     return errorResponse(e);
   }
   const { searchParams } = new URL(req.url);
-  const ownerId = searchParams.get("ownerId");
+  const assigneeId = searchParams.get("assigneeId");
   const contactId = searchParams.get("contactId");
 
   const tasks = await prisma.task.findMany({
-    where: { ...(ownerId ? { ownerId } : {}), ...(contactId ? { contactId } : {}) },
-    include: { owner: true, contact: true },
+    where: { ...(assigneeId ? { assigneeIds: { has: assigneeId } } : {}), ...(contactId ? { contactId } : {}) },
+    include: { contact: true },
     orderBy: { createdAt: "desc" },
   });
   return NextResponse.json({ tasks });
@@ -40,14 +40,13 @@ export async function POST(req: NextRequest) {
     data: {
       title: data.title,
       contactId: data.contactId || null,
-      ownerId: data.assigneeLabel ? null : data.ownerId || actingUser.id,
-      assigneeLabel: data.assigneeLabel || null,
+      assigneeIds: data.assigneeIds.length > 0 ? data.assigneeIds : [actingUser.id],
       dueDate: data.dueDate ? new Date(data.dueDate) : null,
       status: data.status,
       priority: data.priority,
       notes: data.notes ?? "",
     },
-    include: { owner: true, contact: true },
+    include: { contact: true },
   });
   return NextResponse.json({ task }, { status: 201 });
 }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
-import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS } from "@/lib/task-constants";
+import { TASK_PRIORITY_LABELS, TASK_STATUS_LABELS, formatAssignees } from "@/lib/task-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 export async function GET(req: NextRequest) {
@@ -14,23 +14,23 @@ export async function GET(req: NextRequest) {
   }
 
   const { searchParams } = new URL(req.url);
-  const ownerIdParam = searchParams.get("ownerId");
-  const isLabelFilter = ownerIdParam?.startsWith("label:") ?? false;
-  const ownerId = ownerIdParam && !isLabelFilter ? ownerIdParam : null;
-  const assigneeLabel = isLabelFilter ? ownerIdParam!.slice("label:".length) : null;
+  const assigneeId = searchParams.get("assigneeId");
 
-  const tasks = await prisma.task.findMany({
-    where: ownerId ? { ownerId } : assigneeLabel ? { assigneeLabel } : undefined,
-    include: { owner: true, contact: true },
-    orderBy: { createdAt: "desc" },
-  });
+  const [tasks, team] = await Promise.all([
+    prisma.task.findMany({
+      where: assigneeId ? { assigneeIds: { has: assigneeId } } : undefined,
+      include: { contact: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.user.findMany(),
+  ]);
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Tasks");
   sheet.columns = [
     { header: "Title", key: "title", width: 30 },
     { header: "Related Contact", key: "contact", width: 24 },
-    { header: "Owner", key: "owner", width: 20 },
+    { header: "Assigned To", key: "owner", width: 28 },
     { header: "Due Date", key: "dueDate", width: 14 },
     { header: "Status", key: "status", width: 14 },
     { header: "Priority", key: "priority", width: 12 },
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
     sheet.addRow({
       title: safeCell(t.title),
       contact: safeCell(t.contact?.name ?? ""),
-      owner: safeCell(t.assigneeLabel ?? t.owner?.name ?? ""),
+      owner: safeCell(formatAssignees(t.assigneeIds, team)),
       dueDate: t.dueDate ? t.dueDate.toISOString().slice(0, 10) : "",
       status: TASK_STATUS_LABELS[t.status],
       priority: TASK_PRIORITY_LABELS[t.priority],

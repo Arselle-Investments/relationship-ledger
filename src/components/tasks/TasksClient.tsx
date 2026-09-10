@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { DndContext, DragEndEvent, PointerSensor, useSensor, useSensors } from "@dnd-kit/core";
 import { Contact, TaskPriority, User } from "@prisma/client";
-import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
+import { formatAssignees } from "@/lib/task-constants";
 import { quarterBounds } from "@/lib/conferences";
 import { TaskWithRelations } from "@/types/task";
 import { PriorityColumn } from "./PriorityColumn";
@@ -47,17 +47,15 @@ export function TasksClient({
   contacts,
   canEdit,
   currentUserId,
-  currentUserName,
 }: {
   initialTasks: TaskWithRelations[];
   team: User[];
   contacts: Contact[];
   canEdit: boolean;
   currentUserId: string;
-  currentUserName: string | null;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
-  const [ownerFilter, setOwnerFilter] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState("");
   const [dateRangeFilter, setDateRangeFilter] = useState<DateRangeValue>("");
   const [viewMode, setViewMode] = useState<"board" | "calendar">("board");
   // Defaults to "view" deliberately — a board full of drag targets invites
@@ -69,36 +67,14 @@ export function TasksClient({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
-  // Only the people who actually execute tasks are assignable — everyone
-  // else on the User table (an account owner, other staff not doing hands-on
-  // outreach) doesn't show up here, and "Team" means this trio, not literally
-  // every user in the system.
-  const taskTeam = useMemo(
-    () => team.filter((u) => TASK_TEAM_EMAILS.includes(u.email.toLowerCase())),
-    [team]
-  );
-
   function isAssignedToMe(task: TaskWithRelations): boolean {
-    if (task.ownerId === currentUserId) return true;
-    // "Team" is a sentinel meaning all three task-team members jointly, not
-    // literal text to substring-match — a plain includes() check would never
-    // match anyone's actual name against the string "Team".
-    if (task.assigneeLabel === "Team") return taskTeam.some((u) => u.id === currentUserId);
-    if (currentUserName && task.assigneeLabel) return task.assigneeLabel.includes(currentUserName);
-    return false;
+    return task.assigneeIds.includes(currentUserId);
   }
-
-  const assigneeLabels = useMemo(
-    () => Array.from(new Set(tasks.map((t) => t.assigneeLabel).filter((l): l is string => !!l))).sort(),
-    [tasks]
-  );
 
   const filtered = useMemo(() => {
     let list = tasks;
-    if (ownerFilter) {
-      list = ownerFilter.startsWith("label:")
-        ? list.filter((t) => t.assigneeLabel === ownerFilter.slice("label:".length))
-        : list.filter((t) => t.ownerId === ownerFilter);
+    if (assigneeFilter) {
+      list = list.filter((t) => t.assigneeIds.includes(assigneeFilter));
     }
     if (dateRangeFilter) {
       // A literal window, not "everything overdue plus this window" — with
@@ -113,7 +89,7 @@ export function TasksClient({
       });
     }
     return list;
-  }, [tasks, ownerFilter, dateRangeFilter]);
+  }, [tasks, assigneeFilter, dateRangeFilter]);
 
   // Done tasks are archived out of the active board — they're still on file
   // (and still counted, exportable, and searchable in the calendar) but
@@ -200,16 +176,11 @@ export function TasksClient({
             </button>
           </div>
         )}
-        <select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value)}>
-          <option value="">All owners</option>
+        <select value={assigneeFilter} onChange={(e) => setAssigneeFilter(e.target.value)}>
+          <option value="">Everyone assigned</option>
           {team.map((u) => (
             <option key={u.id} value={u.id}>
               {u.name || u.email}
-            </option>
-          ))}
-          {assigneeLabels.map((label) => (
-            <option key={label} value={`label:${label}`}>
-              {label}
             </option>
           ))}
         </select>
@@ -221,7 +192,7 @@ export function TasksClient({
           ))}
         </select>
         <div className="spacer" />
-        <a className="btn" href={`/api/tasks/export${ownerFilter ? `?ownerId=${ownerFilter}` : ""}`}>
+        <a className="btn" href={`/api/tasks/export${assigneeFilter ? `?assigneeId=${assigneeFilter}` : ""}`}>
           Export to Excel
         </a>
         {canEdit && (
@@ -246,6 +217,7 @@ export function TasksClient({
                   key={priority}
                   priority={priority}
                   tasks={byPriority.get(priority) ?? []}
+                  team={team}
                   canEdit={canEditNow}
                   onCardClick={setEditing}
                   onMarkDone={handleMarkDone}
@@ -273,7 +245,7 @@ export function TasksClient({
                   {doneTasks.map((t) => (
                     <tr key={t.id} onClick={() => setEditing(t)}>
                       <td className="name-cell">{t.title}</td>
-                      <td className="muted">{t.assigneeLabel || t.owner?.name || "—"}</td>
+                      <td className="muted">{formatAssignees(t.assigneeIds, team)}</td>
                       <td className="muted">{t.contact?.name || "—"}</td>
                       <td className="muted">{t.dueDate ? new Date(t.dueDate).toISOString().slice(0, 10) : "—"}</td>
                     </tr>
@@ -284,13 +256,13 @@ export function TasksClient({
           </div>
         </>
       ) : (
-        <TasksCalendar tasks={filtered} onTaskClick={setEditing} />
+        <TasksCalendar tasks={filtered} team={team} onTaskClick={setEditing} />
       )}
 
       {editing !== null && (
         <TaskModal
           task={editing === "new" ? null : editing}
-          team={taskTeam}
+          team={team}
           contacts={contacts}
           canEdit={canEdit}
           onClose={() => setEditing(null)}

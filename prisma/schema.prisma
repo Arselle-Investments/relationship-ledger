@@ -28,7 +28,6 @@ model User {
   sessions       Session[]
   ownedContacts  Contact[] @relation("ContactOwner")
   warmPathFor    Contact[] @relation("ContactWarmPath")
-  ownedTasks     Task[]    @relation("TaskOwner")
   travelPlans    Travel[]
   editLogEntries EditLogEntry[]
 }
@@ -555,12 +554,11 @@ model Task {
   title     String
   contactId String?
   contact   Contact?     @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  ownerId   String?
-  owner     User?        @relation("TaskOwner", fields: [ownerId], references: [id])
-  // Set instead of ownerId when a task is jointly assigned to more than one
-  // person ("Aaron or Kev", "Team") — there's no single accountable owner to
-  // point ownerId at, but the task still needs a human-readable assignee.
-  assigneeLabel String?
+  // Zero or more team-member User ids — a task can be assigned to nobody, one
+  // person, or several jointly (replaces the old single ownerId plus a
+  // free-text assigneeLabel hack for joint assignment). Plain array rather
+  // than a join table, same convention as MailingList.contactIds elsewhere.
+  assigneeIds String[]   @default([])
   dueDate   DateTime?    @db.Date
   status    TaskStatus   @default(OPEN)
   priority  TaskPriority @default(MEDIUM)
@@ -569,7 +567,6 @@ model Task {
   updatedAt DateTime     @updatedAt
 
   @@index([status])
-  @@index([ownerId])
 }
 
 // Single-row table (id is always "singleton") holding admin-editable defaults.
