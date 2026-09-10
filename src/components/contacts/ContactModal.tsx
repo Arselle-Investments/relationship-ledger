@@ -413,19 +413,23 @@ export function ContactModal({
                 Linked tasks
               </label>
               {linkedTasks.map((t) => {
-                const isOverdue = t.status !== "DONE" && t.dueDate && new Date(t.dueDate) < new Date(new Date().toDateString());
+                const isDone = t.status === "DONE";
+                const isOverdue = !isDone && t.dueDate && new Date(t.dueDate) < new Date(new Date().toDateString());
+                // Done tasks skip the priority stripe/dot entirely — that
+                // urgency no longer applies once the work is finished — and
+                // fade as a whole to read as settled rather than needing eyes.
                 const priorityClass = t.priority === "HIGH" ? "High" : t.priority === "LOW" ? "Low" : "Medium";
                 return (
                   <div
                     key={t.id}
-                    className={`task-card pri-${priorityClass}`}
-                    style={{ cursor: "pointer" }}
+                    className={`task-card${isDone ? "" : ` pri-${priorityClass}`}`}
+                    style={{ cursor: "pointer", opacity: isDone ? 0.55 : 1 }}
                     onClick={() => setEditingTask(t)}
                   >
                     <div className="t">
                       {t.title}
-                      {t.status === "DONE" && (
-                        <span className="tag forest" style={{ marginLeft: 6 }}>
+                      {isDone && (
+                        <span className="tag" style={{ marginLeft: 6 }}>
                           Done
                         </span>
                       )}
@@ -437,7 +441,7 @@ export function ContactModal({
                     </div>
                     <div className="meta">
                       <span>
-                        <span className={`pri-dot pri-${priorityClass}`} />
+                        {!isDone && <span className={`pri-dot pri-${priorityClass}`} />}
                         {t.assigneeLabel || t.owner?.name || "Unassigned"}
                       </span>
                       <span className={isOverdue ? "overdue-text" : undefined}>
