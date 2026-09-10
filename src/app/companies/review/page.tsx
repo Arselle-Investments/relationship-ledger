@@ -46,6 +46,7 @@ export default async function CompanyReviewPage() {
     <AppShell activeHref="/companies/review" user={user} companyReviewCount={clusters.length}>
       <CompanyReviewClient
         initialClusters={clusters}
+        allCompanies={companies}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

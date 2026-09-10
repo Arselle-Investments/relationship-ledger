@@ -8,6 +8,7 @@ export function AppShell({
   user,
   children,
   inboxCount,
+  newContactsCount,
   companyReviewCount,
   dataHygieneCount,
 }: {
@@ -15,6 +16,7 @@ export function AppShell({
   user: { name?: string | null; email?: string | null; role: Role };
   children: React.ReactNode;
   inboxCount?: number;
+  newContactsCount?: number;
   companyReviewCount?: number;
   dataHygieneCount?: number;
 }) {
@@ -32,7 +34,7 @@ export function AppShell({
           </div>
           <div>
             <h1>Arselle Relationship Ledger</h1>
-            <div className="sub">Relationships &middot; Outreach &middot; Pipeline &middot; Emerging Managers</div>
+            <div className="sub">Relationships &middot; Outreach &middot; Pipeline</div>
           </div>
         </Link>
         <div id="identity-bar">
@@ -59,6 +61,7 @@ export function AppShell({
       <TwoTierNav
         activeHref={activeHref}
         inboxCount={inboxCount}
+        newContactsCount={newContactsCount}
         companyReviewCount={companyReviewCount}
         dataHygieneCount={dataHygieneCount}
       />

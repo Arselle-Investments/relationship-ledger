@@ -25,11 +25,7 @@ export function ContactsClient({
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [editing, setEditing] = useState<ContactWithRelations | null | "new">(null);
-  const [agoraExporting, setAgoraExporting] = useState(false);
-  const [agoraMsg, setAgoraMsg] = useState<string | null>(null);
-  const [agoraExportDays, setAgoraExportDays] = useState("");
 
-  const pendingAgoraCount = contacts.filter((c) => !c.agoraExportedAt).length;
   const activeAdvancedCount = countActiveAdvancedFilters(advancedFilters);
 
   const agoraTypes = useMemo(
@@ -96,34 +92,6 @@ export function ContactsClient({
     return `/api/contacts/export?${params.toString()}`;
   }
 
-  async function handleAgoraExport() {
-    setAgoraExporting(true);
-    setAgoraMsg(null);
-    const url = agoraExportDays
-      ? `/api/contacts/export-new-for-agora?days=${agoraExportDays}`
-      : "/api/contacts/export-new-for-agora";
-    const res = await fetch(url, { method: "POST" });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      setAgoraExporting(false);
-      setAgoraMsg(json.error ?? "Something went wrong.");
-      return;
-    }
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = objectUrl;
-    a.download = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(objectUrl);
-    setAgoraExporting(false);
-    setAgoraMsg(`Exported and marked as sent to Agora.`);
-    const refreshed = await fetch("/api/contacts").then((r) => r.json());
-    setContacts(refreshed.contacts);
-  }
-
   return (
     <div>
       <div className="toolbar">
@@ -169,18 +137,6 @@ export function ContactsClient({
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
         <div className="spacer" />
-        {canEdit && pendingAgoraCount > 0 && (
-          <>
-            <select value={agoraExportDays} onChange={(e) => setAgoraExportDays(e.target.value)}>
-              <option value="">All pending ({pendingAgoraCount})</option>
-              <option value="15">Added in last 15 days</option>
-              <option value="30">Added in last 30 days</option>
-            </select>
-            <button className="btn" onClick={handleAgoraExport} disabled={agoraExporting}>
-              {agoraExporting ? "Exporting…" : "Export new for Agora"}
-            </button>
-          </>
-        )}
         <a className="btn" href={exportUrl()}>
           Export to Excel
         </a>
@@ -191,7 +147,6 @@ export function ContactsClient({
         )}
       </div>
 
-      {agoraMsg && <div className="helptext" style={{ marginBottom: 12 }}>{agoraMsg}</div>}
       <div className="helptext" style={{ marginBottom: 12 }}>
         Showing {filtered.length} of {contacts.length} contacts.
       </div>

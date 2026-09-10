@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Company } from "@prisma/client";
+import { detectCompanyConflicts, defaultResolutions, ConflictField } from "@/lib/company-conflicts";
+import { MergeConflictModal } from "./MergeConflictModal";
+import { ManualMergePicker } from "./ManualMergePicker";
 
 type CompanyWithCounts = Company & { _count: { contacts: number; feedback: number; outreach: number }; fromAgora: boolean };
 
@@ -20,9 +23,11 @@ type ClusterEntry = { cluster: CompanyWithCounts[]; looseMatch: boolean };
 
 export function CompanyReviewClient({
   initialClusters,
+  allCompanies,
   canEdit,
 }: {
   initialClusters: ClusterEntry[];
+  allCompanies: CompanyWithCounts[];
   canEdit: boolean;
 }) {
   const [clusters, setClusters] = useState(initialClusters);
@@ -31,20 +36,24 @@ export function CompanyReviewClient({
   );
   const [busyIndex, setBusyIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingConflict, setPendingConflict] = useState<{
+    index: number;
+    cluster: CompanyWithCounts[];
+    primaryId: string;
+    conflicts: ConflictField[];
+  } | null>(null);
 
   function removeCluster(index: number) {
     setClusters((prev) => prev.filter((_, i) => i !== index));
   }
 
-  async function mergeCluster(index: number, cluster: CompanyWithCounts[]) {
+  async function submitMerge(index: number, primaryId: string, secondaryIds: string[], resolutions?: Record<string, string>) {
     setError(null);
-    const primaryId = primaryByCluster[index];
-    const secondaryIds = cluster.filter((c) => c.id !== primaryId).map((c) => c.id);
     setBusyIndex(index);
     const res = await fetch("/api/companies/merge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ primaryId, secondaryIds }),
+      body: JSON.stringify({ primaryId, secondaryIds, resolutions }),
     });
     const json = await res.json();
     setBusyIndex(null);
@@ -52,7 +61,19 @@ export function CompanyReviewClient({
       setError(json.error ?? "Something went wrong.");
       return;
     }
+    setPendingConflict(null);
     removeCluster(index);
+  }
+
+  function mergeCluster(index: number, cluster: CompanyWithCounts[]) {
+    const primaryId = primaryByCluster[index];
+    const secondaryIds = cluster.filter((c) => c.id !== primaryId).map((c) => c.id);
+    const conflicts = detectCompanyConflicts(cluster);
+    if (conflicts.length === 0) {
+      submitMerge(index, primaryId, secondaryIds);
+      return;
+    }
+    setPendingConflict({ index, cluster, primaryId, conflicts });
   }
 
   async function dismissCluster(index: number, cluster: CompanyWithCounts[]) {
@@ -81,6 +102,8 @@ export function CompanyReviewClient({
         Grouped by name (case, punctuation, and endings like &ldquo;Inc.&rdquo; or &ldquo;Holdings&rdquo; ignored), never
         merged automatically. Pick which record to keep, or confirm they&rsquo;re actually different companies.
       </div>
+
+      {canEdit && <ManualMergePicker companies={allCompanies} />}
 
       {error && <div className="error-text" style={{ marginBottom: 16 }}>{error}</div>}
 
@@ -162,6 +185,22 @@ export function CompanyReviewClient({
             </div>
           );
         })
+      )}
+
+      {pendingConflict && (
+        <MergeConflictModal
+          conflicts={pendingConflict.conflicts}
+          defaultValues={defaultResolutions(
+            pendingConflict.conflicts,
+            pendingConflict.cluster.find((c) => c.id === pendingConflict.primaryId)!
+          )}
+          onCancel={() => setPendingConflict(null)}
+          onConfirm={(resolutions) => {
+            const secondaryIds = pendingConflict.cluster.filter((c) => c.id !== pendingConflict.primaryId).map((c) => c.id);
+            submitMerge(pendingConflict.index, pendingConflict.primaryId, secondaryIds, resolutions);
+          }}
+          busy={busyIndex === pendingConflict.index}
+        />
       )}
     </div>
   );

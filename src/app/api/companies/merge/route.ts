@@ -2,10 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
+import { ContactTier, ContactType } from "@prisma/client";
 
 const schema = z.object({
   primaryId: z.string().trim().min(1),
   secondaryIds: z.array(z.string().trim().min(1)).min(1, "Pick at least one company to merge in."),
+  // User-chosen winning value for any field where the merging companies had
+  // genuinely different real values (surfaced by the conflict-resolution
+  // modal) — takes priority over the fill-blank-from-secondary default below.
+  resolutions: z.record(z.string(), z.string()).optional(),
 });
 
 function mergeArrays(a: string[], b: string[]): string[] {
@@ -26,7 +31,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
-  const { primaryId, secondaryIds } = parsed.data;
+  const { primaryId, secondaryIds, resolutions } = parsed.data;
   if (secondaryIds.includes(primaryId)) {
     return NextResponse.json({ error: "The primary company can't also be one of the ones being merged in." }, { status: 400 });
   }
@@ -104,7 +109,12 @@ export async function POST(req: NextRequest) {
       if (!website && s.website) website = s.website;
       if (!linkedinUrl && s.linkedinUrl) linkedinUrl = s.linkedinUrl;
       if (!aum && s.aum) aum = s.aum;
-      else if (aum && s.aum && s.aum.trim() !== aum.trim()) preservedNotes.push(`Alternate AUM figure on a merged duplicate (${s.name}): ${s.aum}`);
+      else if (aum && s.aum && s.aum.trim() !== aum.trim() && !resolutions?.aum) {
+        // No explicit resolution came through (e.g. a caller that skipped the
+        // conflict-resolution modal) — fall back to preserving the discarded
+        // figure as a note rather than silently dropping it.
+        preservedNotes.push(`Alternate AUM figure on a merged duplicate (${s.name}): ${s.aum}`);
+      }
       if (!founded && s.founded) founded = s.founded;
       if (!priorityQuarter && s.priorityQuarter) priorityQuarter = s.priorityQuarter;
       // A secondary's own name (the one not kept) is worth staying findable
@@ -113,6 +123,18 @@ export async function POST(req: NextRequest) {
       if (s.name.trim().toLowerCase() !== primary.name.trim().toLowerCase()) preservedNotes.push(`Also known as: ${s.name}`);
     }
     if (preservedNotes.length) notes = [notes, ...preservedNotes].filter(Boolean).join("\n");
+
+    // A resolution the user picked in the conflict modal always wins over the
+    // fill-blank-from-secondary defaults above — that's what it means for a
+    // field to have been a genuine conflict rather than one side just missing it.
+    if (resolutions?.city) city = resolutions.city;
+    if (resolutions?.tier && (Object.values(ContactTier) as string[]).includes(resolutions.tier)) tier = resolutions.tier as ContactTier;
+    if (resolutions?.type && (Object.values(ContactType) as string[]).includes(resolutions.type)) type = resolutions.type as ContactType;
+    if (resolutions?.website) website = resolutions.website;
+    if (resolutions?.linkedinUrl) linkedinUrl = resolutions.linkedinUrl;
+    if (resolutions?.aum) aum = resolutions.aum;
+    if (resolutions?.founded) founded = resolutions.founded;
+    if (resolutions?.priorityQuarter) priorityQuarter = resolutions.priorityQuarter;
 
     await tx.company.update({
       where: { id: primaryId },
