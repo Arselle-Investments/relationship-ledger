@@ -30,6 +30,7 @@ model User {
   warmPathFor    Contact[] @relation("ContactWarmPath")
   ownedTasks     Task[]    @relation("TaskOwner")
   travelPlans    Travel[]
+  editLogEntries EditLogEntry[]
 }
 
 model Account {
@@ -576,4 +577,28 @@ model SequenceTemplate {
   steps     Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+// One row per single-field change on a tracked entity (Contact/Company for
+// now — see src/lib/edit-log.ts) — a lightweight audit trail for Data
+// Quality's Edit Log tab, not a full field-level history of everything.
+// entityLabel is a name snapshot at edit time so the log still reads
+// sensibly after the entity itself is later renamed or deleted.
+model EditLogEntry {
+  id            String    @id @default(cuid())
+  entityType    String
+  entityId      String
+  entityLabel   String
+  field         String
+  oldValue      String?
+  newValue      String?
+  changedById   String?
+  changedBy     User?     @relation(fields: [changedById], references: [id], onDelete: SetNull)
+  changedByName String?
+  createdAt     DateTime  @default(now())
+  undone        Boolean   @default(false)
+  undoneAt      DateTime?
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
 }

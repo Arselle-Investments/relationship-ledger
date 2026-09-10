@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { contactInputSchema, validateStatusNoteRule } from "@/lib/contact-schema";
 import { recordStageChange } from "@/lib/stage-history";
+import { logEdit } from "@/lib/edit-log";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -84,6 +85,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       changedByName: actingUser.name,
     });
   }
+
+  await logEdit({
+    entityType: "Contact",
+    entityId: id,
+    entityLabel: contact.name,
+    changedById: actingUser.id,
+    changedByName: actingUser.name,
+    changes: (Object.keys(data) as (keyof typeof data)[]).map((field) => ({
+      field,
+      oldValue: existing[field as keyof typeof existing],
+      newValue: contact[field as keyof typeof contact],
+    })),
+  });
 
   return NextResponse.json({ contact });
 }

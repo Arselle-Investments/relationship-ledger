@@ -139,6 +139,7 @@ const UTILITY_SECTIONS: SectionDef[] = [
       { href: "/companies/review", label: "Duplicate Companies" },
       { href: "/data-hygiene", label: "Data Hygiene" },
       { href: "/agora-sync", label: "Agora Sync" },
+      { href: "/edit-log", label: "Edit Log" },
     ],
   },
 ];

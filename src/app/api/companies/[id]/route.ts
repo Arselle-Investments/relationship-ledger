@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { ContactTier } from "@prisma/client";
+import { logEdit } from "@/lib/edit-log";
 
 const schema = z.object({
   tier: z.nativeEnum(ContactTier).optional().nullable(),
@@ -14,8 +15,9 @@ const schema = z.object({
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     throw e;
@@ -38,5 +40,19 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ("founded" in parsed.data) data.founded = parsed.data.founded?.trim() || null;
 
   const company = await prisma.company.update({ where: { id }, data });
+
+  await logEdit({
+    entityType: "Company",
+    entityId: id,
+    entityLabel: company.name,
+    changedById: actingUser.id,
+    changedByName: actingUser.name,
+    changes: Object.keys(data).map((field) => ({
+      field,
+      oldValue: existing[field as keyof typeof existing],
+      newValue: company[field as keyof typeof company],
+    })),
+  });
+
   return NextResponse.json({ company });
 }
