@@ -31,6 +31,7 @@ export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   INITIAL_INTEREST: "Initial interest",
   MEETING_OCCURRED: "Meeting occurred",
   FOLLOW_UP_ENGAGEMENT: "Follow-up engagement",
+  ACTIVE_PROSPECT: "Active prospect",
   DUE_DILIGENCE: "Due diligence / Data room",
   COMMITTED: "Committed",
   PASSED_OPEN: "Passed (open to future funds)",

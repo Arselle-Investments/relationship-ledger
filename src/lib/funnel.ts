@@ -12,6 +12,7 @@ export const FUNDRAISING_STAGES: FundraisingStage[] = [
   FundraisingStage.INITIAL_INTEREST,
   FundraisingStage.MEETING_OCCURRED,
   FundraisingStage.FOLLOW_UP_ENGAGEMENT,
+  FundraisingStage.ACTIVE_PROSPECT,
   FundraisingStage.DUE_DILIGENCE,
   FundraisingStage.PASSED_OPEN,
   FundraisingStage.PASSED_NOT_INTERESTED,
@@ -31,6 +32,9 @@ export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   INITIAL_INTEREST: "#BCD0CC",
   MEETING_OCCURRED: "#9CB9B3",
   FOLLOW_UP_ENGAGEMENT: "#7C9992",
+  // Breaks from the green progress ramp on purpose — a deliberately-targeted
+  // prospect is a distinct designation, not just "one rung further along."
+  ACTIVE_PROSPECT: "#C9A66B",
   DUE_DILIGENCE: "#5B8079",
   COMMITTED: "#3D615A",
   PASSED_OPEN: "#C7BFAE",

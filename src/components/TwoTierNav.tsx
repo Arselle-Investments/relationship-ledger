@@ -110,7 +110,7 @@ const SECTIONS: SectionDef[] = [
         tabs: [
           { href: "/funnel", label: "Funnel" },
           { href: "/target-companies", label: "Target Companies" },
-          { href: "/target-contacts", label: "Target Contacts" },
+          { href: "/target-contacts", label: "Target Investors" },
           { href: "/stuck-contacts", label: "Stalled Contacts" },
         ],
       },

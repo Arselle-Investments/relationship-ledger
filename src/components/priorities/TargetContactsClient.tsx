@@ -87,7 +87,7 @@ export function TargetContactsClient({
       </div>
 
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-        <h3 style={{ fontSize: 14 }}>Target contacts by tier</h3>
+        <h3 style={{ fontSize: 14 }}>Target investors by tier</h3>
         <input
           type="text"
           placeholder="Search contacts…"
@@ -97,7 +97,8 @@ export function TargetContactsClient({
         />
       </div>
       <div className="helptext" style={{ marginBottom: 10 }}>
-        LP contacts prioritized for the AREF I fund raise, shown with their current funnel stage.
+        Fund-raise investor prospects, shown with their current funnel stage. Deal-side/LP contacts are handled
+        under Deal Capital instead.
       </div>
       <DndContext id="target-contacts-board" sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="tier-board">

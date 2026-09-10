@@ -99,6 +99,7 @@ enum FundraisingStage {
   INITIAL_INTEREST
   MEETING_OCCURRED
   FOLLOW_UP_ENGAGEMENT
+  ACTIVE_PROSPECT // deliberate, targeted courting for a specific raise — more intentional than a general follow-up
   DUE_DILIGENCE
   COMMITTED
   PASSED_OPEN // passed on this deal, open to future ones
@@ -160,6 +161,14 @@ model Contact {
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
+  // Which side of the business this record actually belongs to — inferred
+  // from import provenance (AREF I Tracker vs. Capital Partner Outreach/LP
+  // List) rather than guessed from tier, which is a priority ranking, not a
+  // category. Null means "no signal either way" — an existing record that
+  // predates this field, still shown in Target Investors/Companies exactly
+  // as before; only an explicit DEAL classification excludes it.
+  recordContext RecordContext?
+
   tasks Task[]
   correspondence Correspondence[]
   stageChanges   ContactStatusChange[]
@@ -172,6 +181,12 @@ model Contact {
   @@index([agoraType])
   @@index([primaryLocation])
   @@index([companyId])
+  @@index([recordContext])
+}
+
+enum RecordContext {
+  FUND
+  DEAL
 }
 
 // A real record for a capital partner/company, promoted out of the free-text
@@ -213,6 +228,10 @@ model Company {
   investmentSizeMin   Float?
   investmentSizeMax   Float?
 
+  // Same fund-vs-deal distinction as Contact.recordContext — see that field's
+  // comment. Null means no signal either way.
+  recordContext RecordContext?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -221,6 +240,7 @@ model Company {
   outreach DealOutreach[]
 
   @@index([name])
+  @@index([recordContext])
 }
 
 enum DealStatus {
