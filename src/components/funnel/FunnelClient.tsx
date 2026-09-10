@@ -139,7 +139,7 @@ export function FunnelClient({
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
-        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search a contact's funnel stage</div>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search a contact&apos;s funnel stage</div>
         <div style={{ position: "relative", maxWidth: 360 }}>
           <input
             type="text"
