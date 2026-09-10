@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CapitalSource, Consultant, FundraisingStage } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
-import { buildStatusFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
+import { buildStatusFunnelCounts, FUNDRAISING_STAGE_COLORS } from "@/lib/funnel";
 
 type Kind = "capital-sources" | "consultants";
 
@@ -70,19 +70,11 @@ export function EmergingManagersFunnelClient({
                     background: FUNDRAISING_STAGE_COLORS[status],
                     borderRadius: 6,
                     transition: "width .2s",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "flex-end",
-                    paddingRight: 8,
                   }}
-                >
-                  {widthPct > 14 && (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: fundraisingStageTextColor(status) }}>{count}</span>
-                  )}
-                </div>
+                />
               </div>
               <div style={{ width: 36, textAlign: "right", fontFamily: "'Poppins',sans-serif", fontWeight: 600, flex: "none" }}>
-                {widthPct <= 14 ? count : ""}
+                {count}
               </div>
             </div>
           );
