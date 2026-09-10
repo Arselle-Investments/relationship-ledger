@@ -21,8 +21,13 @@ export const DEAL_ASSET_CLASS_OPTIONS = ["Industrial", "Multifamily", "Retail", 
 
 // Deal feedback (company/LP-level) uses the same fundraising pipeline as
 // Contact — re-exported under this name so existing deal-feedback callers
-// read naturally, without implying it's a separate vocabulary.
-export const FEEDBACK_STATUS_LABELS = FUNDRAISING_STAGE_LABELS;
+// read naturally, without implying it's a separate vocabulary. PASSED_OPEN is
+// the one label that genuinely differs by context: at the deal level, "open"
+// means open to a *future deal*, not a future fund (see FUNDRAISING_STAGE_LABELS).
+export const FEEDBACK_STATUS_LABELS: Record<FundraisingStage, string> = {
+  ...FUNDRAISING_STAGE_LABELS,
+  PASSED_OPEN: "Passed (open to future deals)",
+};
 
 export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
   NOT_STARTED: "",
@@ -34,4 +39,5 @@ export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
   COMMITTED: "forest",
   PASSED_OPEN: "",
   PASSED_NOT_INTERESTED: "rust",
+  DO_NOT_CONTACT: "rust",
 };

@@ -21,17 +21,28 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 
 // The fundraising/syndication pipeline — Contact (LP-level), DealFeedback
 // (company-level), and Consultant/CapitalSource (Emerging Managers outreach),
-// the same funnel just anchored at whichever level applies.
+// the same funnel just anchored at whichever level applies. This is the
+// Fund Raise (Contact-level) wording specifically — Deal Capital and
+// Emerging Managers each override the one label that differs by context
+// (PASSED_OPEN) via FEEDBACK_STATUS_LABELS and EM_STAGE_LABELS respectively.
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   NOT_STARTED: "Not started",
   OUTREACH_SENT: "Outreach sent",
   INITIAL_INTEREST: "Initial interest",
   MEETING_OCCURRED: "Meeting occurred",
   FOLLOW_UP_ENGAGEMENT: "Follow-up engagement",
-  DUE_DILIGENCE: "Due diligence",
+  DUE_DILIGENCE: "Due diligence / Data room",
   COMMITTED: "Committed",
-  PASSED_OPEN: "Passed (open to future deals)",
+  PASSED_OPEN: "Passed (open to future funds)",
   PASSED_NOT_INTERESTED: "Passed (not interested)",
+  DO_NOT_CONTACT: "Do not contact",
+};
+
+// Emerging Managers (Consultant/CapitalSource.outreachStatus) — same pipeline,
+// but "open" here means open to a future EM opportunity, not a future fund or deal.
+export const EM_STAGE_LABELS: Record<FundraisingStage, string> = {
+  ...FUNDRAISING_STAGE_LABELS,
+  PASSED_OPEN: "Passed (open to future opportunities)",
 };
 
 // Short badge/tag text for the two terminal "passed" stages, used wherever

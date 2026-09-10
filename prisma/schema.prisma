@@ -104,6 +104,7 @@ enum FundraisingStage {
   COMMITTED
   PASSED_OPEN // passed on this deal, open to future ones
   PASSED_NOT_INTERESTED // a genuine no
+  DO_NOT_CONTACT // a firm stop — compliance/preference, not just a soft pass
 }
 
 model Contact {
@@ -131,6 +132,12 @@ model Contact {
   // Agora" batch — lets that export always mean "everyone since last time",
   // whether the contact was added manually or confirmed from the Inbox.
   agoraExportedAt    DateTime?
+  // Timestamp of the last "export contact changes for Agora" batch this
+  // contact was included in — separate from agoraExportedAt, which only ever
+  // fires once (the "brand new contact" export). A contact is "changed since
+  // we last told Agora" whenever updatedAt is newer than this (or this is
+  // still null and the contact already has agoraExportedAt set).
+  agoraChangesSyncedAt DateTime?
   // Public-web research (bio snippet + recent news), refreshed on demand from
   // the contact card. Null/empty until a team member requests it — this is
   // never fetched automatically, since coverage is inherently uneven.
@@ -189,6 +196,9 @@ model Company {
   // it has ever earned; this is the audit trail the team needs to trust a
   // collapsed, cross-source view instead of one silo per source.
   sources String[] @default([])
+  // Null until this company has been included in an "export new companies for
+  // Agora" batch — same convention as Contact.agoraExportedAt.
+  agoraExportedAt DateTime?
   website String?
   linkedinUrl String?
   aum String? // free text ("~$10B+") — source data isn't consistently numeric

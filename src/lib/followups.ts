@@ -6,6 +6,7 @@ const STALE_EXEMPT_STATUSES: FundraisingStage[] = [
   FundraisingStage.COMMITTED,
   FundraisingStage.PASSED_OPEN,
   FundraisingStage.PASSED_NOT_INTERESTED,
+  FundraisingStage.DO_NOT_CONTACT,
 ];
 
 function utcMidnight(d: Date): number {

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CapitalSource, FundraisingStage, Consultant } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EM_STAGE_LABELS } from "@/lib/contact-constants";
 import { EmCorrespondenceTimeline } from "./EmCorrespondenceTimeline";
 
 type CapitalSourceWithConsultant = CapitalSource & { consultant: Consultant | null };
@@ -140,13 +140,13 @@ export function CapitalSourceDetailClient({
               <select value={cs.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as FundraisingStage })}>
                 {Object.values(FundraisingStage).map((s) => (
                   <option key={s} value={s}>
-                    {FUNDRAISING_STAGE_LABELS[s]}
+                    {EM_STAGE_LABELS[s]}
                   </option>
                 ))}
               </select>
             </>
           ) : (
-            <span className="tag brass">{FUNDRAISING_STAGE_LABELS[cs.outreachStatus]}</span>
+            <span className="tag brass">{EM_STAGE_LABELS[cs.outreachStatus]}</span>
           )}
           {cs.consultant && (
             <Link href={`/consultants/${cs.consultant.id}`} className="btn small ghost">

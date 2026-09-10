@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Correspondence } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EM_STAGE_LABELS } from "@/lib/contact-constants";
 
 /**
  * Correspondence log for a Consultant or CapitalSource — same idea as
@@ -73,7 +73,7 @@ export function EmCorrespondenceTimeline({
           {item.suggestionState === "PENDING" && item.suggestedStatus && (
             <div style={{ marginTop: 4, padding: "6px 8px", background: "var(--forest-bg)", borderRadius: 6 }}>
               <div style={{ fontSize: 12, color: "var(--ink)" }}>
-                AI suggests: move to <strong>{FUNDRAISING_STAGE_LABELS[item.suggestedStatus]}</strong>
+                AI suggests: move to <strong>{EM_STAGE_LABELS[item.suggestedStatus]}</strong>
                 {item.suggestionRationale ? ` · ${item.suggestionRationale}` : ""}
               </div>
               {canEdit && (

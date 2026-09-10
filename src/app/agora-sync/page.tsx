@@ -11,10 +11,15 @@ export default async function AgoraSyncPage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const pendingCount = await prisma.contact.count({ where: { agoraExportedAt: null } });
+  const companyPendingCount = await prisma.company.count({ where: { agoraExportedAt: null } });
 
   return (
     <AppShell activeHref="/agora-sync" user={user}>
-      <AgoraSyncClient pendingCount={pendingCount} canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR} />
+      <AgoraSyncClient
+        pendingCount={pendingCount}
+        companyPendingCount={companyPendingCount}
+        canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
+      />
     </AppShell>
   );
 }

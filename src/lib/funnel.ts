@@ -1,9 +1,11 @@
 import { FundraisingStage } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 
-// The fundraising pipeline order shown in Fund Raise -> Funnel. Both PASSED
-// variants are terminal drop-offs, not forward stages, but still worth
-// showing so the team can see how much falls out, and where.
+// The fundraising pipeline order shown in Fund Raise -> Funnel. PASSED and
+// DO_NOT_CONTACT are terminal drop-offs, not forward stages, but still worth
+// showing so the team can see how much falls out, and where. Committed is
+// deliberately last — it's the actual finish line, not just "the stage before
+// the drop-off stages" — so it renders after every drop-off outcome.
 export const FUNDRAISING_STAGES: FundraisingStage[] = [
   FundraisingStage.NOT_STARTED,
   FundraisingStage.OUTREACH_SENT,
@@ -11,16 +13,18 @@ export const FUNDRAISING_STAGES: FundraisingStage[] = [
   FundraisingStage.MEETING_OCCURRED,
   FundraisingStage.FOLLOW_UP_ENGAGEMENT,
   FundraisingStage.DUE_DILIGENCE,
-  FundraisingStage.COMMITTED,
   FundraisingStage.PASSED_OPEN,
   FundraisingStage.PASSED_NOT_INTERESTED,
+  FundraisingStage.DO_NOT_CONTACT,
+  FundraisingStage.COMMITTED,
 ];
 
 // Heatmap colors for the funnel bars: a light-to-dark forest-green ramp for
 // forward progress (culminating in the deepest green at Committed, reusing
-// --forest's existing "good/success" meaning elsewhere in the app), then two
-// deliberately different colors for the two passed stages — a neutral tan
-// for "still worth another deal" versus rust for a genuine no.
+// --forest's existing "good/success" meaning elsewhere in the app), then
+// progressively harder-stop colors for the drop-off outcomes — a neutral tan
+// for "still worth another deal", rust for a genuine no, and a deeper
+// maroon for "never reach out again."
 export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   NOT_STARTED: "#EEF2F1",
   OUTREACH_SENT: "#D7E3E1",
@@ -31,6 +35,7 @@ export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   COMMITTED: "#3D615A",
   PASSED_OPEN: "#C7BFAE",
   PASSED_NOT_INTERESTED: "#A85A40",
+  DO_NOT_CONTACT: "#6B2E2E",
 };
 
 // Stages dark enough to need white text instead of ink.
@@ -38,6 +43,7 @@ const DARK_STAGES = new Set<FundraisingStage>([
   FundraisingStage.DUE_DILIGENCE,
   FundraisingStage.COMMITTED,
   FundraisingStage.PASSED_NOT_INTERESTED,
+  FundraisingStage.DO_NOT_CONTACT,
 ]);
 
 export function fundraisingStageTextColor(status: FundraisingStage): string {

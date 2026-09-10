@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { CapitalSource, Consultant, FundraisingStage } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EM_STAGE_LABELS } from "@/lib/contact-constants";
 import { buildStatusFunnelCounts, FUNDRAISING_STAGE_COLORS } from "@/lib/funnel";
 
 type Kind = "capital-sources" | "consultants";
@@ -60,7 +60,7 @@ export function EmergingManagersFunnelClient({
               style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, cursor: "pointer" }}
             >
               <div style={{ width: 140, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
-                {FUNDRAISING_STAGE_LABELS[status]}
+                {EM_STAGE_LABELS[status]}
               </div>
               <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
                 <div
@@ -85,7 +85,7 @@ export function EmergingManagersFunnelClient({
         <div className="overlay open" onClick={() => setSelected(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-head">
-              <h2>{FUNDRAISING_STAGE_LABELS[selected]}</h2>
+              <h2>{EM_STAGE_LABELS[selected]}</h2>
               <button className="close-x" onClick={() => setSelected(null)}>
                 &times;
               </button>

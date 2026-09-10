@@ -13,6 +13,7 @@ export function TaskModal({
   onClose,
   onSaved,
   onDeleted,
+  defaultContactId,
 }: {
   task: TaskWithRelations | null;
   team: User[];
@@ -21,10 +22,12 @@ export function TaskModal({
   onClose: () => void;
   onSaved: (task: TaskWithRelations) => void;
   onDeleted: (id: string) => void;
+  /** Pre-selects "Related contact" when creating a task from a contact's own view. */
+  defaultContactId?: string;
 }) {
   const isEdit = !!task;
   const [title, setTitle] = useState(task?.title ?? "");
-  const [contactId, setContactId] = useState(task?.contactId ?? "");
+  const [contactId, setContactId] = useState(task?.contactId ?? defaultContactId ?? "");
   // The "assigned to" select doubles as an owner picker and a joint-assignee
   // picker: a plain team member's id, or a synthetic "pair:idA,idB" / "team"
   // value that resolves to a human-readable assigneeLabel instead of a

@@ -14,6 +14,7 @@ import { ContactSequenceSection } from "./ContactSequenceSection";
 import { ActivityTimeline } from "./ActivityTimeline";
 import { ContactResearchSection } from "./ContactResearchSection";
 import { ContactAgoraSection } from "./ContactAgoraSection";
+import { TaskModal } from "@/components/tasks/TaskModal";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -58,6 +59,17 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
   };
 }
 
+// Plain label+value row for View mode — same label typography as the
+// editable `.field`, just a static value instead of an input.
+function ViewField({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="field" style={{ marginBottom: 12 }}>
+      <label>{label}</label>
+      <div style={{ fontSize: 13.5, whiteSpace: "pre-wrap" }}>{value}</div>
+    </div>
+  );
+}
+
 export function ContactModal({
   contact,
   team,
@@ -81,7 +93,14 @@ export function ContactModal({
   const [saving, setSaving] = useState(false);
   const [linkedTasks, setLinkedTasks] = useState<TaskWithRelations[] | null>(null);
   const [liveContact, setLiveContact] = useState<ContactWithRelations | null>(contact);
+  const [addingTask, setAddingTask] = useState(false);
   const isEdit = !!contact;
+  // Defaults to View for an existing record — most visits are "what does this
+  // say," not "let me change something." A brand-new contact has nothing to
+  // summarize, so it always opens straight into the full form; a view-only
+  // role never gets a toggle since there's nothing they could switch to.
+  const [mode, setMode] = useState<"view" | "edit">(isEdit ? "view" : "edit");
+  const effectiveMode: "view" | "edit" = !canEdit ? "view" : !isEdit ? "edit" : mode;
 
   function handleSequenceUpdated(updated: ContactWithRelations) {
     setLiveContact(updated);
@@ -105,6 +124,11 @@ export function ContactModal({
       .then((json) => setLinkedTasks(json.tasks ?? []))
       .catch(() => setLinkedTasks([]));
   }, [contact]);
+
+  function handleTaskCreated(task: TaskWithRelations) {
+    setLinkedTasks((prev) => [task, ...(prev ?? [])]);
+    setAddingTask(false);
+  }
 
   function set<K extends keyof ContactFormValues>(key: K, value: ContactFormValues[K]) {
     setValues((v) => ({ ...v, [key]: value }));
@@ -155,6 +179,7 @@ export function ContactModal({
       setError(json.error ?? "Something went wrong.");
       return;
     }
+    setMode("view");
     onSaved(json.contact);
   }
 
@@ -165,11 +190,15 @@ export function ContactModal({
     if (res.ok) onDeleted(contact.id);
   }
 
+  const owner = team.find((u) => u.id === values.ownerId);
+  const warmPath = team.find((u) => u.id === values.warmPathId);
+
   return (
+    <>
     <div className="overlay open" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" style={{ maxWidth: 720 }} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>{isEdit ? "Edit contact" : "Add contact"}</h2>
+          <h2>{isEdit ? contact!.name : "Add contact"}</h2>
           <button className="close-x" onClick={onClose}>
             &times;
           </button>
@@ -180,128 +209,163 @@ export function ContactModal({
               View-only. You can browse this record but not change it.
             </div>
           )}
-          <div className="field">
-            <label>Name</label>
-            <input value={values.name} onChange={(e) => set("name", e.target.value)} disabled={!canEdit} />
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Organization</label>
-              <input value={values.org} onChange={(e) => set("org", e.target.value)} disabled={!canEdit} />
+          {isEdit && canEdit && (
+            <div className="view-toggle" style={{ display: "inline-flex", marginBottom: 16 }}>
+              <button className={mode === "view" ? "active" : ""} onClick={() => setMode("view")}>
+                View
+              </button>
+              <button className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")}>
+                Edit
+              </button>
             </div>
-            <div className="field">
-              <label>Email</label>
-              <input value={values.email} onChange={(e) => set("email", e.target.value)} disabled={!canEdit} />
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Type</label>
-              <select value={values.type} onChange={(e) => set("type", e.target.value as ContactType)} disabled={!canEdit}>
-                {TYPE_OPTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {CONTACT_TYPE_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Tier</label>
-              <select value={values.tier} onChange={(e) => set("tier", e.target.value as ContactTier)} disabled={!canEdit}>
-                {TIER_OPTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {CONTACT_TIER_LABELS[t]}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Status</label>
-              <select value={values.status} onChange={(e) => set("status", e.target.value as FundraisingStage)} disabled={!canEdit}>
-                {STATUS_OPTIONS.map((s) => (
-                  <option key={s} value={s}>
-                    {FUNDRAISING_STAGE_LABELS[s]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>Owner</label>
-              <select value={values.ownerId} onChange={(e) => set("ownerId", e.target.value)} disabled={!canEdit}>
-                <option value="">— none —</option>
-                {team.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Warm path</label>
-              <select value={values.warmPathId} onChange={(e) => set("warmPathId", e.target.value)} disabled={!canEdit}>
-                <option value="">— none —</option>
-                {team.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.email}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="field">
-              <label>City / region</label>
-              <input value={values.city} onChange={(e) => set("city", e.target.value)} disabled={!canEdit} />
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Last contact</label>
-              <input
-                type="date"
-                value={values.lastContact}
-                onChange={(e) => set("lastContact", e.target.value)}
-                disabled={!canEdit}
-              />
-            </div>
-            <div className="field">
-              <label>Cadence override (days)</label>
-              <input
-                type="number"
-                min={1}
-                value={values.cadenceOverrideDays}
-                onChange={(e) => set("cadenceOverrideDays", e.target.value)}
-                disabled={!canEdit}
-              />
-              <div className="helptext">Leave blank to use the team default.</div>
-            </div>
-          </div>
-          <div className="field-row">
-            <div className="field">
-              <label>Priority quarter</label>
-              <input
-                placeholder="e.g. 2026-Q4"
-                value={values.priorityQuarter}
-                onChange={(e) => set("priorityQuarter", e.target.value)}
-                disabled={!canEdit}
-              />
-            </div>
-            <div className="field">
-              <label>Tags</label>
-              <input
-                placeholder="comma, separated"
-                value={values.tags}
-                onChange={(e) => set("tags", e.target.value)}
-                disabled={!canEdit}
-              />
-            </div>
-          </div>
-          <div className="field">
-            <label>Notes</label>
-            <textarea value={values.notes} onChange={(e) => set("notes", e.target.value)} disabled={!canEdit} />
-          </div>
+          )}
+
+          {effectiveMode === "view" ? (
+            <>
+              <ViewField label="Type" value={CONTACT_TYPE_LABELS[values.type]} />
+              <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
+              <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
+              {values.org && <ViewField label="Organization" value={values.org} />}
+              {values.email && <ViewField label="Email" value={values.email} />}
+              {values.phone && <ViewField label="Phone" value={values.phone} />}
+              {values.city && <ViewField label="City / region" value={values.city} />}
+              {owner && <ViewField label="Owner" value={owner.name || owner.email} />}
+              {warmPath && <ViewField label="Warm path" value={warmPath.name || warmPath.email} />}
+              {values.lastContact && <ViewField label="Last contact" value={values.lastContact} />}
+              {values.cadenceOverrideDays && (
+                <ViewField label="Cadence override" value={`${values.cadenceOverrideDays} days`} />
+              )}
+              {values.priorityQuarter && <ViewField label="Priority quarter" value={values.priorityQuarter} />}
+              {values.tags && <ViewField label="Tags" value={values.tags} />}
+              {values.notes && <ViewField label="Notes" value={values.notes} />}
+            </>
+          ) : (
+            <>
+              <div className="field">
+                <label>Name</label>
+                <input value={values.name} onChange={(e) => set("name", e.target.value)} disabled={!canEdit} />
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Organization</label>
+                  <input value={values.org} onChange={(e) => set("org", e.target.value)} disabled={!canEdit} />
+                </div>
+                <div className="field">
+                  <label>Email</label>
+                  <input value={values.email} onChange={(e) => set("email", e.target.value)} disabled={!canEdit} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Type</label>
+                  <select value={values.type} onChange={(e) => set("type", e.target.value as ContactType)} disabled={!canEdit}>
+                    {TYPE_OPTIONS.map((t) => (
+                      <option key={t} value={t}>
+                        {CONTACT_TYPE_LABELS[t]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Tier</label>
+                  <select value={values.tier} onChange={(e) => set("tier", e.target.value as ContactTier)} disabled={!canEdit}>
+                    {TIER_OPTIONS.map((t) => (
+                      <option key={t} value={t}>
+                        {CONTACT_TIER_LABELS[t]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Status</label>
+                  <select value={values.status} onChange={(e) => set("status", e.target.value as FundraisingStage)} disabled={!canEdit}>
+                    {STATUS_OPTIONS.map((s) => (
+                      <option key={s} value={s}>
+                        {FUNDRAISING_STAGE_LABELS[s]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>Owner</label>
+                  <select value={values.ownerId} onChange={(e) => set("ownerId", e.target.value)} disabled={!canEdit}>
+                    <option value="">— none —</option>
+                    {team.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name || u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Warm path</label>
+                  <select value={values.warmPathId} onChange={(e) => set("warmPathId", e.target.value)} disabled={!canEdit}>
+                    <option value="">— none —</option>
+                    {team.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.name || u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="field">
+                  <label>City / region</label>
+                  <input value={values.city} onChange={(e) => set("city", e.target.value)} disabled={!canEdit} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Last contact</label>
+                  <input
+                    type="date"
+                    value={values.lastContact}
+                    onChange={(e) => set("lastContact", e.target.value)}
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div className="field">
+                  <label>Cadence override (days)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={values.cadenceOverrideDays}
+                    onChange={(e) => set("cadenceOverrideDays", e.target.value)}
+                    disabled={!canEdit}
+                  />
+                  <div className="helptext">Leave blank to use the team default.</div>
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>Priority quarter</label>
+                  <input
+                    placeholder="e.g. 2026-Q4"
+                    value={values.priorityQuarter}
+                    onChange={(e) => set("priorityQuarter", e.target.value)}
+                    disabled={!canEdit}
+                  />
+                </div>
+                <div className="field">
+                  <label>Tags</label>
+                  <input
+                    placeholder="comma, separated"
+                    value={values.tags}
+                    onChange={(e) => set("tags", e.target.value)}
+                    disabled={!canEdit}
+                  />
+                </div>
+              </div>
+              <div className="field">
+                <label>Notes</label>
+                <textarea value={values.notes} onChange={(e) => set("notes", e.target.value)} disabled={!canEdit} />
+              </div>
+            </>
+          )}
+
           {isEdit && linkedTasks !== null && linkedTasks.length > 0 && (
             <div className="activity-log">
               <label style={{ display: "block", fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", letterSpacing: ".04em", color: "var(--ink-soft)", marginBottom: 8 }}>
@@ -329,19 +393,40 @@ export function ContactModal({
         </div>
         {canEdit && (
           <div className="modal-foot">
-            {isEdit ? (
-              <button className="btn btn-danger" onClick={handleDelete}>
-                Delete
+            <div style={{ display: "flex", gap: 8 }}>
+              {isEdit && (
+                <button className="btn btn-danger" onClick={handleDelete}>
+                  Delete
+                </button>
+              )}
+              {isEdit && (
+                <button className="btn small ghost" onClick={() => setAddingTask(true)}>
+                  + Add task
+                </button>
+              )}
+            </div>
+            {effectiveMode === "edit" && (
+              <button className="btn primary" onClick={handleSave} disabled={saving}>
+                {saving ? "Saving…" : "Save"}
               </button>
-            ) : (
-              <span />
             )}
-            <button className="btn primary" onClick={handleSave} disabled={saving}>
-              {saving ? "Saving…" : "Save"}
-            </button>
           </div>
         )}
       </div>
     </div>
+
+    {addingTask && contact && (
+      <TaskModal
+        task={null}
+        team={team}
+        contacts={liveContact ? [liveContact] : [contact]}
+        canEdit={canEdit}
+        defaultContactId={contact.id}
+        onClose={() => setAddingTask(false)}
+        onSaved={handleTaskCreated}
+        onDeleted={() => setAddingTask(false)}
+      />
+    )}
+    </>
   );
 }

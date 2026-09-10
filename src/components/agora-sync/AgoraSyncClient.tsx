@@ -4,37 +4,74 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { VerifyAgoraModal } from "./VerifyAgoraModal";
 
-export function AgoraSyncClient({ pendingCount, canEdit }: { pendingCount: number; canEdit: boolean }) {
+export function AgoraSyncClient({
+  pendingCount,
+  companyPendingCount,
+  canEdit,
+}: {
+  pendingCount: number;
+  companyPendingCount: number;
+  canEdit: boolean;
+}) {
   const router = useRouter();
   const [exportDays, setExportDays] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [companyExportDays, setCompanyExportDays] = useState("");
+  const [companyExporting, setCompanyExporting] = useState(false);
+  const [companyExportMsg, setCompanyExportMsg] = useState<string | null>(null);
+  const [changesExporting, setChangesExporting] = useState(false);
+  const [changesExportMsg, setChangesExportMsg] = useState<string | null>(null);
   const [verifyFile, setVerifyFile] = useState<File | null>(null);
   const verifyFileInputRef = useRef<HTMLInputElement>(null);
 
-  async function handleExport() {
-    setExporting(true);
-    setExportMsg(null);
-    const url = exportDays ? `/api/contacts/export-new-for-agora?days=${exportDays}` : "/api/contacts/export-new-for-agora";
+  async function downloadExport(url: string, filenamePrefix: string) {
     const res = await fetch(url, { method: "POST" });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
-      setExporting(false);
-      setExportMsg(json.error ?? "Something went wrong.");
-      return;
+      return { ok: false as const, error: json.error ?? "Something went wrong." };
     }
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = objectUrl;
-    a.download = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.download = `${filenamePrefix}-${new Date().toISOString().slice(0, 10)}.xlsx`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(objectUrl);
+    return { ok: true as const };
+  }
+
+  async function handleExport() {
+    setExporting(true);
+    setExportMsg(null);
+    const url = exportDays ? `/api/contacts/export-new-for-agora?days=${exportDays}` : "/api/contacts/export-new-for-agora";
+    const result = await downloadExport(url, "arselle-new-contacts-for-agora");
     setExporting(false);
-    setExportMsg("Exported and marked as sent to Agora.");
-    router.refresh();
+    setExportMsg(result.ok ? "Exported and marked as sent to Agora." : result.error);
+    if (result.ok) router.refresh();
+  }
+
+  async function handleCompanyExport() {
+    setCompanyExporting(true);
+    setCompanyExportMsg(null);
+    const url = companyExportDays
+      ? `/api/companies/export-new-for-agora?days=${companyExportDays}`
+      : "/api/companies/export-new-for-agora";
+    const result = await downloadExport(url, "arselle-new-companies-for-agora");
+    setCompanyExporting(false);
+    setCompanyExportMsg(result.ok ? "Exported and marked as sent to Agora." : result.error);
+    if (result.ok) router.refresh();
+  }
+
+  async function handleChangesExport() {
+    setChangesExporting(true);
+    setChangesExportMsg(null);
+    const result = await downloadExport("/api/contacts/export-changes-for-agora", "arselle-contact-changes-for-agora");
+    setChangesExporting(false);
+    setChangesExportMsg(result.ok ? "Exported. Re-run any time to pick up what's changed since." : result.error);
+    if (result.ok) router.refresh();
   }
 
   if (!canEdit) {
@@ -75,6 +112,49 @@ export function AgoraSyncClient({ pendingCount, canEdit }: { pendingCount: numbe
             {exportMsg && <div className="helptext">{exportMsg}</div>}
           </>
         )}
+      </div>
+
+      <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 6 }}>Export new companies for Agora</h3>
+        <div className="helptext" style={{ marginBottom: 14 }}>
+          Companies added here that haven&rsquo;t been sent to Agora yet. Downloads a spreadsheet formatted for Agora
+          import and marks everything included as exported, so the next export only picks up what&rsquo;s new since
+          this one.
+        </div>
+        {companyPendingCount === 0 ? (
+          <div className="empty">
+            <h3>Nothing pending</h3>
+            <div>Every company on file has already been exported to Agora.</div>
+          </div>
+        ) : (
+          <>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+              <select value={companyExportDays} onChange={(e) => setCompanyExportDays(e.target.value)}>
+                <option value="">All pending ({companyPendingCount})</option>
+                <option value="15">Added in last 15 days</option>
+                <option value="30">Added in last 30 days</option>
+              </select>
+              <button className="btn primary" onClick={handleCompanyExport} disabled={companyExporting}>
+                {companyExporting ? "Exporting…" : "Export new for Agora"}
+              </button>
+            </div>
+            {companyExportMsg && <div className="helptext">{companyExportMsg}</div>}
+          </>
+        )}
+      </div>
+
+      <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 6 }}>Export contact changes for Agora</h3>
+        <div className="helptext" style={{ marginBottom: 14 }}>
+          For contacts already sent to Agora: organization, phone, city, or notes edited here since the last time
+          this ran. Downloads a spreadsheet of just what changed, so Agora can be updated to match.
+        </div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
+          <button className="btn primary" onClick={handleChangesExport} disabled={changesExporting}>
+            {changesExporting ? "Exporting…" : "Export changes for Agora"}
+          </button>
+        </div>
+        {changesExportMsg && <div className="helptext">{changesExportMsg}</div>}
       </div>
 
       <div className="card" style={{ padding: 20, maxWidth: 640 }}>

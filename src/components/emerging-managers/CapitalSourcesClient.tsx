@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { CapitalSource, FundraisingStage, Consultant } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { EM_STAGE_LABELS } from "@/lib/contact-constants";
 
 type CapitalSourceWithConsultant = CapitalSource & { consultant: Consultant | null };
 
@@ -24,7 +24,7 @@ function sortValue(c: CapitalSourceWithConsultant, key: SortKey): string | numbe
     case "name":
       return c.name.toLowerCase();
     case "status":
-      return FUNDRAISING_STAGE_LABELS[c.outreachStatus];
+      return EM_STAGE_LABELS[c.outreachStatus];
     case "tier":
       // untiered sinks to the bottom regardless of direction
       return c.tier ?? 99;
@@ -116,7 +116,7 @@ export function CapitalSourcesClient({
           <option value="">All statuses</option>
           {Object.values(FundraisingStage).map((s) => (
             <option key={s} value={s}>
-              {FUNDRAISING_STAGE_LABELS[s]}
+              {EM_STAGE_LABELS[s]}
             </option>
           ))}
         </select>
@@ -178,7 +178,7 @@ export function CapitalSourcesClient({
                     </Link>
                   </td>
                   <td>
-                    <span className="tag brass">{FUNDRAISING_STAGE_LABELS[c.outreachStatus]}</span>
+                    <span className="tag brass">{EM_STAGE_LABELS[c.outreachStatus]}</span>
                   </td>
                   <td className="muted">{c.tier ? `Tier ${c.tier}` : "—"}</td>
                   <td className="muted">{c.timing || "—"}</td>
