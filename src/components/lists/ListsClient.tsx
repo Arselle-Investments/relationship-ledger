@@ -38,6 +38,7 @@ export function ListsClient({
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
+  const [syncingId, setSyncingId] = useState<string | null>(null);
 
   const contactMatches = useMemo(() => {
     const q = contactSearch.trim().toLowerCase();
@@ -99,6 +100,22 @@ export function ListsClient({
   function removeLocal(id: string) {
     setLists((prev) => prev.filter((e) => e.list.id !== id));
     setEditing(null);
+  }
+
+  async function syncTags(entry: MailingListWithContacts) {
+    setSyncingId(entry.list.id);
+    const res = await fetch(`/api/lists/${entry.list.id}/tag-members`, { method: "POST" });
+    setSyncingId(null);
+    if (!res.ok) {
+      setCopyMsg("Something went wrong tagging this list's members for Agora.");
+      return;
+    }
+    const json = await res.json();
+    setCopyMsg(
+      json.tagged === 0
+        ? `Everyone in "${entry.list.name}" was already tagged for Agora.`
+        : `Tagged ${json.tagged} contact${json.tagged === 1 ? "" : "s"} in "${entry.list.name}" with "${entry.list.name}" for Agora to read.`
+    );
   }
 
   async function duplicateList(entry: MailingListWithContacts) {
@@ -220,6 +237,12 @@ export function ListsClient({
         )}
       </div>
 
+      <div className="helptext" style={{ marginBottom: 12 }}>
+        New lists tag their members with the list&rsquo;s own name automatically, since Agora only ever reads a
+        contact&rsquo;s Tags. Use &ldquo;Sync tags to Agora&rdquo; on a list any time to re-tag its current members
+        (e.g. after a smart list&rsquo;s membership grows).
+      </div>
+
       {copyMsg && <div className="helptext" style={{ marginBottom: 12 }}>{copyMsg}</div>}
 
       {lists.length === 0 ? (
@@ -260,6 +283,11 @@ export function ListsClient({
                 <a className="btn small" href={mailtoHref(entry)} onClick={() => handleMailtoClick(entry)}>
                   Email (BCC)
                 </a>
+                {canEdit && (
+                  <button className="btn small" disabled={syncingId === entry.list.id} onClick={() => syncTags(entry)}>
+                    {syncingId === entry.list.id ? "Tagging…" : "Sync tags to Agora"}
+                  </button>
+                )}
                 {canEdit && (
                   <button className="btn small" onClick={() => duplicateList(entry)}>
                     Duplicate

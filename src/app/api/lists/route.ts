@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { mailingListInputSchema } from "@/lib/mailing-list-schema";
+import { tagContactsForList } from "@/lib/list-tagging";
 
 export async function GET() {
   try {
@@ -14,8 +15,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     return errorResponse(e);
   }
@@ -40,6 +42,11 @@ export async function POST(req: NextRequest) {
       filterStatus: data.filterStatus || null,
     },
   });
+
+  // Tag every initial member right away so this list is visible to Agora
+  // (which only reads Contact.tags) from the moment it's created.
+  await tagContactsForList(list, actingUser);
+
   return NextResponse.json({ list }, { status: 201 });
 }
 

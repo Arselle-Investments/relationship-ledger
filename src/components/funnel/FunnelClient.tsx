@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FundraisingStage, User } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
-import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS } from "@/lib/funnel";
+import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -31,6 +31,22 @@ export function FunnelClient({
   const [selectedByStage, setSelectedByStage] = useState<Map<FundraisingStage, Set<string>>>(new Map());
   const [bulkTaskStage, setBulkTaskStage] = useState<FundraisingStage | null>(null);
   const [bulkTaskMsg, setBulkTaskMsg] = useState<string | null>(null);
+  const [stageSearch, setStageSearch] = useState("");
+  const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
+  const stageRefs = useRef<Map<FundraisingStage, HTMLDivElement | null>>(new Map());
+
+  const stageMatches = useMemo(() => {
+    const q = stageSearch.trim().toLowerCase();
+    if (!q) return [];
+    return contacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [contacts, stageSearch]);
+
+  function jumpToStage(status: FundraisingStage) {
+    setExpanded((prev) => new Set(prev).add(status));
+    requestAnimationFrame(() => {
+      stageRefs.current.get(status)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }
 
   const matchesByStage = useMemo(() => {
     const map = new Map<FundraisingStage, ContactWithRelations[]>();
@@ -122,6 +138,71 @@ export function FunnelClient({
         </div>
       </div>
 
+      <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search a contact's funnel stage</div>
+        <div style={{ position: "relative", maxWidth: 360 }}>
+          <input
+            type="text"
+            placeholder="Search a contact by name…"
+            value={lookupContact ? lookupContact.name : stageSearch}
+            onChange={(e) => {
+              setStageSearch(e.target.value);
+              setLookupContact(null);
+            }}
+          />
+          {stageMatches.length > 0 && !lookupContact && (
+            <div
+              className="card"
+              style={{ position: "absolute", top: "100%", left: 0, right: 0, zIndex: 5, marginTop: 4, padding: 4, maxHeight: 220, overflow: "auto" }}
+            >
+              {stageMatches.map((c) => (
+                <div
+                  key={c.id}
+                  className="lookup-row"
+                  style={{ display: "block", width: "100%", textAlign: "left", padding: "7px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
+                  onClick={() => {
+                    setLookupContact(c);
+                    setStageSearch("");
+                  }}
+                >
+                  {c.name} {c.org ? <span className="muted">({c.org})</span> : null}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {lookupContact && (
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+            <span
+              style={{
+                display: "inline-block",
+                fontSize: 12,
+                fontWeight: 700,
+                padding: "3px 11px",
+                borderRadius: 20,
+                background: FUNDRAISING_STAGE_COLORS[lookupContact.status],
+                color: fundraisingStageTextColor(lookupContact.status),
+              }}
+            >
+              {FUNDRAISING_STAGE_LABELS[lookupContact.status]}
+            </span>
+            <button className="btn small" onClick={() => jumpToStage(lookupContact.status)}>
+              Jump to this stage
+            </button>
+            <button
+              className="btn small ghost"
+              onClick={() => {
+                setLookupContact(null);
+                setStageSearch("");
+              }}
+            >
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
+
       {bulkTaskMsg && <div className="helptext" style={{ marginBottom: 12 }}>{bulkTaskMsg}</div>}
 
       <div className="card" style={{ padding: 22 }}>
@@ -133,7 +214,13 @@ export function FunnelClient({
           const matches = matchesByStage.get(status) ?? [];
           const selected = selectedFor(status);
           return (
-            <div key={status} style={{ marginBottom: 14 }}>
+            <div
+              key={status}
+              ref={(el) => {
+                stageRefs.current.set(status, el);
+              }}
+              style={{ marginBottom: 14 }}
+            >
               <div
                 onClick={() => toggleStage(status)}
                 style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}

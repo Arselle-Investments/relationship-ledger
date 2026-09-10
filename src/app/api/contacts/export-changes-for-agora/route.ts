@@ -5,15 +5,17 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { safeCell } from "@/lib/excel-safety";
 
 // The same fields "Import from Agora" deliberately leaves alone (see
-// verify-against-agora) — the ones a team member might correct by hand, and
-// so the ones worth telling Agora about after the fact.
-const FIELDS = ["org", "phone", "city", "notes"] as const;
+// verify-against-agora), plus tags — the only channel a CRM mailing list has
+// into Agora (see src/lib/list-tagging.ts), so a tag change is exactly the
+// kind of thing this export needs to carry over too.
+const FIELDS = ["org", "phone", "city", "notes", "tags"] as const;
 type FieldKey = (typeof FIELDS)[number];
 const FIELD_LABELS: Record<FieldKey, string> = {
   org: "Organization",
   phone: "Phone",
   city: "City",
   notes: "Notes",
+  tags: "Tags",
 };
 
 /**
@@ -35,7 +37,7 @@ export async function POST() {
 
   const candidates = await prisma.contact.findMany({
     where: { agoraExportedAt: { not: null } },
-    select: { id: true, name: true, email: true, org: true, phone: true, city: true, notes: true, agoraChangesSyncedAt: true },
+    select: { id: true, name: true, email: true, org: true, phone: true, city: true, notes: true, tags: true, agoraChangesSyncedAt: true },
   });
   if (candidates.length === 0) {
     return NextResponse.json({ error: "No contacts have been sent to Agora yet." }, { status: 400 });
@@ -75,6 +77,7 @@ export async function POST() {
     { header: "Phone", key: "phone", width: 16 },
     { header: "City", key: "city", width: 18 },
     { header: "Notes", key: "notes", width: 40 },
+    { header: "Tags", key: "tags", width: 30 },
     { header: "Changed Fields", key: "changedFields", width: 26 },
   ];
   sheet.getRow(1).font = { bold: true };
@@ -87,6 +90,7 @@ export async function POST() {
       phone: safeCell(c.phone ?? ""),
       city: safeCell(c.city ?? ""),
       notes: safeCell(c.notes ?? ""),
+      tags: safeCell((c.tags ?? []).join(", ")),
       changedFields: Array.from(changed).map((f) => FIELD_LABELS[f]).join(", "),
     });
   }

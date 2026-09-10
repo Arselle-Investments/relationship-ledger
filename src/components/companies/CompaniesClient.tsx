@@ -42,6 +42,8 @@ export function CompaniesClient({
   const [sourceFilter, setSourceFilter] = useState("");
   const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
+  const [agoraFilter, setAgoraFilter] = useState<"" | "PENDING" | "EXPORTED">("");
+  const [exporting, setExporting] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<CompanyAdvancedFilters>(EMPTY_COMPANY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
@@ -128,6 +130,8 @@ export function CompaniesClient({
       if (tierFilter === "UNTIERED" && g.company?.tier) return false;
       if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
       if (typeFilter && g.company?.type !== typeFilter) return false;
+      if (agoraFilter === "PENDING" && g.company?.agoraExportedAt) return false;
+      if (agoraFilter === "EXPORTED" && !g.company?.agoraExportedAt) return false;
       if (advancedFilters.investmentStructure && !(g.company?.investmentStructures ?? []).includes(advancedFilters.investmentStructure)) return false;
       if (advancedFilters.investmentStrategy && !(g.company?.investmentStrategies ?? []).includes(advancedFilters.investmentStrategy)) return false;
       if (advancedFilters.tag && !(g.company?.tags ?? []).includes(advancedFilters.tag)) return false;
@@ -139,7 +143,29 @@ export function CompaniesClient({
       if (advancedFilters.hasDealActivity && !((g.company?.outreach.length ?? 0) > 0 || (g.company?.feedback.length ?? 0) > 0)) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter, advancedFilters]);
+  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter, agoraFilter, advancedFilters]);
+
+  async function exportFiltered() {
+    const companyIds = filtered.map((g) => g.company?.id).filter((id): id is string => !!id);
+    if (companyIds.length === 0) return;
+    setExporting(true);
+    const res = await fetch("/api/companies/export-filtered", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ companyIds }),
+    });
+    setExporting(false);
+    if (!res.ok) return;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `arselle-companies-${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
 
   const activeGroup = selectedCompany ? groups.find((g) => g.name === selectedCompany) ?? null : null;
   const activeCompany = activeGroup?.company
@@ -194,6 +220,21 @@ export function CompaniesClient({
         </div>
       </div>
 
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <span className="helptext" style={{ margin: 0 }}>Agora:</span>
+        <div className="view-toggle">
+          <button className={agoraFilter === "" ? "active" : ""} onClick={() => setAgoraFilter("")}>
+            All
+          </button>
+          <button className={agoraFilter === "PENDING" ? "active" : ""} onClick={() => setAgoraFilter("PENDING")}>
+            Not yet in Agora
+          </button>
+          <button className={agoraFilter === "EXPORTED" ? "active" : ""} onClick={() => setAgoraFilter("EXPORTED")}>
+            Already in Agora
+          </button>
+        </div>
+      </div>
+
       <div className="toolbar">
         <input
           type="text"
@@ -223,6 +264,9 @@ export function CompaniesClient({
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
         <div className="spacer" />
+        <button className="btn" onClick={exportFiltered} disabled={exporting}>
+          {exporting ? "Exporting…" : "Export filtered to Excel"}
+        </button>
       </div>
 
       <div className="helptext" style={{ marginBottom: 12 }}>
@@ -232,6 +276,7 @@ export function CompaniesClient({
         {sourceFilter ? ` · sourced from ${sourceFilter}` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
+        {agoraFilter === "PENDING" ? " · not yet in Agora" : agoraFilter === "EXPORTED" ? " · already in Agora" : ""}
         {activeAdvancedCount > 0 ? ` · ${activeAdvancedCount} more filter${activeAdvancedCount === 1 ? "" : "s"}` : ""}
       </div>
 
@@ -249,6 +294,7 @@ export function CompaniesClient({
               <th>Target asset classes</th>
               <th>Deal feedback</th>
               <th>Sources</th>
+              <th>Agora</th>
             </tr>
           </thead>
           <tbody>
@@ -267,6 +313,15 @@ export function CompaniesClient({
                     ))
                   ) : (
                     <span className="muted">—</span>
+                  )}
+                </td>
+                <td>
+                  {g.company?.agoraExportedAt ? (
+                    <span className="tag forest" style={{ fontSize: 10 }}>
+                      In Agora
+                    </span>
+                  ) : (
+                    <span className="muted">Not yet</span>
                   )}
                 </td>
               </tr>

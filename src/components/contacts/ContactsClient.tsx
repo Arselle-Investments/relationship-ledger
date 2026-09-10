@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { User, ContactType, ContactTier } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "./ContactModal";
 import { AdvancedFilters, ContactsFilterModal, EMPTY_ADVANCED_FILTERS, countActiveAdvancedFilters } from "./ContactsFilterModal";
+import { CreateListFromFilterModal } from "./CreateListFromFilterModal";
 
 export function ContactsClient({
   initialContacts,
@@ -25,6 +27,8 @@ export function ContactsClient({
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedFilters>(EMPTY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [editing, setEditing] = useState<ContactWithRelations | null | "new">(null);
+  const [creatingList, setCreatingList] = useState(false);
+  const [listMsg, setListMsg] = useState<string | null>(null);
 
   const activeAdvancedCount = countActiveAdvancedFilters(advancedFilters);
 
@@ -137,6 +141,11 @@ export function ContactsClient({
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
         <div className="spacer" />
+        {canEdit && (
+          <button className="btn" onClick={() => setCreatingList(true)} disabled={filtered.length === 0}>
+            Create list from these results
+          </button>
+        )}
         <a className="btn" href={exportUrl()}>
           Export to Excel
         </a>
@@ -150,6 +159,12 @@ export function ContactsClient({
       <div className="helptext" style={{ marginBottom: 12 }}>
         Showing {filtered.length} of {contacts.length} contacts.
       </div>
+
+      {listMsg && (
+        <div className="helptext" style={{ marginBottom: 12 }}>
+          {listMsg} <Link href="/lists">View in Mailing Lists</Link>.
+        </div>
+      )}
 
       {filtered.length === 0 ? (
         <div className="empty">
@@ -210,6 +225,17 @@ export function ContactsClient({
           onSaved={upsertLocal}
           onDeleted={removeLocal}
           onLiveUpdate={updateLocalInPlace}
+        />
+      )}
+
+      {creatingList && (
+        <CreateListFromFilterModal
+          contactIds={filtered.map((c) => c.id)}
+          onClose={() => setCreatingList(false)}
+          onCreated={(listName) => {
+            setCreatingList(false);
+            setListMsg(`Created "${listName}" with ${filtered.length} contact${filtered.length === 1 ? "" : "s"}.`);
+          }}
         />
       )}
     </div>
