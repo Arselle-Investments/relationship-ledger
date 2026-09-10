@@ -161,13 +161,18 @@ model Contact {
   companyId String?
   company   Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
 
-  // Which side of the business this record actually belongs to — inferred
-  // from import provenance (AREF I Tracker vs. Capital Partner Outreach/LP
-  // List) rather than guessed from tier, which is a priority ranking, not a
-  // category. Null means "no signal either way" — an existing record that
-  // predates this field, still shown in Target Investors/Companies exactly
-  // as before; only an explicit DEAL classification excludes it.
-  recordContext RecordContext?
+  // Which side(s) of the business this record actually belongs to —
+  // inferred from import provenance (AREF I Tracker vs. Capital Partner
+  // Outreach/LP List) rather than guessed from tier, which is a priority
+  // ranking, not a category. A contact can be both: someone whose employer
+  // is a deal-level LP but who is also personally an individual fund
+  // investor. Empty means "no signal either way" — an existing record that
+  // predates this field, still shown in Target Investors exactly as
+  // before; only a DEAL-only classification (no FUND alongside it)
+  // excludes it. Company stays single-valued (see Company.recordContext) —
+  // this same ambiguity doesn't apply there: the person invests personally,
+  // not their employer.
+  recordContexts RecordContext[] @default([])
 
   tasks Task[]
   correspondence Correspondence[]
@@ -181,7 +186,6 @@ model Contact {
   @@index([agoraType])
   @@index([primaryLocation])
   @@index([companyId])
-  @@index([recordContext])
 }
 
 enum RecordContext {

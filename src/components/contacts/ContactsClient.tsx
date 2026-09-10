@@ -51,7 +51,7 @@ export function ContactsClient({
     return contacts.filter((c) => {
       if (typeFilter && c.type !== typeFilter) return false;
       if (tierFilter && c.tier !== tierFilter) return false;
-      if (contextFilter && c.recordContext !== contextFilter) return false;
+      if (contextFilter && !c.recordContexts.includes(contextFilter)) return false;
       if (ownerFilter && c.ownerId !== ownerFilter) return false;
       if (agoraTypeFilter && c.agoraType !== agoraTypeFilter) return false;
       if (advancedFilters.status && c.status !== advancedFilters.status) return false;
@@ -210,10 +210,12 @@ export function ContactsClient({
                 <td>{c.org || <span className="muted">—</span>}</td>
                 <td>{c.agoraType || CONTACT_TYPE_LABELS[c.type]}</td>
                 <td>
-                  {c.recordContext ? (
-                    <span className={`tag ${RECORD_CONTEXT_TAG_CLASS[c.recordContext]}`}>
-                      {RECORD_CONTEXT_LABELS[c.recordContext]}
-                    </span>
+                  {c.recordContexts.length > 0 ? (
+                    c.recordContexts.map((ctx) => (
+                      <span key={ctx} className={`tag ${RECORD_CONTEXT_TAG_CLASS[ctx]}`}>
+                        {RECORD_CONTEXT_LABELS[ctx]}
+                      </span>
+                    ))
                   ) : (
                     <span className="muted">—</span>
                   )}
