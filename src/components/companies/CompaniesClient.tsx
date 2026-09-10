@@ -161,6 +161,22 @@ export function CompaniesClient({
 
   return (
     <div>
+      {allSources.length > 0 && (
+        <div className="toolbar" style={{ marginBottom: 10 }}>
+          <span className="helptext" style={{ margin: 0 }}>Source:</span>
+          <div className="view-toggle">
+            <button className={sourceFilter === "" ? "active" : ""} onClick={() => setSourceFilter("")}>
+              All
+            </button>
+            {allSources.map((s) => (
+              <button key={s} className={sourceFilter === s ? "active" : ""} onClick={() => setSourceFilter(s)}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="toolbar" style={{ marginBottom: 10 }}>
         <span className="helptext" style={{ margin: 0 }}>Tier:</span>
         <div className="view-toggle">
@@ -177,22 +193,6 @@ export function CompaniesClient({
           </button>
         </div>
       </div>
-
-      {allSources.length > 0 && (
-        <div className="toolbar" style={{ marginBottom: 10 }}>
-          <span className="helptext" style={{ margin: 0 }}>Source:</span>
-          <div className="view-toggle">
-            <button className={sourceFilter === "" ? "active" : ""} onClick={() => setSourceFilter("")}>
-              All
-            </button>
-            {allSources.map((s) => (
-              <button key={s} className={sourceFilter === s ? "active" : ""} onClick={() => setSourceFilter(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="toolbar">
         <input
