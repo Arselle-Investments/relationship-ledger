@@ -6,6 +6,8 @@ import { HomeClient } from "@/components/home/HomeClient";
 import { Role, TaskStatus } from "@prisma/client";
 import { TASK_TEAM_EMAILS } from "@/lib/task-constants";
 import { quarterBounds } from "@/lib/conferences";
+import { getSettings } from "@/lib/settings";
+import { getOverdueContacts } from "@/lib/followups";
 
 export default async function HomePage() {
   const session = await auth();
@@ -14,7 +16,7 @@ export default async function HomePage() {
   const today = new Date().toISOString().slice(0, 10);
   const quarterEnd = quarterBounds(0).end;
 
-  const [allOpenTasks, travel, upcomingConferences, allConferences, team, contacts] = await Promise.all([
+  const [allOpenTasks, travel, upcomingConferences, allConferences, team, contacts, settings] = await Promise.all([
     prisma.task.findMany({
       where: { status: { not: TaskStatus.DONE } },
       include: { owner: true, contact: true },
@@ -37,7 +39,8 @@ export default async function HomePage() {
     }),
     prisma.conference.findMany(), // ConferenceModal needs the full history to detect a recurring series
     prisma.user.findMany({ orderBy: { name: "asc" } }),
-    prisma.contact.findMany({ orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ include: { owner: true, warmPath: true }, orderBy: { name: "asc" } }),
+    getSettings(),
   ]);
 
   // "Mine" — either the sole owner, or named in a joint assigneeLabel (e.g.
@@ -50,6 +53,11 @@ export default async function HomePage() {
     if (t.assigneeLabel === "Team") return isOnTaskTeam;
     return !!(user.name && t.assigneeLabel?.includes(user.name));
   });
+
+  const myOverdueContacts = getOverdueContacts(
+    contacts.filter((c) => c.ownerId === user.id),
+    settings.defaultCadenceDays
+  );
 
   return (
     <AppShell activeHref="/" user={user}>
@@ -64,6 +72,7 @@ export default async function HomePage() {
         allConferences={allConferences}
         team={team}
         contacts={contacts}
+        overdueContacts={myOverdueContacts}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

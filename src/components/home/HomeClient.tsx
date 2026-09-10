@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Conference, Contact, Travel, User } from "@prisma/client";
 import { TaskWithRelations } from "@/types/task";
+import { OverdueContact } from "@/lib/followups";
 import { ConferenceModal } from "@/components/conferences/ConferenceModal";
 import { TaskModal } from "@/components/tasks/TaskModal";
 
@@ -29,6 +30,7 @@ export function HomeClient({
   allConferences: initialAllConferences,
   team,
   contacts,
+  overdueContacts: initialOverdueContacts,
   canEdit,
 }: {
   currentUserId: string;
@@ -41,9 +43,12 @@ export function HomeClient({
   allConferences: Conference[];
   team: User[];
   contacts: Contact[];
+  overdueContacts: OverdueContact[];
   canEdit: boolean;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
+  const [overdueContacts, setOverdueContacts] = useState(initialOverdueContacts);
+  const [markingId, setMarkingId] = useState<string | null>(null);
   const [conferences, setConferences] = useState(initialConferences);
   const [allConferences, setAllConferences] = useState(initialAllConferences);
   const [editingConference, setEditingConference] = useState<Conference | null>(null);
@@ -151,6 +156,17 @@ export function HomeClient({
   );
   const noDateTasks = useMemo(() => tasks.filter((t) => !t.dueDate), [tasks]);
 
+  async function markFollowedUp(contactId: string) {
+    setMarkingId(contactId);
+    const res = await fetch(`/api/contacts/${contactId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lastContact: new Date().toISOString().slice(0, 10) }),
+    });
+    setMarkingId(null);
+    if (res.ok) setOverdueContacts((prev) => prev.filter((c) => c.id !== contactId));
+  }
+
   async function markDone(task: TaskWithRelations) {
     setTasks((prev) => prev.map((t) => (t.id === task.id ? { ...t, status: "DONE" } : t)));
     const res = await fetch(`/api/tasks/${task.id}`, {
@@ -236,6 +252,47 @@ export function HomeClient({
             })}
           </tbody>
         </table>
+      )}
+
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginTop: 28, marginBottom: 10 }}>
+        <h3 style={{ fontSize: 14 }}>Your overdue follow-ups</h3>
+        <Link href="/followups" className="settings-link" style={{ padding: 0, fontSize: 12 }}>
+          Open Follow-ups →
+        </Link>
+      </div>
+      {overdueContacts.length === 0 ? (
+        <div className="empty" style={{ marginBottom: 24 }}>
+          <h3>Nothing overdue</h3>
+          <div>Every contact you own is within cadence.</div>
+        </div>
+      ) : (
+        <div style={{ marginBottom: 24 }}>
+          {overdueContacts.map((c) => (
+            <div
+              key={c.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                gap: 10,
+                padding: "7px 0",
+                borderBottom: "1px solid var(--line)",
+                fontSize: 13,
+              }}
+            >
+              <div>
+                <strong>{c.name}</strong>
+                {c.org ? <span className="muted"> &middot; {c.org}</span> : null}
+                <span className="muted"> &middot; {c.daysOverdue}d overdue</span>
+              </div>
+              {canEdit && (
+                <button className="btn small" onClick={() => markFollowedUp(c.id)} disabled={markingId === c.id}>
+                  {markingId === c.id ? "Saving…" : "Mark followed up"}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="field-row">
