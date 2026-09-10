@@ -1,5 +1,7 @@
 "use client";
 
+export type AgoraStatusFilter = "" | "PENDING" | "EXPORTED";
+
 export type CompanyAdvancedFilters = {
   priorityQuarter: string;
   investmentStructure: string;
@@ -10,6 +12,13 @@ export type CompanyAdvancedFilters = {
   hasWebsite: boolean;
   hasAum: boolean;
   hasDealActivity: boolean;
+  // Data-quality/Agora-sync filters — a niche need (a handful of people
+  // reconciling this app against Agora), so tucked in here rather than a
+  // permanent row in the main toolbar everyone sees. Sources is AND logic
+  // (a company must carry every selected source, not just one), for "which
+  // companies are in both AREF I and the Agora org export" type questions.
+  sources: string[];
+  agoraStatus: AgoraStatusFilter;
 };
 
 export const EMPTY_COMPANY_ADVANCED_FILTERS: CompanyAdvancedFilters = {
@@ -22,10 +31,15 @@ export const EMPTY_COMPANY_ADVANCED_FILTERS: CompanyAdvancedFilters = {
   hasWebsite: false,
   hasAum: false,
   hasDealActivity: false,
+  sources: [],
+  agoraStatus: "",
 };
 
 export function countActiveCompanyFilters(f: CompanyAdvancedFilters): number {
-  return Object.entries(f).filter(([, v]) => (typeof v === "boolean" ? v : v !== "")).length;
+  return Object.entries(f).filter(([key, v]) => {
+    if (key === "sources") return (v as string[]).length > 0;
+    return typeof v === "boolean" ? v : v !== "";
+  }).length;
 }
 
 export function CompaniesFilterModal({
@@ -36,6 +50,7 @@ export function CompaniesFilterModal({
   investmentStrategies,
   tags,
   priorityQuarters,
+  sources,
 }: {
   filters: CompanyAdvancedFilters;
   onChange: (next: CompanyAdvancedFilters) => void;
@@ -44,9 +59,17 @@ export function CompaniesFilterModal({
   investmentStrategies: string[];
   tags: string[];
   priorityQuarters: string[];
+  sources: string[];
 }) {
   function set<K extends keyof CompanyAdvancedFilters>(key: K, value: CompanyAdvancedFilters[K]) {
     onChange({ ...filters, [key]: value });
+  }
+
+  function toggleSource(source: string) {
+    const next = filters.sources.includes(source)
+      ? filters.sources.filter((s) => s !== source)
+      : [...filters.sources, source];
+    set("sources", next);
   }
 
   return (
@@ -133,6 +156,29 @@ export function CompaniesFilterModal({
                 Has deal activity (sent to, or feedback logged)
               </label>
             </div>
+          </div>
+
+          {sources.length > 0 && (
+            <div className="field">
+              <label>Sources (matches companies with all selected)</label>
+              <div className="checkbox-list" style={{ maxHeight: 160, overflowY: "auto" }}>
+                {sources.map((s) => (
+                  <label key={s}>
+                    <input type="checkbox" checked={filters.sources.includes(s)} onChange={() => toggleSource(s)} />
+                    {s}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="field">
+            <label>Agora status</label>
+            <select value={filters.agoraStatus} onChange={(e) => set("agoraStatus", e.target.value as CompanyAdvancedFilters["agoraStatus"])}>
+              <option value="">Any</option>
+              <option value="PENDING">Not yet in Agora</option>
+              <option value="EXPORTED">Already in Agora</option>
+            </select>
           </div>
         </div>
         <div className="modal-foot">

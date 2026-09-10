@@ -39,10 +39,8 @@ export function CompaniesClient({
   const [companies, setCompanies] = useState(initialCompanies);
   const [search, setSearch] = useState("");
   const [assetClassFilter, setAssetClassFilter] = useState("");
-  const [sourceFilter, setSourceFilter] = useState("");
   const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
-  const [agoraFilter, setAgoraFilter] = useState<"" | "PENDING" | "EXPORTED">("");
   const [exporting, setExporting] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<CompanyAdvancedFilters>(EMPTY_COMPANY_ADVANCED_FILTERS);
   const [showAllFilters, setShowAllFilters] = useState(false);
@@ -126,12 +124,12 @@ export function CompaniesClient({
     return groups.filter((g) => {
       if (q && !g.name.toLowerCase().includes(q) && !(g.company?.city ?? "").toLowerCase().includes(q)) return false;
       if (assetClassFilter && !(g.company?.targetAssetClasses ?? []).includes(assetClassFilter)) return false;
-      if (sourceFilter && !(g.company?.sources ?? []).includes(sourceFilter)) return false;
       if (tierFilter === "UNTIERED" && g.company?.tier) return false;
       if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
       if (typeFilter && g.company?.type !== typeFilter) return false;
-      if (agoraFilter === "PENDING" && g.company?.agoraExportedAt) return false;
-      if (agoraFilter === "EXPORTED" && !g.company?.agoraExportedAt) return false;
+      if (advancedFilters.sources.length > 0 && !advancedFilters.sources.every((s) => (g.company?.sources ?? []).includes(s))) return false;
+      if (advancedFilters.agoraStatus === "PENDING" && g.company?.agoraExportedAt) return false;
+      if (advancedFilters.agoraStatus === "EXPORTED" && !g.company?.agoraExportedAt) return false;
       if (advancedFilters.investmentStructure && !(g.company?.investmentStructures ?? []).includes(advancedFilters.investmentStructure)) return false;
       if (advancedFilters.investmentStrategy && !(g.company?.investmentStrategies ?? []).includes(advancedFilters.investmentStrategy)) return false;
       if (advancedFilters.tag && !(g.company?.tags ?? []).includes(advancedFilters.tag)) return false;
@@ -143,7 +141,7 @@ export function CompaniesClient({
       if (advancedFilters.hasDealActivity && !((g.company?.outreach.length ?? 0) > 0 || (g.company?.feedback.length ?? 0) > 0)) return false;
       return true;
     });
-  }, [groups, search, assetClassFilter, sourceFilter, tierFilter, typeFilter, agoraFilter, advancedFilters]);
+  }, [groups, search, assetClassFilter, tierFilter, typeFilter, advancedFilters]);
 
   async function exportFiltered() {
     const companyIds = filtered.map((g) => g.company?.id).filter((id): id is string => !!id);
@@ -187,22 +185,6 @@ export function CompaniesClient({
 
   return (
     <div>
-      {allSources.length > 0 && (
-        <div className="toolbar" style={{ marginBottom: 10 }}>
-          <span className="helptext" style={{ margin: 0 }}>Source:</span>
-          <div className="view-toggle">
-            <button className={sourceFilter === "" ? "active" : ""} onClick={() => setSourceFilter("")}>
-              All
-            </button>
-            {allSources.map((s) => (
-              <button key={s} className={sourceFilter === s ? "active" : ""} onClick={() => setSourceFilter(s)}>
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="toolbar" style={{ marginBottom: 10 }}>
         <span className="helptext" style={{ margin: 0 }}>Tier:</span>
         <div className="view-toggle">
@@ -216,21 +198,6 @@ export function CompaniesClient({
           ))}
           <button className={tierFilter === "UNTIERED" ? "active" : ""} onClick={() => setTierFilter("UNTIERED")}>
             No tier
-          </button>
-        </div>
-      </div>
-
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <span className="helptext" style={{ margin: 0 }}>Agora:</span>
-        <div className="view-toggle">
-          <button className={agoraFilter === "" ? "active" : ""} onClick={() => setAgoraFilter("")}>
-            All
-          </button>
-          <button className={agoraFilter === "PENDING" ? "active" : ""} onClick={() => setAgoraFilter("PENDING")}>
-            Not yet in Agora
-          </button>
-          <button className={agoraFilter === "EXPORTED" ? "active" : ""} onClick={() => setAgoraFilter("EXPORTED")}>
-            Already in Agora
           </button>
         </div>
       </div>
@@ -273,10 +240,10 @@ export function CompaniesClient({
         {filtered.length} of {groups.length} companies
         {noOrgCount > 0 ? ` · ${noOrgCount} contact${noOrgCount === 1 ? "" : "s"} with no organization on file` : ""}
         {assetClassFilter ? ` · filtered to ${assetClassFilter} investors` : ""}
-        {sourceFilter ? ` · sourced from ${sourceFilter}` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
-        {agoraFilter === "PENDING" ? " · not yet in Agora" : agoraFilter === "EXPORTED" ? " · already in Agora" : ""}
+        {advancedFilters.sources.length > 0 ? ` · sourced from ${advancedFilters.sources.join(" + ")}` : ""}
+        {advancedFilters.agoraStatus === "PENDING" ? " · not yet in Agora" : advancedFilters.agoraStatus === "EXPORTED" ? " · already in Agora" : ""}
         {activeAdvancedCount > 0 ? ` · ${activeAdvancedCount} more filter${activeAdvancedCount === 1 ? "" : "s"}` : ""}
       </div>
 
@@ -541,6 +508,7 @@ export function CompaniesClient({
           investmentStrategies={investmentStrategies}
           tags={allTags}
           priorityQuarters={priorityQuarters}
+          sources={allSources}
         />
       )}
     </div>
