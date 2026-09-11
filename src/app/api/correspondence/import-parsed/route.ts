@@ -5,7 +5,7 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
-import { extractEmailFromText } from "@/lib/email-extract";
+import { extractEmailFromText, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -60,8 +60,14 @@ export async function POST(req: NextRequest) {
 
       const subject = msg.subject || "";
       const bodyText = msg.text || "";
-      const headerEmail = msg.fromEmail || null;
-      const headerName = msg.fromName || null;
+      // Agora BCCs itself on everything for its own tracking — that relay
+      // address (or its support alias) shows up as a structurally valid
+      // "From" on some forwarded/logged messages but is never "the contact,"
+      // so it's cleared here the same way a staff sender would be, letting
+      // the AI/body-text fallbacks below find whoever's actually on the thread.
+      const rawHeaderEmail = msg.fromEmail || null;
+      const headerEmail = rawHeaderEmail && isRealContactEmail(rawHeaderEmail) ? rawHeaderEmail : null;
+      const headerName = headerEmail ? msg.fromName || null : null;
 
       // A confident header-based match means there's nothing left for AI to
       // add — org is already on file for an existing contact, and identity
@@ -91,7 +97,7 @@ export async function POST(req: NextRequest) {
         extractedEmail = headerEmail || extracted.email;
         extractedName = headerName || extracted.name;
         extractedOrg = extracted.org;
-        if (isStaffEmail(extractedEmail)) {
+        if (isStaffEmail(extractedEmail) || (extractedEmail && !isRealContactEmail(extractedEmail))) {
           extractedEmail = null;
           extractedName = null;
         }

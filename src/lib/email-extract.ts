@@ -9,7 +9,16 @@ const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const NON_CONTACT_DOMAIN_RE = /agorareal\.com$|\.bcc\.clients\./i;
 const PLACEHOLDER_LOCAL_RE = /^(first\.?last|firstname\.?lastname|jane\.?doe|john\.?doe|name)$/i;
 
-function isRealContactEmail(email: string): boolean {
+/**
+ * True unless the address is one of the known non-contact shapes — Agora's
+ * own BCC/logging relay, its support alias, or a "first.last@" placeholder.
+ * Exported so every ingestion path (not just the body-text regex fallback
+ * below) can reject these before they're ever proposed as a new contact —
+ * a message whose visible "From" ends up being Agora's own relay (it BCCs
+ * itself on everything, for its own tracking) is real data worth keeping on
+ * the correspondence record, just never as "the contact" on either end.
+ */
+export function isRealContactEmail(email: string): boolean {
   const [local, domain] = email.split("@");
   if (!domain || NON_CONTACT_DOMAIN_RE.test(domain)) return false;
   if (PLACEHOLDER_LOCAL_RE.test(local)) return false;

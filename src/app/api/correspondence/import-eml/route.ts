@@ -5,7 +5,7 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { isStaffEmail } from "@/lib/staff-emails";
-import { extractEmailFromText } from "@/lib/email-extract";
+import { extractEmailFromText, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -77,6 +77,13 @@ export async function POST(req: NextRequest) {
         const external = recipients.find((r) => r.address && !isStaffEmail(r.address));
         headerEmail = external?.address?.toLowerCase() || null;
         headerName = external?.name || null;
+      } else if (headerEmail && !isRealContactEmail(headerEmail)) {
+        // Agora BCCs itself on everything for its own tracking — that relay
+        // address (or its support alias) is never "the contact" either, even
+        // though it's structurally a real header. Clear it so the AI/body-text
+        // fallbacks below get a chance to find whoever's actually on the thread.
+        headerEmail = null;
+        headerName = null;
       }
 
       // A confident header-based match means there's nothing left for AI to
@@ -106,7 +113,7 @@ export async function POST(req: NextRequest) {
         extractedEmail = headerEmail || extracted.email;
         extractedName = headerName || extracted.name;
         extractedOrg = extracted.org;
-        if (isStaffEmail(extractedEmail)) {
+        if (isStaffEmail(extractedEmail) || (extractedEmail && !isRealContactEmail(extractedEmail))) {
           extractedEmail = null;
           extractedName = null;
         }

@@ -4,7 +4,7 @@ import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
 import { isStaffEmail } from "@/lib/staff-emails";
-import { extractEmailFromText } from "@/lib/email-extract";
+import { extractEmailFromText, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   // no external party actually on the thread) can lead the model to return
   // the internal author since there's nothing external to find — never treat
   // one of our own team as "the contact."
-  if (isStaffEmail(extracted.email)) {
+  if (isStaffEmail(extracted.email) || (extracted.email && !isRealContactEmail(extracted.email))) {
     extracted.email = null;
     extracted.name = null;
   }
