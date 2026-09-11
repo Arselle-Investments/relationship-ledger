@@ -1,11 +1,32 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { User } from "@prisma/client";
+import { MailingList, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { MailingListWithContacts } from "@/types/mailing-list";
 import { ListModal } from "./ListModal";
+import { ContactsTable } from "@/components/ContactsTable";
+import { ContactModal } from "@/components/contacts/ContactModal";
+
+/** Client-side mirror of computeListContacts (src/lib/mailing-lists.ts), so a
+ * contact edit here can update every list's membership immediately without a
+ * round trip. */
+function recomputeListMembers(list: MailingList, allContacts: ContactWithRelations[]): ContactWithRelations[] {
+  if (list.mode === "STATIC") {
+    return allContacts.filter((c) => list.contactIds.includes(c.id));
+  }
+  let candidates = allContacts;
+  if (list.filterType) candidates = candidates.filter((c) => c.type === list.filterType);
+  if (list.filterTier) candidates = candidates.filter((c) => c.tier === list.filterTier);
+  if (list.filterOwnerId) candidates = candidates.filter((c) => c.ownerId === list.filterOwnerId);
+  if (list.filterStatus) candidates = candidates.filter((c) => c.status === list.filterStatus);
+  if (list.filterTag) {
+    const needle = list.filterTag.toLowerCase();
+    candidates = candidates.filter((c) => c.tags.some((t) => t.toLowerCase().includes(needle)));
+  }
+  return candidates;
+}
 
 function filterSummary(entry: MailingListWithContacts, team: User[]): string | null {
   const { list } = entry;
@@ -34,10 +55,36 @@ export function ListsClient({
   canEdit: boolean;
 }) {
   const [lists, setLists] = useState(initialLists);
+  const [contacts, setContacts] = useState(allContacts);
   const [editing, setEditing] = useState<MailingListWithContacts | null | "new">(null);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [openContact, setOpenContact] = useState<ContactWithRelations | null>(null);
+
+  function toggleExpand(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handleContactSaved(contact: ContactWithRelations) {
+    const nextContacts = contacts.map((c) => (c.id === contact.id ? contact : c));
+    setContacts(nextContacts);
+    setLists((prev) => prev.map((entry) => ({ ...entry, contacts: recomputeListMembers(entry.list, nextContacts) })));
+    setOpenContact(null);
+  }
+
+  function handleContactDeleted(id: string) {
+    const nextContacts = contacts.filter((c) => c.id !== id);
+    setContacts(nextContacts);
+    setLists((prev) => prev.map((entry) => ({ ...entry, contacts: entry.contacts.filter((c) => c.id !== id) })));
+    setOpenContact(null);
+  }
 
   // Agora only ever reads a contact's Tags, not this app's lists, so every
   // list's members need the list's name in their tags to be visible there.
@@ -55,8 +102,8 @@ export function ListsClient({
   const contactMatches = useMemo(() => {
     const q = contactSearch.trim().toLowerCase();
     if (!q) return [];
-    return allContacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [allContacts, contactSearch]);
+    return contacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [contacts, contactSearch]);
 
   const listsContainingLookup = useMemo(() => {
     if (!lookupContact) return [];
@@ -273,6 +320,9 @@ export function ListsClient({
                 <a className="btn small" href={mailtoHref(entry)} onClick={() => handleMailtoClick(entry)}>
                   Email (BCC)
                 </a>
+                <button className="btn small" onClick={() => toggleExpand(entry.list.id)}>
+                  {expanded.has(entry.list.id) ? "Hide" : "View"}
+                </button>
                 {canEdit && (
                   <button className="btn small" onClick={() => duplicateList(entry)}>
                     Duplicate
@@ -285,13 +335,9 @@ export function ListsClient({
                 )}
               </div>
             </div>
-            {entry.contacts.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                {entry.contacts.map((c) => (
-                  <span key={c.id} className="tag">
-                    {c.name}
-                  </span>
-                ))}
+            {expanded.has(entry.list.id) && (
+              <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
+                <ContactsTable contacts={entry.contacts} onOpenContact={setOpenContact} emptyMessage="No contacts in this list." />
               </div>
             )}
           </div>
@@ -301,11 +347,22 @@ export function ListsClient({
       {editing !== null && (
         <ListModal
           entry={editing === "new" ? null : editing}
-          allContacts={allContacts}
+          allContacts={contacts}
           team={team}
           onClose={() => setEditing(null)}
           onSaved={upsertLocal}
           onDeleted={removeLocal}
+        />
+      )}
+
+      {openContact && (
+        <ContactModal
+          contact={openContact}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setOpenContact(null)}
+          onSaved={handleContactSaved}
+          onDeleted={handleContactDeleted}
         />
       )}
     </div>

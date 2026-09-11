@@ -1,30 +1,38 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { User } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 import { DeliverableWithContacts } from "@/types/deliverable";
 import { DeliverableModal } from "./DeliverableModal";
+import { ContactsTable } from "@/components/ContactsTable";
+import { ContactModal } from "@/components/contacts/ContactModal";
+import { computeDeliverableContacts } from "@/lib/deliverables";
 
 export function DeliverablesClient({
   initialDeliverables,
   allContacts,
+  team,
   canEdit,
 }: {
   initialDeliverables: DeliverableWithContacts[];
   allContacts: ContactWithRelations[];
+  team: User[];
   canEdit: boolean;
 }) {
   const [deliverables, setDeliverables] = useState(initialDeliverables);
+  const [contacts, setContacts] = useState(allContacts);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [editing, setEditing] = useState<DeliverableWithContacts | null | "new">(null);
   const [contactSearch, setContactSearch] = useState("");
   const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
+  const [openContact, setOpenContact] = useState<ContactWithRelations | null>(null);
 
   const contactMatches = useMemo(() => {
     const q = contactSearch.trim().toLowerCase();
     if (!q) return [];
-    return allContacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
-  }, [allContacts, contactSearch]);
+    return contacts.filter((c) => c.name.toLowerCase().includes(q)).slice(0, 8);
+  }, [contacts, contactSearch]);
 
   const deliverablesForLookup = useMemo(() => {
     if (!lookupContact) return [];
@@ -54,6 +62,22 @@ export function DeliverablesClient({
   function removeLocal(id: string) {
     setDeliverables((prev) => prev.filter((e) => e.deliverable.id !== id));
     setEditing(null);
+  }
+
+  function handleContactSaved(contact: ContactWithRelations) {
+    const nextContacts = contacts.map((c) => (c.id === contact.id ? contact : c));
+    setContacts(nextContacts);
+    setDeliverables((prev) =>
+      prev.map((entry) => ({ ...entry, contacts: computeDeliverableContacts(entry.deliverable, nextContacts) }))
+    );
+    setOpenContact(null);
+  }
+
+  function handleContactDeleted(id: string) {
+    const nextContacts = contacts.filter((c) => c.id !== id);
+    setContacts(nextContacts);
+    setDeliverables((prev) => prev.map((entry) => ({ ...entry, contacts: entry.contacts.filter((c) => c.id !== id) })));
+    setOpenContact(null);
   }
 
   return (
@@ -179,30 +203,11 @@ export function DeliverablesClient({
 
               {isOpen && (
                 <div style={{ marginTop: 12, borderTop: "1px solid var(--line)", paddingTop: 12 }}>
-                  {entry.contacts.length === 0 ? (
-                    <div className="muted">No contacts currently carry a matching tag.</div>
-                  ) : (
-                    <table>
-                      <thead>
-                        <tr>
-                          <th>Name</th>
-                          <th>Organization</th>
-                          <th>Owner</th>
-                          <th>Email</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {entry.contacts.map((c) => (
-                          <tr key={c.id}>
-                            <td className="name-cell">{c.name}</td>
-                            <td>{c.org || <span className="muted">—</span>}</td>
-                            <td className="muted">{c.owner?.name || "—"}</td>
-                            <td className="muted">{c.email || "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  )}
+                  <ContactsTable
+                    contacts={entry.contacts}
+                    onOpenContact={setOpenContact}
+                    emptyMessage="No contacts currently carry a matching tag."
+                  />
                 </div>
               )}
             </div>
@@ -213,10 +218,21 @@ export function DeliverablesClient({
       {editing !== null && (
         <DeliverableModal
           entry={editing === "new" ? null : editing}
-          allContacts={allContacts}
+          allContacts={contacts}
           onClose={() => setEditing(null)}
           onSaved={upsertLocal}
           onDeleted={removeLocal}
+        />
+      )}
+
+      {openContact && (
+        <ContactModal
+          contact={openContact}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setOpenContact(null)}
+          onSaved={handleContactSaved}
+          onDeleted={handleContactDeleted}
         />
       )}
     </div>

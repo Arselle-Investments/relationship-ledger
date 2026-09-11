@@ -11,9 +11,10 @@ export default async function DeliverablesPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [deliverables, allContacts] = await Promise.all([
+  const [deliverables, allContacts, team] = await Promise.all([
     prisma.deliverable.findMany({ orderBy: { name: "asc" } }),
     prisma.contact.findMany({ include: { owner: true, warmPath: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   const initialDeliverables = deliverables.map((deliverable) => ({
@@ -26,6 +27,7 @@ export default async function DeliverablesPage() {
       <DeliverablesClient
         initialDeliverables={initialDeliverables}
         allContacts={allContacts}
+        team={team}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>
