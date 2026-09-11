@@ -5,6 +5,7 @@ import { Company } from "@prisma/client";
 import { clusterByFuzzyName, groupKeyFor } from "@/lib/company-match";
 import { MergePreviewModal, PreviewField } from "@/components/MergePreviewModal";
 import { ManualMergePicker } from "./ManualMergePicker";
+import { SourceTags } from "@/components/SourceTags";
 
 type CompanyWithCounts = Company & { _count: { contacts: number; feedback: number; outreach: number }; fromAgora: boolean };
 
@@ -266,7 +267,7 @@ export function CompanyReviewClient({
                           </span>
                         )}
                       </td>
-                      <td className="muted">{c.sources.length > 0 ? c.sources.join(", ") : "—"}</td>
+                      <td className="muted"><SourceTags sources={c.sources} /></td>
                       <td className="muted">{c._count.contacts}</td>
                       <td className="muted">{c._count.feedback}</td>
                       <td className="muted">{c._count.outreach}</td>
