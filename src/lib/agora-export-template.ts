@@ -84,11 +84,30 @@ function splitName(name: string): { first: string; last: string } {
 }
 
 /**
- * Builds one export row, in AGORA_TEMPLATE_HEADERS order. Every value is a
- * direct read of a field we're confident about — see the module comment for
- * why ambiguous columns are left blank instead of inferred.
+ * Whether an uploaded template header is one this app already knows how to
+ * populate — see buildAgoraContactRow. A header outside this list still gets
+ * a column in the export (so the file's shape always matches what's
+ * currently on file in Settings), just left blank on every row until a
+ * developer wires up its real value source, same "never guess" rule as
+ * every other ambiguous column here.
  */
-export function buildAgoraContactRow(contact: Contact, company: Company | null): string[] {
+export function isKnownAgoraTemplateHeader(header: string): boolean {
+  return (AGORA_TEMPLATE_HEADERS as readonly string[]).includes(header);
+}
+
+/**
+ * Builds one export row, in the given header order (defaults to
+ * AGORA_TEMPLATE_HEADERS — pass Settings.agoraContactTemplateHeaders when a
+ * revised template has been uploaded). Every value is a direct read of a
+ * field we're confident about — see the module comment for why ambiguous
+ * columns are left blank instead of inferred; a header this function doesn't
+ * recognize at all (from a revised template) is blank for the same reason.
+ */
+export function buildAgoraContactRow(
+  contact: Contact,
+  company: Company | null,
+  headers: readonly string[] = AGORA_TEMPLATE_HEADERS
+): string[] {
   const { first, last } = splitName(contact.name);
   const tags = contact.tags ?? [];
   const yn = (hit: boolean) => (hit ? "Yes" : "");
@@ -99,7 +118,7 @@ export function buildAgoraContactRow(contact: Contact, company: Company | null):
   const equityCheckRange =
     sizeMin != null || sizeMax != null ? `${sizeMin ?? "?"}mm - ${sizeMax ?? "?"}mm` : "";
 
-  const row: Record<(typeof AGORA_TEMPLATE_HEADERS)[number], string> = {
+  const row: Record<string, string> = {
     Email: safeCell(contact.email ?? ""),
     "First Name": safeCell(first),
     "Last Name": safeCell(last),
@@ -168,5 +187,5 @@ export function buildAgoraContactRow(contact: Contact, company: Company | null):
     "Strip Center Retail Investment Thesis - Sent (Interaction Log - Deliverables Sent)": "",
   };
 
-  return AGORA_TEMPLATE_HEADERS.map((h) => row[h]);
+  return headers.map((h) => row[h] ?? "");
 }

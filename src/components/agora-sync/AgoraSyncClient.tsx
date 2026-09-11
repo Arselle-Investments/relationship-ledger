@@ -4,17 +4,24 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { VerifyAgoraModal } from "./VerifyAgoraModal";
 import { ExportLogEntry, ExportLogTable } from "./ExportLogTable";
+import { AgoraTemplateSection } from "./AgoraTemplateSection";
 
 export function AgoraSyncClient({
   pendingCount,
   companyPendingCount,
   initialExportLogs,
   canEdit,
+  initialTemplateHeaders,
+  initialTemplateIsCustom,
+  initialTemplateNewHeaders,
 }: {
   pendingCount: number;
   companyPendingCount: number;
   initialExportLogs: ExportLogEntry[];
   canEdit: boolean;
+  initialTemplateHeaders: string[];
+  initialTemplateIsCustom: boolean;
+  initialTemplateNewHeaders: string[];
 }) {
   const router = useRouter();
   const [exportLogs, setExportLogs] = useState(initialExportLogs);
@@ -113,6 +120,12 @@ export function AgoraSyncClient({
 
   return (
     <div>
+      <AgoraTemplateSection
+        initialHeaders={initialTemplateHeaders}
+        initialIsCustom={initialTemplateIsCustom}
+        initialNewHeaders={initialTemplateNewHeaders}
+      />
+
       <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 6 }}>Export new contacts for Agora</h3>
         <div className="helptext" style={{ marginBottom: 14 }}>

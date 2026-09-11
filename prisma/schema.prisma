@@ -693,6 +693,16 @@ model Settings {
   // Prospects" back to something else) without touching code. Null/missing
   // key means "use the built-in default" (FUNDRAISING_STAGE_LABELS).
   funnelStageLabels Json?
+
+  // string[] — the header row of Agora's own "Import/Update Contacts"
+  // template, uploaded from Agora Sync whenever Agora adds/renames a custom
+  // field, so the export column layout can be updated without a code
+  // deploy. Null means "use the built-in default list" (AGORA_TEMPLATE_HEADERS
+  // in agora-export-template.ts). A header this app already knows how to
+  // populate keeps working; a brand-new header with no mapping yet is sent
+  // blank on every row (never guessed) until a developer wires up its real
+  // value source.
+  agoraContactTemplateHeaders Json?
 }
 
 model SequenceTemplate {

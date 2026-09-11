@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { AGORA_TEMPLATE_HEADERS, buildAgoraContactRow } from "@/lib/agora-export-template";
+import { getSettings } from "@/lib/settings";
 
 // The same fields "Import from Agora" deliberately leaves alone (see
 // verify-against-agora), plus tags — the only channel a CRM mailing list has
@@ -68,12 +69,15 @@ export async function POST() {
     return NextResponse.json({ error: "No contact changes since the last export." }, { status: 400 });
   }
 
+  const settings = await getSettings();
+  const headers = (settings.agoraContactTemplateHeaders as string[] | null) ?? AGORA_TEMPLATE_HEADERS;
+
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Template");
-  sheet.addRow([...AGORA_TEMPLATE_HEADERS]);
+  sheet.addRow([...headers]);
   sheet.getRow(1).font = { bold: true };
   for (const c of toExport) {
-    sheet.addRow(buildAgoraContactRow(c, c.company));
+    sheet.addRow(buildAgoraContactRow(c, c.company, headers));
   }
   sheet.columns.forEach((col) => (col.width = 20));
 
