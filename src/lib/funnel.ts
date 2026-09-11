@@ -27,22 +27,21 @@ export const DROPPED_STAGES: FundraisingStage[] = [
 
 export const FUNDRAISING_STAGES: FundraisingStage[] = [...PIPELINE_STAGES, ...DROPPED_STAGES];
 
-// Heatmap colors for the funnel bars: a light-to-dark forest-green ramp for
-// forward progress (culminating in the deepest green at Committed, reusing
-// --forest's existing "good/success" meaning elsewhere in the app), then
-// progressively harder-stop colors for the drop-off outcomes — a neutral tan
-// for "still worth another deal", rust for a genuine no, and a deeper
-// maroon for "never reach out again."
+// Heatmap colors for the funnel bars: an even light-to-dark forest-green
+// ombre across the whole live pipeline (reusing --forest's existing
+// "good/success" meaning elsewhere in the app), lightest at Not started and
+// deepest at Committed — the actual finish line — then progressively
+// harder-stop colors for the drop-off outcomes — a neutral tan for "still
+// worth another deal", rust for a genuine no, and a deeper maroon for "never
+// reach out again."
 export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
-  NOT_STARTED: "#EEF2F1",
-  OUTREACH_SENT: "#D7E3E1",
-  INITIAL_INTEREST: "#BCD0CC",
-  MEETING_OCCURRED: "#9CB9B3",
-  // Breaks from the green progress ramp on purpose — a deliberately-targeted
-  // prospect is a distinct designation, not just "one rung further along."
-  ACTIVE_PROSPECT: "#C9A66B",
-  DUE_DILIGENCE: "#5B8079",
-  COMMITTED: "#3D615A",
+  NOT_STARTED: "#F0F5F4",
+  OUTREACH_SENT: "#CCDDDB",
+  INITIAL_INTEREST: "#A7C7C3",
+  MEETING_OCCURRED: "#81B1AB",
+  ACTIVE_PROSPECT: "#5A9C94",
+  DUE_DILIGENCE: "#417A72",
+  COMMITTED: "#2B554F",
   PASSED_OPEN: "#C7BFAE",
   PASSED_NOT_INTERESTED: "#A85A40",
   DO_NOT_CONTACT: "#6B2E2E",
