@@ -1,11 +1,11 @@
 import { Company } from "@prisma/client";
 
 /**
- * Whether a company belongs in the AREF I Prospects funnel — much simpler
- * than the contact-side check, since Company.recordContext is already
- * single-valued (see its schema comment): a company is unambiguously FUND,
- * DEAL, or unclassified, never both.
+ * Whether a company belongs in the AREF I Prospects funnel. A company can
+ * genuinely be both FUND and DEAL (an existing Deal-side LP relationship
+ * that's also a separate fund prospect) — this only checks for the FUND
+ * signal, same as the contact-side check.
  */
-export function belongsInCompanyFundFunnel(company: Pick<Company, "recordContext">): boolean {
-  return company.recordContext === "FUND";
+export function belongsInCompanyFundFunnel(company: Pick<Company, "recordContexts">): boolean {
+  return company.recordContexts.includes("FUND");
 }

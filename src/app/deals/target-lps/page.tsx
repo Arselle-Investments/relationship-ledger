@@ -17,7 +17,7 @@ export default async function TargetLPsPage() {
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     prisma.company.findMany({
-      where: { recordContext: "DEAL" },
+      where: { recordContexts: { has: "DEAL" } },
       include: {
         feedback: { include: { deal: true, contact: true }, orderBy: { createdAt: "desc" } },
         outreach: { include: { deal: true }, orderBy: { sentAt: "desc" } },

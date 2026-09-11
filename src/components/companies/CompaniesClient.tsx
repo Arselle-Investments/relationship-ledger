@@ -179,7 +179,7 @@ export function CompaniesClient({
       if (tierFilter === "UNTIERED" && g.company?.tier) return false;
       if (tierFilter && tierFilter !== "UNTIERED" && g.company?.tier !== tierFilter) return false;
       if (typeFilter && g.company?.type !== typeFilter) return false;
-      if (contextFilter && g.company?.recordContext !== contextFilter) return false;
+      if (contextFilter && !g.company?.recordContexts.includes(contextFilter)) return false;
       if (advancedFilters.sources.length > 0 && !advancedFilters.sources.every((s) => (g.company?.sources ?? []).includes(s))) return false;
       if (advancedFilters.agoraStatus === "PENDING" && g.company?.agoraExportedAt) return false;
       if (advancedFilters.agoraStatus === "EXPORTED" && !g.company?.agoraExportedAt) return false;
@@ -348,9 +348,13 @@ export function CompaniesClient({
                 <td className="name-cell">{g.name}</td>
                 <td>{g.contacts.length}</td>
                 <td>
-                  {g.company?.recordContext ? (
-                    <span className={`tag ${RECORD_CONTEXT_TAG_CLASS[g.company.recordContext]}`}>
-                      {RECORD_CONTEXT_LABELS[g.company.recordContext]}
+                  {g.company && g.company.recordContexts.length > 0 ? (
+                    <span style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      {g.company.recordContexts.map((ctx) => (
+                        <span key={ctx} className={`tag ${RECORD_CONTEXT_TAG_CLASS[ctx]}`}>
+                          {RECORD_CONTEXT_LABELS[ctx]}
+                        </span>
+                      ))}
                     </span>
                   ) : (
                     <span className="muted">—</span>

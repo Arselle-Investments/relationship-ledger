@@ -239,14 +239,18 @@ model Company {
   investmentSizeMin   Float?
   investmentSizeMax   Float?
 
-  // Same fund-vs-deal distinction as Contact.recordContext — see that field's
-  // comment. Null means no signal either way.
-  recordContext RecordContext?
+  // Same fund-vs-deal distinction as Contact.recordContexts — see that
+  // field's comment. Unlike the original single-valued assumption here
+  // (a company only ever being one or the other), a company can genuinely be
+  // both: an existing Deal-side LP relationship that's also become a
+  // separate personal/institutional AREF I fund prospect. Empty means no
+  // signal either way.
+  recordContexts RecordContext[] @default([])
 
   // The AREF I Prospects funnel stage for this company itself (family
   // offices, RIAs, etc. tracked as a firm rather than through one person) —
   // separate from any individual fund-side contact's own status. Only
-  // meaningful when recordContext is FUND. Backfilled once from the
+  // meaningful when recordContexts includes FUND. Backfilled once from the
   // fundraising tracker's "Engagement Status" column and, where a linked
   // contact was already further along, rolled up to match that contact one
   // time; from then on the company and its contacts move independently, so
@@ -262,7 +266,6 @@ model Company {
   stageChanges CompanyStatusChange[]
 
   @@index([name])
-  @@index([recordContext])
   @@index([status])
 }
 

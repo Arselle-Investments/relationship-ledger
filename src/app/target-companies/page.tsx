@@ -10,11 +10,12 @@ export default async function TargetCompaniesPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  // Excludes anything explicitly classified as deal-side (e.g. Capital
+  // Excludes anything explicitly classified as deal-side-only (e.g. Capital
   // Partner Outreach) — a company with no classification yet still shows
-  // here exactly as before, only an explicit DEAL context opts it out.
+  // here exactly as before, and a company that's both Deal and Fund still
+  // shows since it's a real fund prospect too.
   const companies = await prisma.company.findMany({
-    where: { OR: [{ recordContext: null }, { recordContext: { not: "DEAL" } }] },
+    where: { OR: [{ NOT: { recordContexts: { has: "DEAL" } } }, { recordContexts: { has: "FUND" } }] },
   });
 
   return (

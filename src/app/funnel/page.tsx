@@ -13,7 +13,7 @@ export default async function FunnelPage() {
 
   const [contacts, companies, team, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
-    prisma.company.findMany({ where: { recordContext: "FUND" }, include: { contacts: true } }),
+    prisma.company.findMany({ where: { recordContexts: { has: "FUND" } }, include: { contacts: true } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     getSettings(),
   ]);
