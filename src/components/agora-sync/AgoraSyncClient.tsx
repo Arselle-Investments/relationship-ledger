@@ -174,8 +174,9 @@ export function AgoraSyncClient({
       <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 6 }}>Export contact changes for Agora</h3>
         <div className="helptext" style={{ marginBottom: 14 }}>
-          For contacts already sent to Agora: organization, phone, city, or notes edited here since the last time
-          this ran. Downloads a spreadsheet of just what changed, so Agora can be updated to match.
+          For contacts already sent to Agora: organization, phone, city, notes, or tags edited here since the last
+          time this ran. Downloads their full current record in Agora&rsquo;s own import template (matched by
+          email), so it drops straight into their re-import flow.
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
           <button className="btn primary" onClick={handleChangesExport} disabled={changesExporting}>
