@@ -13,6 +13,9 @@ import {
   EMPTY_COMPANY_ADVANCED_FILTERS,
   countActiveCompanyFilters,
 } from "@/components/companies/CompaniesFilterModal";
+import { SortHeader, useSort } from "@/components/SortHeader";
+
+type SortField = "name" | "city" | "contacts" | "outreach" | "feedback";
 
 type FeedbackWithRelations = DealFeedback & { deal: Deal; contact: Contact | null };
 type OutreachWithDeal = DealOutreach & { deal: Deal };
@@ -49,6 +52,7 @@ export function TargetLPsClient({
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
+  const { sortKey, toggleSort } = useSort<SortField>("name");
 
   const assetClasses = useMemo(
     () => Array.from(new Set(companies.flatMap((c) => c.targetAssetClasses))).sort(),
@@ -113,6 +117,24 @@ export function TargetLPsClient({
       return true;
     });
   }, [groups, search, assetClassFilter, tierFilter, typeFilter, advancedFilters]);
+
+  const sorted = useMemo(() => {
+    const dir = sortKey.dir === "asc" ? 1 : -1;
+    return [...filtered].sort((a, b) => {
+      switch (sortKey.field) {
+        case "city":
+          return dir * (a.company.city ?? "").localeCompare(b.company.city ?? "");
+        case "contacts":
+          return dir * (a.contacts.length - b.contacts.length);
+        case "outreach":
+          return dir * (a.company.outreach.length - b.company.outreach.length);
+        case "feedback":
+          return dir * (a.company.feedback.length - b.company.feedback.length);
+        default:
+          return dir * a.name.localeCompare(b.name);
+      }
+    });
+  }, [filtered, sortKey]);
 
   async function exportFiltered() {
     const companyIds = filtered.map((g) => g.company.id);
@@ -229,19 +251,23 @@ export function TargetLPsClient({
         <table>
           <thead>
             <tr>
-              <th>Company</th>
-              <th>Contacts</th>
+              <SortHeader field="name" label="Company" sortKey={sortKey} onSort={toggleSort} />
+              <SortHeader field="city" label="City" sortKey={sortKey} onSort={toggleSort} />
+              <SortHeader field="contacts" label="Contacts" sortKey={sortKey} onSort={toggleSort} />
               <th>Target asset classes</th>
-              <th>Deal feedback</th>
+              <SortHeader field="outreach" label="Deals sent" sortKey={sortKey} onSort={toggleSort} />
+              <SortHeader field="feedback" label="Deal feedback" sortKey={sortKey} onSort={toggleSort} />
               <th>Sources</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((g) => (
+            {sorted.map((g) => (
               <tr key={g.name} onClick={() => setSelectedCompany(g.name)}>
                 <td className="name-cell">{g.name}</td>
+                <td className="muted">{g.company.city || "—"}</td>
                 <td>{g.contacts.length}</td>
                 <td className="muted">{g.company.targetAssetClasses.join(", ") || "—"}</td>
+                <td className="muted">{g.company.outreach.length}</td>
                 <td className="muted">{g.company.feedback.length || 0}</td>
                 <td>
                   {g.company.sources.length > 0 ? (

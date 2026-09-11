@@ -2,8 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ContactType, FundraisingStage, User } from "@prisma/client";
-import { CONTACT_TYPE_LABELS, mergeStageLabels } from "@/lib/contact-constants";
+import { FundraisingStage, User } from "@prisma/client";
+import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
@@ -36,9 +36,13 @@ export function FunnelClient({
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const labels = useMemo(() => mergeStageLabels(stageLabelOverrides), [stageLabelOverrides]);
-  const [typeFilter, setTypeFilter] = useState<ContactType | "ALL">("ALL");
+  const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const contactTypes = useMemo(
+    () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
+    [contacts]
+  );
   const filteredContacts = useMemo(
-    () => (typeFilter === "ALL" ? contacts : contacts.filter((c) => c.type === typeFilter)),
+    () => (typeFilter === "ALL" ? contacts : contacts.filter((c) => c.agoraType === typeFilter)),
     [contacts, typeFilter]
   );
   const pipelineCounts = useMemo(() => buildFunnelCounts(filteredContacts, PIPELINE_STAGES), [filteredContacts]);
@@ -458,12 +462,12 @@ export function FunnelClient({
         </div>
         <div className="spacer" />
         <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
-          Filter by general type
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "ALL")}>
-            <option value="ALL">All general types</option>
-            {Object.values(ContactType).map((t) => (
+          Filter by contact type
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+            <option value="ALL">All contact types</option>
+            {contactTypes.map((t) => (
               <option key={t} value={t}>
-                {CONTACT_TYPE_LABELS[t]}
+                {t}
               </option>
             ))}
           </select>

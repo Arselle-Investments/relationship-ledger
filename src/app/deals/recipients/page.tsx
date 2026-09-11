@@ -15,6 +15,7 @@ export default async function DealRecipientsPage() {
     include: {
       feedback: { include: { deal: true, contact: true }, orderBy: { createdAt: "desc" } },
       outreach: { include: { deal: true }, orderBy: { sentAt: "desc" } },
+      _count: { select: { contacts: true } },
     },
     orderBy: { name: "asc" },
   });
