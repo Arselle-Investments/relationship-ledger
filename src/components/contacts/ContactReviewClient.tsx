@@ -323,7 +323,18 @@ export function ContactReviewClient({
                   {matchedBy === "email" ? "Same email" : matchedBy === "name" ? "Same name" : "Possible match"}
                 </span>
               </div>
-              <table style={{ marginBottom: 12 }}>
+              <table style={{ marginBottom: 12, tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "4%" }} />
+                  <col style={{ width: "15%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "18%" }} />
+                  <col style={{ width: "10%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "6%" }} />
+                  <col style={{ width: "11%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th></th>
@@ -334,7 +345,7 @@ export function ContactReviewClient({
                     <th>Source</th>
                     <th>Tags</th>
                     <th>Tasks</th>
-                    <th>Correspondence</th>
+                    <th style={{ whiteSpace: "normal" }}>Correspondence</th>
                   </tr>
                 </thead>
                 <tbody>

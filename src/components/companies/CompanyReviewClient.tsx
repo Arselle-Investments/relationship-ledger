@@ -235,15 +235,23 @@ export function CompanyReviewClient({
                   None of these match an existing Agora record. Pick the name to keep manually.
                 </div>
               )}
-              <table style={{ marginBottom: 12 }}>
+              <table style={{ marginBottom: 12, tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: "4%" }} />
+                  <col style={{ width: "31%" }} />
+                  <col style={{ width: "27%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "13%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     <th></th>
                     <th>Company</th>
                     <th>Source</th>
-                    <th>Contacts</th>
-                    <th>Deal feedback</th>
-                    <th>Deals sent</th>
+                    <th style={{ whiteSpace: "normal" }}>Contacts</th>
+                    <th style={{ whiteSpace: "normal" }}>Deal feedback</th>
+                    <th style={{ whiteSpace: "normal" }}>Deals sent</th>
                   </tr>
                 </thead>
                 <tbody>
