@@ -14,15 +14,20 @@ export function ConferencesClient({
   initialConferences,
   team,
   canEdit,
+  currentUserId,
 }: {
   initialConferences: Conference[];
   team: User[];
   canEdit: boolean;
+  currentUserId: string;
 }) {
   const [conferences, setConferences] = useState(initialConferences);
   const [viewMode, setViewMode] = useState<"cards" | "calendar" | "map">("cards");
   const [cardsFilter, setCardsFilter] = useState<"all" | "quarter">("all");
   const [exportPreset, setExportPreset] = useState<"all" | "quarter" | "year" | "confirmed">("all");
+  const [icsPreset, setIcsPreset] = useState<"all" | "attending" | "select">("attending");
+  const [icsPickerOpen, setIcsPickerOpen] = useState(false);
+  const [icsSelectedIds, setIcsSelectedIds] = useState<Set<string>>(new Set());
   const [regionFilter, setRegionFilter] = useState<Region | "all">("all");
   const [editing, setEditing] = useState<Conference | null | "new">(null);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -66,6 +71,20 @@ export function ConferencesClient({
 
   function updateConferenceLocal(conference: Conference) {
     setConferences((prev) => prev.map((e) => (e.id === conference.id ? conference : e)));
+  }
+
+  function toggleIcsSelected(id: string) {
+    setIcsSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function icsHref(): string {
+    if (icsPreset === "select") return `/api/conferences/export-ics?filter=ids&ids=${Array.from(icsSelectedIds).join(",")}`;
+    return `/api/conferences/export-ics?filter=${icsPreset}`;
   }
 
   async function handleImportFile(file: File) {
@@ -127,6 +146,28 @@ export function ConferencesClient({
         <a className="btn" href={`/api/conferences/export?filter=${exportPreset}`}>
           Export to Excel
         </a>
+        <select
+          value={icsPreset}
+          onChange={(e) => {
+            const next = e.target.value as typeof icsPreset;
+            setIcsPreset(next);
+            setIcsPickerOpen(next === "select");
+          }}
+          title="Calendar export preset"
+        >
+          <option value="attending">Calendar: I&rsquo;m attending</option>
+          <option value="all">Calendar: all conferences</option>
+          <option value="select">Calendar: pick a few…</option>
+        </select>
+        {icsPreset === "select" ? (
+          <button className="btn" onClick={() => setIcsPickerOpen((v) => !v)}>
+            {icsPickerOpen ? "Hide picker" : `Choose conferences (${icsSelectedIds.size})`}
+          </button>
+        ) : (
+          <a className="btn" href={icsHref()}>
+            Add to calendar (.ics)
+          </a>
+        )}
         {canEdit && (
           <>
             <input
@@ -152,6 +193,36 @@ export function ConferencesClient({
           </>
         )}
       </div>
+
+      {icsPreset === "select" && icsPickerOpen && (
+        <div className="card" style={{ padding: 14, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10, flexWrap: "wrap" }}>
+            <div className="helptext" style={{ margin: 0 }}>
+              Pick which conferences to add to your calendar, then download.
+            </div>
+            <div className="spacer" />
+            <a
+              className="btn small primary"
+              style={icsSelectedIds.size === 0 ? { opacity: 0.5, pointerEvents: "none" } : undefined}
+              href={icsSelectedIds.size === 0 ? undefined : icsHref()}
+            >
+              Add {icsSelectedIds.size || ""} to calendar (.ics)
+            </a>
+          </div>
+          <div style={{ maxHeight: 220, overflowY: "auto" }}>
+            {conferences.map((ev) => (
+              <label key={ev.id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, padding: "4px 0" }}>
+                <input type="checkbox" checked={icsSelectedIds.has(ev.id)} onChange={() => toggleIcsSelected(ev.id)} />
+                <span style={{ fontWeight: 600 }}>{ev.name}</span>
+                <span className="muted">
+                  {new Date(ev.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })}
+                  {ev.location ? ` · ${ev.location}` : ""}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="helptext" style={{ marginBottom: 16 }}>
         Recurring conferences aren&rsquo;t detected automatically. Open a past occurrence and use{" "}

@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { ContactWithRelations } from "@/types/contact";
-import { TravelWithUser } from "@/lib/travel";
+import { CompanyTravelMatch, TravelWithUser } from "@/lib/travel";
 import { buildGenericTravelEmail } from "@/lib/travel-templates";
 
 function fmtDate(d: Date | string) {
@@ -26,7 +26,10 @@ export function TripCard({
 }) {
   const [expanded, setExpanded] = useState(false);
   const [matches, setMatches] = useState<ContactWithRelations[] | null>(null);
+  const [companyMatches, setCompanyMatches] = useState<CompanyTravelMatch[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [findTaskMsg, setFindTaskMsg] = useState<Record<string, string>>({});
+  const [findTaskBusy, setFindTaskBusy] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [drafting, setDrafting] = useState(false);
   const [listName, setListName] = useState("");
@@ -45,7 +48,28 @@ export function TripCard({
       const res = await fetch(`/api/travel/${trip.id}/matches`);
       const json = await res.json();
       setMatches(json.contacts ?? []);
+      setCompanyMatches(json.companies ?? []);
     }
+  }
+
+  async function createFindContactTask(companyName: string) {
+    setFindTaskBusy(companyName);
+    const res = await fetch("/api/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: `Find a contact at ${companyName} in ${trip.city}`,
+        assigneeIds: [currentUserId],
+        dueDate: startDateIso,
+        priority: "MEDIUM",
+        notes: `No contact on file at ${companyName} in ${trip.city} yet — research on LinkedIn, Fintrix, or similar before the trip (${fmtDate(trip.startDate)}–${fmtDate(trip.endDate)}).`,
+      }),
+    });
+    setFindTaskBusy(null);
+    setFindTaskMsg((prev) => ({
+      ...prev,
+      [companyName]: res.ok ? "Task created." : "Something went wrong creating the task.",
+    }));
   }
 
   function toggleSelect(id: string) {
@@ -212,6 +236,36 @@ export function TripCard({
 
       {expanded && (
         <div style={{ marginTop: 14, borderTop: "1px solid var(--line)", paddingTop: 14 }}>
+          {companyMatches && companyMatches.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 6 }}>Companies based in {trip.city}</div>
+              {companyMatches.map(({ company, contacts: companyContacts }) => (
+                <div key={company.id} style={{ marginBottom: 8, fontSize: 13 }}>
+                  <span style={{ fontWeight: 600 }}>{company.name}</span>
+                  {companyContacts.length > 0 ? (
+                    <span className="muted"> &mdash; {companyContacts.map((c) => c.name).join(", ")}</span>
+                  ) : (
+                    <>
+                      <span className="muted"> &mdash; no contact on file here yet</span>
+                      {canEdit && (
+                        <button
+                          className="btn small ghost"
+                          style={{ marginLeft: 8 }}
+                          onClick={() => createFindContactTask(company.name)}
+                          disabled={findTaskBusy === company.name}
+                        >
+                          {findTaskBusy === company.name ? "Creating…" : "Create task to find a contact"}
+                        </button>
+                      )}
+                      {findTaskMsg[company.name] && (
+                        <span className="helptext" style={{ marginLeft: 8 }}>{findTaskMsg[company.name]}</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
           {matches === null ? (
             <div className="muted" style={{ fontSize: 12.5 }}>Loading…</div>
           ) : matches.length === 0 ? (

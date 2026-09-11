@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireUser } from "@/lib/permissions";
-import { getMatchingContacts } from "@/lib/travel";
+import { getMatchingCompanies, getMatchingContacts } from "@/lib/travel";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -13,6 +13,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const trip = await prisma.travel.findUnique({ where: { id } });
   if (!trip) return NextResponse.json({ error: "Trip not found." }, { status: 404 });
-  const contacts = await getMatchingContacts(trip.city);
-  return NextResponse.json({ contacts });
+  const [contacts, companies] = await Promise.all([
+    getMatchingContacts(trip.city),
+    getMatchingCompanies(trip.city),
+  ]);
+  return NextResponse.json({ contacts, companies });
 }
