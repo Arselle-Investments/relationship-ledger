@@ -12,6 +12,11 @@ const schema = z.object({
   linkedinUrl: z.string().trim().optional().nullable(),
   aum: z.string().trim().optional().nullable(),
   founded: z.string().trim().optional().nullable(),
+  targetAssetClasses: z.array(z.string()).optional(),
+  investmentStructures: z.array(z.string()).optional(),
+  investmentStrategies: z.array(z.string()).optional(),
+  investmentSizeMin: z.number().optional().nullable(),
+  investmentSizeMax: z.number().optional().nullable(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -38,6 +43,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if ("linkedinUrl" in parsed.data) data.linkedinUrl = parsed.data.linkedinUrl?.trim() || null;
   if ("aum" in parsed.data) data.aum = parsed.data.aum?.trim() || null;
   if ("founded" in parsed.data) data.founded = parsed.data.founded?.trim() || null;
+  if ("targetAssetClasses" in parsed.data) data.targetAssetClasses = parsed.data.targetAssetClasses;
+  if ("investmentStructures" in parsed.data) data.investmentStructures = parsed.data.investmentStructures;
+  if ("investmentStrategies" in parsed.data) data.investmentStrategies = parsed.data.investmentStrategies;
+  if ("investmentSizeMin" in parsed.data) data.investmentSizeMin = parsed.data.investmentSizeMin ?? null;
+  if ("investmentSizeMax" in parsed.data) data.investmentSizeMax = parsed.data.investmentSizeMax ?? null;
 
   const company = await prisma.company.update({ where: { id }, data });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, RecordContext, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
@@ -8,6 +8,8 @@ import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-co
 import { RECORD_CONTEXT_LABELS, RECORD_CONTEXT_TAG_CLASS } from "@/lib/record-context";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
+import { ViewField } from "@/components/contacts/ViewField";
+import { TaskModal } from "@/components/tasks/TaskModal";
 import {
   CompaniesFilterModal,
   CompanyAdvancedFilters,
@@ -48,12 +50,33 @@ export function CompaniesClient({
   const [showAllFilters, setShowAllFilters] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
+  // Defaults to View each time a different company is opened — most visits
+  // are "what does this say," not "let me change something," same reasoning
+  // as the Contact modal's own View/Edit toggle.
+  const [companyMode, setCompanyMode] = useState<"view" | "edit">("view");
+  const [addingTask, setAddingTask] = useState(false);
+
+  useEffect(() => {
+    setCompanyMode("view");
+  }, [selectedCompany]);
 
   const companyById = useMemo(() => new Map(companies.map((c) => [c.id, c])), [companies]);
 
   async function patchCompany(
     id: string,
-    data: { tier?: ContactTier | null; priorityQuarter?: string | null; website?: string | null; linkedinUrl?: string | null; aum?: string | null; founded?: string | null }
+    data: {
+      tier?: ContactTier | null;
+      priorityQuarter?: string | null;
+      website?: string | null;
+      linkedinUrl?: string | null;
+      aum?: string | null;
+      founded?: string | null;
+      targetAssetClasses?: string[];
+      investmentStructures?: string[];
+      investmentStrategies?: string[];
+      investmentSizeMin?: number | null;
+      investmentSizeMax?: number | null;
+    }
   ) {
     const res = await fetch(`/api/companies/${id}`, {
       method: "PATCH",
@@ -172,6 +195,18 @@ export function CompaniesClient({
     URL.revokeObjectURL(url);
   }
 
+  function clearFilters() {
+    setSearch("");
+    setAssetClassFilter("");
+    setTierFilter("");
+    setTypeFilter("");
+    setContextFilter("");
+    setAdvancedFilters(EMPTY_COMPANY_ADVANCED_FILTERS);
+  }
+
+  const anyFilterActive =
+    !!search || !!assetClassFilter || !!tierFilter || !!typeFilter || !!contextFilter || activeAdvancedCount > 0;
+
   const activeGroup = selectedCompany ? groups.find((g) => g.name === selectedCompany) ?? null : null;
   const activeCompany = activeGroup?.company
     ? companyById.get(activeGroup.company.id) ?? activeGroup.company
@@ -207,23 +242,6 @@ export function CompaniesClient({
         </div>
       </div>
 
-      <div className="toolbar" style={{ marginBottom: 10 }}>
-        <span className="helptext" style={{ margin: 0 }}>Tier:</span>
-        <div className="view-toggle">
-          <button className={tierFilter === "" ? "active" : ""} onClick={() => setTierFilter("")}>
-            All
-          </button>
-          {Object.values(ContactTier).map((t) => (
-            <button key={t} className={tierFilter === t ? "active" : ""} onClick={() => setTierFilter(t)}>
-              {CONTACT_TIER_LABELS[t]}
-            </button>
-          ))}
-          <button className={tierFilter === "UNTIERED" ? "active" : ""} onClick={() => setTierFilter("UNTIERED")}>
-            No tier
-          </button>
-        </div>
-      </div>
-
       <div className="toolbar">
         <input
           type="text"
@@ -231,6 +249,15 @@ export function CompaniesClient({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value as ContactTier | "UNTIERED" | "")}>
+          <option value="">All tiers</option>
+          {Object.values(ContactTier).map((t) => (
+            <option key={t} value={t}>
+              {CONTACT_TIER_LABELS[t]}
+            </option>
+          ))}
+          <option value="UNTIERED">No tier</option>
+        </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "")}>
           <option value="">All types</option>
           {Object.values(ContactType).map((t) => (
@@ -252,6 +279,11 @@ export function CompaniesClient({
         <button className="btn" onClick={() => setShowAllFilters(true)}>
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
+        {anyFilterActive && (
+          <button className="btn ghost" onClick={clearFilters}>
+            Clear filters
+          </button>
+        )}
         <div className="spacer" />
         <button className="btn" onClick={exportFiltered} disabled={exporting}>
           {exporting ? "Exporting…" : "Export filtered to Excel"}
@@ -330,121 +362,236 @@ export function CompaniesClient({
               </button>
             </div>
             <div className="modal-body">
-              {activeCompany ? (
-                <>
-                  {activeCompany.sources.length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
+              {activeCompany && (
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                  {activeCompany.sources.length > 0 ? (
+                    <div>
                       {activeCompany.sources.map((s) => (
                         <span key={s} className="tag forest">
                           {s}
                         </span>
                       ))}
                     </div>
+                  ) : (
+                    <div />
                   )}
-                  <div className="field-row" style={{ marginBottom: 16 }}>
-                    <div className="field">
-                      <label>Tier</label>
-                      <select
-                        value={activeCompany.tier ?? ""}
-                        disabled={!canEdit}
-                        onChange={(e) => patchCompany(activeCompany.id, { tier: (e.target.value as ContactTier) || null })}
-                      >
-                        <option value="">No tier</option>
-                        {Object.values(ContactTier).map((t) => (
-                          <option key={t} value={t}>
-                            {CONTACT_TIER_LABELS[t]}
-                          </option>
-                        ))}
-                      </select>
+                  {canEdit && (
+                    <div className="view-toggle">
+                      <button className={companyMode === "view" ? "active" : ""} onClick={() => setCompanyMode("view")}>
+                        View
+                      </button>
+                      <button className={companyMode === "edit" ? "active" : ""} onClick={() => setCompanyMode("edit")}>
+                        Edit
+                      </button>
                     </div>
-                    <div className="field">
-                      <label>Priority quarter</label>
-                      <input
-                        placeholder="e.g. 2026-Q4"
-                        defaultValue={activeCompany.priorityQuarter ?? ""}
-                        disabled={!canEdit}
-                        onBlur={(e) => patchCompany(activeCompany.id, { priorityQuarter: e.target.value.trim() || null })}
+                  )}
+                </div>
+              )}
+
+              {activeCompany ? (
+                companyMode === "view" ? (
+                  <>
+                    <ViewField label="Tier" value={activeCompany.tier ? CONTACT_TIER_LABELS[activeCompany.tier] : "No tier"} />
+                    {activeCompany.priorityQuarter && <ViewField label="Priority quarter" value={activeCompany.priorityQuarter} />}
+                    {activeCompany.website && (
+                      <ViewField
+                        label="Website"
+                        value={
+                          <a href={activeCompany.website} target="_blank" rel="noopener noreferrer">
+                            {activeCompany.website}
+                          </a>
+                        }
                       />
-                    </div>
-                  </div>
-                  <div className="field-row" style={{ marginBottom: 16 }}>
-                    <div className="field">
-                      <label>Website</label>
-                      <input
-                        placeholder="https://…"
-                        defaultValue={activeCompany.website ?? ""}
-                        disabled={!canEdit}
-                        onBlur={(e) => patchCompany(activeCompany.id, { website: e.target.value.trim() || null })}
+                    )}
+                    {activeCompany.linkedinUrl && (
+                      <ViewField
+                        label="LinkedIn"
+                        value={
+                          <a href={activeCompany.linkedinUrl} target="_blank" rel="noopener noreferrer">
+                            {activeCompany.linkedinUrl}
+                          </a>
+                        }
                       />
+                    )}
+                    {activeCompany.aum && <ViewField label="AUM" value={activeCompany.aum} />}
+                    {activeCompany.founded && <ViewField label="Founded" value={activeCompany.founded} />}
+                    {(activeCompany.targetAssetClasses.length > 0 ||
+                      activeCompany.investmentStructures.length > 0 ||
+                      activeCompany.investmentStrategies.length > 0 ||
+                      activeCompany.investmentSizeMin ||
+                      activeCompany.investmentSizeMax) && (
+                      <div className="card" style={{ padding: 14, marginBottom: 16, background: "var(--forest-bg)" }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", color: "var(--brass-dark)", marginBottom: 6 }}>
+                          Investment criteria
+                        </div>
+                        {activeCompany.targetAssetClasses.length > 0 && (
+                          <div style={{ fontSize: 13, marginBottom: 3 }}>
+                            <b>Asset classes:</b> {activeCompany.targetAssetClasses.join(", ")}
+                          </div>
+                        )}
+                        {activeCompany.investmentStructures.length > 0 && (
+                          <div style={{ fontSize: 13, marginBottom: 3 }}>
+                            <b>Structures:</b> {activeCompany.investmentStructures.join(", ")}
+                          </div>
+                        )}
+                        {activeCompany.investmentStrategies.length > 0 && (
+                          <div style={{ fontSize: 13, marginBottom: 3 }}>
+                            <b>Strategy:</b> {activeCompany.investmentStrategies.join(", ")}
+                          </div>
+                        )}
+                        {(activeCompany.investmentSizeMin || activeCompany.investmentSizeMax) && (
+                          <div style={{ fontSize: 13 }}>
+                            <b>Check size:</b> {activeCompany.investmentSizeMin ?? "?"}mm &ndash; {activeCompany.investmentSizeMax ?? "?"}mm
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <div className="field-row" style={{ marginBottom: 16 }}>
+                      <div className="field">
+                        <label>Tier</label>
+                        <select
+                          value={activeCompany.tier ?? ""}
+                          disabled={!canEdit}
+                          onChange={(e) => patchCompany(activeCompany.id, { tier: (e.target.value as ContactTier) || null })}
+                        >
+                          <option value="">No tier</option>
+                          {Object.values(ContactTier).map((t) => (
+                            <option key={t} value={t}>
+                              {CONTACT_TIER_LABELS[t]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="field">
+                        <label>Priority quarter</label>
+                        <input
+                          placeholder="e.g. 2026-Q4"
+                          defaultValue={activeCompany.priorityQuarter ?? ""}
+                          disabled={!canEdit}
+                          onBlur={(e) => patchCompany(activeCompany.id, { priorityQuarter: e.target.value.trim() || null })}
+                        />
+                      </div>
                     </div>
-                    <div className="field">
-                      <label>LinkedIn</label>
-                      <input
-                        placeholder="https://linkedin.com/company/…"
-                        defaultValue={activeCompany.linkedinUrl ?? ""}
-                        disabled={!canEdit}
-                        onBlur={(e) => patchCompany(activeCompany.id, { linkedinUrl: e.target.value.trim() || null })}
-                      />
+                    <div className="field-row" style={{ marginBottom: 16 }}>
+                      <div className="field">
+                        <label>Website</label>
+                        <input
+                          placeholder="https://…"
+                          defaultValue={activeCompany.website ?? ""}
+                          disabled={!canEdit}
+                          onBlur={(e) => patchCompany(activeCompany.id, { website: e.target.value.trim() || null })}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>LinkedIn</label>
+                        <input
+                          placeholder="https://linkedin.com/company/…"
+                          defaultValue={activeCompany.linkedinUrl ?? ""}
+                          disabled={!canEdit}
+                          onBlur={(e) => patchCompany(activeCompany.id, { linkedinUrl: e.target.value.trim() || null })}
+                        />
+                      </div>
                     </div>
-                  </div>
-                  <div className="field-row" style={{ marginBottom: 16 }}>
-                    <div className="field">
-                      <label>AUM</label>
-                      <input
-                        placeholder="e.g. ~$10B+"
-                        defaultValue={activeCompany.aum ?? ""}
-                        disabled={!canEdit}
-                        onBlur={(e) => patchCompany(activeCompany.id, { aum: e.target.value.trim() || null })}
-                      />
+                    <div className="field-row" style={{ marginBottom: 16 }}>
+                      <div className="field">
+                        <label>AUM</label>
+                        <input
+                          placeholder="e.g. ~$10B+"
+                          defaultValue={activeCompany.aum ?? ""}
+                          disabled={!canEdit}
+                          onBlur={(e) => patchCompany(activeCompany.id, { aum: e.target.value.trim() || null })}
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Founded</label>
+                        <input
+                          placeholder="e.g. 2011"
+                          defaultValue={activeCompany.founded ?? ""}
+                          disabled={!canEdit}
+                          onBlur={(e) => patchCompany(activeCompany.id, { founded: e.target.value.trim() || null })}
+                        />
+                      </div>
                     </div>
-                    <div className="field">
-                      <label>Founded</label>
-                      <input
-                        placeholder="e.g. 2011"
-                        defaultValue={activeCompany.founded ?? ""}
-                        disabled={!canEdit}
-                        onBlur={(e) => patchCompany(activeCompany.id, { founded: e.target.value.trim() || null })}
-                      />
+                    <div className="field-row" style={{ marginBottom: 16 }}>
+                      <div className="field">
+                        <label>Asset classes</label>
+                        <input
+                          placeholder="e.g. Industrial, Multifamily, Retail"
+                          defaultValue={activeCompany.targetAssetClasses.join(", ")}
+                          disabled={!canEdit}
+                          onBlur={(e) =>
+                            patchCompany(activeCompany.id, {
+                              targetAssetClasses: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Investment structures</label>
+                        <input
+                          placeholder="e.g. LP Equity, Co-GP, Debt Capital"
+                          defaultValue={activeCompany.investmentStructures.join(", ")}
+                          disabled={!canEdit}
+                          onBlur={(e) =>
+                            patchCompany(activeCompany.id, {
+                              investmentStructures: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                            })
+                          }
+                        />
+                      </div>
                     </div>
-                  </div>
-                </>
+                    <div className="field-row" style={{ marginBottom: 16 }}>
+                      <div className="field">
+                        <label>Investment strategy</label>
+                        <input
+                          placeholder="e.g. Core, Core+, Value-Add / Opp"
+                          defaultValue={activeCompany.investmentStrategies.join(", ")}
+                          disabled={!canEdit}
+                          onBlur={(e) =>
+                            patchCompany(activeCompany.id, {
+                              investmentStrategies: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="field">
+                        <label>Check size range ($mm)</label>
+                        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                          <input
+                            type="number"
+                            placeholder="Min"
+                            defaultValue={activeCompany.investmentSizeMin ?? ""}
+                            disabled={!canEdit}
+                            onBlur={(e) =>
+                              patchCompany(activeCompany.id, {
+                                investmentSizeMin: e.target.value.trim() ? Number(e.target.value) : null,
+                              })
+                            }
+                          />
+                          <span className="muted">to</span>
+                          <input
+                            type="number"
+                            placeholder="Max"
+                            defaultValue={activeCompany.investmentSizeMax ?? ""}
+                            disabled={!canEdit}
+                            onBlur={(e) =>
+                              patchCompany(activeCompany.id, {
+                                investmentSizeMax: e.target.value.trim() ? Number(e.target.value) : null,
+                              })
+                            }
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )
               ) : (
                 <div className="helptext" style={{ marginBottom: 16 }}>
                   No company record on file yet for this organization, so tier and priority quarter aren&rsquo;t set-able until one exists.
                 </div>
-              )}
-              {activeCompany && (
-                (activeCompany.targetAssetClasses.length > 0 ||
-                  activeCompany.investmentStructures.length > 0 ||
-                  activeCompany.investmentStrategies.length > 0 ||
-                  activeCompany.investmentSizeMin ||
-                  activeCompany.investmentSizeMax) && (
-                  <div className="card" style={{ padding: 14, marginBottom: 16, background: "var(--forest-bg)" }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 600, textTransform: "uppercase", color: "var(--brass-dark)", marginBottom: 6 }}>
-                      Investment criteria
-                    </div>
-                    {activeCompany.targetAssetClasses.length > 0 && (
-                      <div style={{ fontSize: 13, marginBottom: 3 }}>
-                        <b>Asset classes:</b> {activeCompany.targetAssetClasses.join(", ")}
-                      </div>
-                    )}
-                    {activeCompany.investmentStructures.length > 0 && (
-                      <div style={{ fontSize: 13, marginBottom: 3 }}>
-                        <b>Structures:</b> {activeCompany.investmentStructures.join(", ")}
-                      </div>
-                    )}
-                    {activeCompany.investmentStrategies.length > 0 && (
-                      <div style={{ fontSize: 13, marginBottom: 3 }}>
-                        <b>Strategy:</b> {activeCompany.investmentStrategies.join(", ")}
-                      </div>
-                    )}
-                    {(activeCompany.investmentSizeMin || activeCompany.investmentSizeMax) && (
-                      <div style={{ fontSize: 13 }}>
-                        <b>Check size:</b> {activeCompany.investmentSizeMin ?? "?"}mm &ndash; {activeCompany.investmentSizeMax ?? "?"}mm
-                      </div>
-                    )}
-                  </div>
-                )
               )}
 
               <div className="helptext" style={{ marginBottom: 10 }}>
@@ -507,8 +654,28 @@ export function CompaniesClient({
                 </>
               )}
             </div>
+            {canEdit && (
+              <div className="modal-foot">
+                <button className="btn small ghost" onClick={() => setAddingTask(true)}>
+                  + Add task
+                </button>
+                <span />
+              </div>
+            )}
           </div>
         </div>
+      )}
+
+      {addingTask && activeGroup && (
+        <TaskModal
+          task={null}
+          team={team}
+          contacts={activeGroup.contacts}
+          canEdit={canEdit}
+          onClose={() => setAddingTask(false)}
+          onSaved={() => setAddingTask(false)}
+          onDeleted={() => setAddingTask(false)}
+        />
       )}
 
       {editingContact && (
