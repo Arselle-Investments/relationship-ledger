@@ -11,7 +11,7 @@ export default async function LookaheadPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
+  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies] =
     await Promise.all([
       prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
       prisma.task.findMany({ include: { contact: true } }),
@@ -23,14 +23,6 @@ export default async function LookaheadPage() {
       prisma.consultant.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
       prisma.capitalSource.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
       prisma.company.findMany({ where: { tier: "TIER_1" }, orderBy: { name: "asc" } }),
-      prisma.contact.findMany({
-        where: {
-          status: FundraisingStage.NOT_STARTED,
-          correspondence: { some: { source: { in: ["aref_import", "capital_partner_untangle"] } } },
-        },
-        include: { owner: true, warmPath: true },
-        orderBy: { name: "asc" },
-      }),
     ]);
 
   return (
@@ -45,7 +37,6 @@ export default async function LookaheadPage() {
         stalledConsultants={stalledConsultants}
         stalledCapitalSources={stalledCapitalSources}
         tier1Companies={tier1Companies}
-        arefTargetContacts={arefTargetContacts}
         team={team}
       />
     </AppShell>

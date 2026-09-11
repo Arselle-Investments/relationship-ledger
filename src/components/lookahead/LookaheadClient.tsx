@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Settings, Deal, Consultant, CapitalSource, Company, User } from "@prisma/client";
+import { Settings, Deal, Consultant, CapitalSource, Company, User, FundraisingStage } from "@prisma/client";
 import { getOverdueContacts } from "@/lib/followups";
 import { getOverdueSequenceContacts, getUpcomingSequenceItems } from "@/lib/sequences";
 import { getUpcomingCadenceContacts, windowBounds } from "@/lib/lookahead";
@@ -20,6 +20,15 @@ function fmtDate(d: string | Date) {
   return new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
 }
 
+// The two stages where this list matters most — a contact deliberately being
+// courted for the current raise, or already in the room on diligence — so
+// they're worth the eye jumping straight to instead of getting lost among
+// every other overdue/upcoming row.
+const HIGHLIGHT_STAGES: FundraisingStage[] = [FundraisingStage.ACTIVE_PROSPECT, FundraisingStage.DUE_DILIGENCE];
+function highlightRowStyle(status: FundraisingStage): React.CSSProperties | undefined {
+  return HIGHLIGHT_STAGES.includes(status) ? { background: "var(--brass-bg)" } : undefined;
+}
+
 export function LookaheadClient({
   contacts,
   tasks,
@@ -30,7 +39,6 @@ export function LookaheadClient({
   stalledConsultants,
   stalledCapitalSources,
   tier1Companies,
-  arefTargetContacts,
   team,
 }: {
   contacts: ContactWithRelations[];
@@ -43,7 +51,6 @@ export function LookaheadClient({
   stalledConsultants: Consultant[];
   stalledCapitalSources: CapitalSource[];
   tier1Companies: Company[];
-  arefTargetContacts: ContactWithRelations[];
 }) {
   const [windowDays, setWindowDays] = useState<14 | 30 | "quarter">(14);
 
@@ -127,47 +134,12 @@ export function LookaheadClient({
         At a glance for {windowLabel} &middot; {fmtDate(bounds.start)} to {fmtDate(bounds.end)}
       </div>
 
-      <Section title="Tier 1 companies" count={tier1Companies.length} emptyMsg="No companies are marked Tier 1 yet.">
-        {tier1Companies.length > 0 && (
-          <table>
-            <tbody>
-              {tier1Companies.map((c) => (
-                <tr key={c.id}>
-                  <td className="name-cell">{c.name}</td>
-                  <td className="muted">{c.city || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Section>
-
-      <Section
-        title="AREF I tracker targets not yet contacted"
-        count={arefTargetContacts.length}
-        emptyMsg="Nothing outstanding from the AREF I tracker."
-      >
-        {arefTargetContacts.length > 0 && (
-          <table>
-            <tbody>
-              {arefTargetContacts.map((c) => (
-                <tr key={c.id}>
-                  <td className="name-cell">{c.name}</td>
-                  <td>{c.org || <span className="muted">—</span>}</td>
-                  <td className="muted">{c.owner?.name || "—"}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </Section>
-
       <Section title="Required follow-ups (overdue now)" count={requiredCadence.length + requiredSeq.length} emptyMsg="Nothing overdue right now.">
         {requiredCadence.length + requiredSeq.length > 0 && (
           <table>
             <tbody>
               {requiredCadence.map((c) => (
-                <tr key={`cad-${c.id}`}>
+                <tr key={`cad-${c.id}`} style={highlightRowStyle(c.status)}>
                   <td className="name-cell">{c.name}</td>
                   <td>{c.org || <span className="muted">—</span>}</td>
                   <td className="muted">{c.owner?.name || "—"}</td>
@@ -179,7 +151,7 @@ export function LookaheadClient({
                 </tr>
               ))}
               {requiredSeq.map((c) => (
-                <tr key={`seq-${c.id}`}>
+                <tr key={`seq-${c.id}`} style={highlightRowStyle(c.status)}>
                   <td className="name-cell">{c.name}</td>
                   <td>{c.org || <span className="muted">—</span>}</td>
                   <td className="muted">{c.owner?.name || "—"}</td>
@@ -204,7 +176,7 @@ export function LookaheadClient({
           <table>
             <tbody>
               {recommendedSeq.map((r) => (
-                <tr key={`seq-${r.id}`}>
+                <tr key={`seq-${r.id}`} style={highlightRowStyle(r.status)}>
                   <td className="name-cell">{r.name}</td>
                   <td>{r.org || <span className="muted">—</span>}</td>
                   <td className="muted">{r.owner?.name || "—"}</td>
@@ -216,7 +188,7 @@ export function LookaheadClient({
               {recommendedCadence.map((c) => {
                 const cadence = c.cadenceOverrideDays ?? settings.defaultCadenceDays;
                 return (
-                  <tr key={`cad-${c.id}`}>
+                  <tr key={`cad-${c.id}`} style={highlightRowStyle(c.status)}>
                     <td className="name-cell">{c.name}</td>
                     <td>{c.org || <span className="muted">—</span>}</td>
                     <td className="muted">{c.owner?.name || "—"}</td>
@@ -358,6 +330,21 @@ export function LookaheadClient({
                   </td>
                   <td className="muted">Capital source</td>
                   <td className="muted">{cs.nextStep || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </Section>
+
+      <Section title="Tier 1 companies" count={tier1Companies.length} emptyMsg="No companies are marked Tier 1 yet.">
+        {tier1Companies.length > 0 && (
+          <table>
+            <tbody>
+              {tier1Companies.map((c) => (
+                <tr key={c.id}>
+                  <td className="name-cell">{c.name}</td>
+                  <td className="muted">{c.city || "—"}</td>
                 </tr>
               ))}
             </tbody>

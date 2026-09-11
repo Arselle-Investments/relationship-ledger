@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const daysParam = searchParams.get("days");
   const days = daysParam === "30" ? 30 : daysParam === "quarter" ? "quarter" : 14;
 
-  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies, arefTargetContacts] =
+  const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies] =
     await Promise.all([
       prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
       prisma.task.findMany({ include: { contact: true } }),
@@ -38,14 +38,6 @@ export async function GET(req: NextRequest) {
       prisma.consultant.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
       prisma.capitalSource.findMany({ where: { outreachStatus: FundraisingStage.OUTREACH_SENT }, orderBy: { updatedAt: "desc" } }),
       prisma.company.findMany({ where: { tier: ContactTier.TIER_1 }, orderBy: { name: "asc" } }),
-      prisma.contact.findMany({
-        where: {
-          status: FundraisingStage.NOT_STARTED,
-          correspondence: { some: { source: { in: ["aref_import", "capital_partner_untangle"] } } },
-        },
-        include: { owner: true, warmPath: true },
-        orderBy: { name: "asc" },
-      }),
     ]);
 
   const bounds = days === "quarter" ? { start: new Date().toISOString().slice(0, 10), end: quarterBounds(0).end } : windowBounds(days);
@@ -208,17 +200,6 @@ export async function GET(req: NextRequest) {
   tier1Sheet.getRow(1).font = { bold: true };
   for (const c of tier1Companies) {
     tier1Sheet.addRow({ name: safeCell(c.name), city: safeCell(c.city ?? "") });
-  }
-
-  const arefSheet = workbook.addWorksheet("AREF Targets");
-  arefSheet.columns = [
-    { header: "Name", key: "name", width: 24 },
-    { header: "Organization", key: "org", width: 26 },
-    { header: "Owner", key: "owner", width: 20 },
-  ];
-  arefSheet.getRow(1).font = { bold: true };
-  for (const c of arefTargetContacts) {
-    arefSheet.addRow({ name: safeCell(c.name), org: safeCell(c.org ?? ""), owner: safeCell(c.owner?.name ?? "") });
   }
 
   const buffer = await workbook.xlsx.writeBuffer();
