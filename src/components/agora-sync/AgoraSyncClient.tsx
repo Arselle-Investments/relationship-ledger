@@ -145,9 +145,11 @@ export function AgoraSyncClient({
       <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 6 }}>Export new companies for Agora</h3>
         <div className="helptext" style={{ marginBottom: 14 }}>
-          Companies added here that haven&rsquo;t been sent to Agora yet. Downloads a spreadsheet formatted for Agora
-          import and marks everything included as exported, so the next export only picks up what&rsquo;s new since
-          this one.
+          Companies added here that haven&rsquo;t been sent to Agora yet. Agora has no bulk-import for
+          Organizations &mdash; each one has to be created by hand there (CRM &rarr; Organizations &rarr; New
+          Organization) with its contacts then linked to it. This download is a reference list for that manual
+          work, not a file Agora can import; it still marks everything included as sent, so the next export only
+          shows what&rsquo;s new since this one.
         </div>
         {companyPendingCount === 0 ? (
           <div className="empty">

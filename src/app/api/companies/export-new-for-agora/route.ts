@@ -13,11 +13,13 @@ import { safeCell } from "@/lib/excel-safety";
 const AGORA_SOURCES = ["Agora Contact Export", "Agora Org Export"];
 
 /**
- * Companion to /api/contacts/export-new-for-agora, same convention: exports
- * every company added here since the last time this ran, for hand-import
- * into Agora, then marks them exported so re-running only ever picks up
- * what's genuinely new. Column headers are a placeholder using our own field
- * names; expect to adjust once we see Agora's actual expected import format.
+ * Companion to /api/contacts/export-new-for-agora, same "what's pending"
+ * convention, but the output itself is a reference list, not an Agora import
+ * file — per Agora's own docs, Organizations have no bulk-import; each has
+ * to be created by hand (CRM -> Organizations -> New Organization) with its
+ * contacts linked afterward. This just gives the team the list of companies
+ * that still need that manual step, then marks them exported so re-running
+ * only ever surfaces what's genuinely new.
  *
  * Optional ?days=N narrows this to companies added in the last N days.
  */

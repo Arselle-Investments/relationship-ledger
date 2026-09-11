@@ -20,12 +20,12 @@ type FieldKey = (typeof FIELDS)[number];
  * since this run.
  *
  * Uses Agora's own contact template (same as export-new-for-agora), matched
- * on Email, and always fills every column with the contact's full current
- * data rather than just the changed field(s) — a blank cell in an update
- * import could plausibly mean either "leave this alone" or "clear this
- * field" depending on how Agora's importer treats it, and sending the real
- * current value everywhere is correct under either reading. Confirm with
- * Agora directly which it is before assuming a sparser file would be safe.
+ * on Email, and fills every column with the contact's full current data
+ * rather than just the changed field(s). Per Agora's own import docs, a
+ * blank cell on an update import keeps the existing value by default (it is
+ * never cleared) — so a full row is not strictly required, but sending it
+ * anyway keeps this one code path correct regardless of that default ever
+ * changing, and costs nothing since we already have every field on hand.
  */
 export async function POST() {
   let actingUser;
