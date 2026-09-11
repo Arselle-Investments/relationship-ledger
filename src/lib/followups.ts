@@ -41,7 +41,13 @@ export function getOverdueContacts(
 
 // Stable identifiers for filtering, kept separate from the human-readable label
 // (which, for "stale", carries a variable day count and can't be matched on directly).
-export type StaleReasonCode = "never_contacted" | "stale" | "missing_org" | "missing_owner" | "placeholder_email";
+export type StaleReasonCode =
+  | "never_contacted"
+  | "stale"
+  | "missing_org"
+  | "missing_owner"
+  | "placeholder_email"
+  | "no_email";
 export type StaleReason = { code: StaleReasonCode; label: string };
 
 export const STALE_REASON_FILTER_LABELS: Record<StaleReasonCode, string> = {
@@ -50,7 +56,16 @@ export const STALE_REASON_FILTER_LABELS: Record<StaleReasonCode, string> = {
   missing_org: "Missing organization",
   missing_owner: "Missing owner",
   placeholder_email: "Placeholder email",
+  no_email: "No email on file",
 };
+
+// Agora requires every imported contact to have a real email — no email at
+// all, or one of our own historical "needemail@..." placeholders, means the
+// contact can't go out in an Agora export. Centralized here so the export
+// route and the hygiene flag below always agree on what counts as "real."
+export function hasRealEmailForAgora(email: string | null | undefined): boolean {
+  return !!email && !email.toLowerCase().includes("needemail");
+}
 
 export type StaleContact = ContactWithRelations & { staleReasons: StaleReason[] };
 
@@ -74,10 +89,13 @@ export function getStaleContacts(
       }
       if (!c.org) reasons.push({ code: "missing_org", label: "missing organization" });
       if (!c.ownerId) reasons.push({ code: "missing_owner", label: "missing owner" });
-      // Agora's own placeholder convention for "we don't actually have this
-      // person's email" — e.g. "tbd@needemail.com", "needemail2@firm.com".
-      if (c.email?.toLowerCase().includes("needemail")) {
-        reasons.push({ code: "placeholder_email", label: "placeholder email, needs a real address" });
+      if (!c.email) {
+        reasons.push({ code: "no_email", label: "no email — can't export to Agora until one's added" });
+      } else if (!hasRealEmailForAgora(c.email)) {
+        // Our own historical placeholder convention for "we don't actually
+        // have this person's email" — e.g. "tbd@needemail.com". Held back
+        // from Agora exports the same as having no email at all.
+        reasons.push({ code: "placeholder_email", label: "placeholder email — can't export to Agora until it's real" });
       }
       return { ...c, staleReasons: reasons };
     })
