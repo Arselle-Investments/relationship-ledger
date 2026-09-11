@@ -1,9 +1,10 @@
 "use client";
 
-import { FundraisingStage, User } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { ContactType, FundraisingStage, User } from "@prisma/client";
+import { CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 export type AdvancedFilters = {
+  type: string;
   status: string;
   warmPathId: string;
   primaryLocation: string;
@@ -16,6 +17,7 @@ export type AdvancedFilters = {
 };
 
 export const EMPTY_ADVANCED_FILTERS: AdvancedFilters = {
+  type: "",
   status: "",
   warmPathId: "",
   primaryLocation: "",
@@ -62,6 +64,17 @@ export function ContactsFilterModal({
         <div className="modal-body">
           <div className="field-row">
             <div className="field">
+              <label>General type</label>
+              <select value={filters.type} onChange={(e) => set("type", e.target.value)}>
+                <option value="">All general types</option>
+                {Object.values(ContactType).map((t) => (
+                  <option key={t} value={t}>
+                    {CONTACT_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
               <label>Status</label>
               <select value={filters.status} onChange={(e) => set("status", e.target.value)}>
                 <option value="">Any status</option>
@@ -72,6 +85,9 @@ export function ContactsFilterModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="field-row">
             <div className="field">
               <label>Warm path</label>
               <select value={filters.warmPathId} onChange={(e) => set("warmPathId", e.target.value)}>
@@ -83,9 +99,6 @@ export function ContactsFilterModal({
                 ))}
               </select>
             </div>
-          </div>
-
-          <div className="field-row">
             <div className="field">
               <label>Primary location (Agora)</label>
               <select value={filters.primaryLocation} onChange={(e) => set("primaryLocation", e.target.value)}>
@@ -97,6 +110,9 @@ export function ContactsFilterModal({
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="field-row">
             <div className="field">
               <label>Tag</label>
               <select value={filters.tag} onChange={(e) => set("tag", e.target.value)}>

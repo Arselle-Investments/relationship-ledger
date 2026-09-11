@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { User, ContactType, ContactTier, RecordContext } from "@prisma/client";
+import { User, ContactTier, RecordContext } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS, RECORD_CONTEXT_TAG_CLASS } from "@/lib/record-context";
 import { ContactWithRelations } from "@/types/contact";
@@ -21,7 +21,6 @@ export function ContactsClient({
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("");
   const [tierFilter, setTierFilter] = useState("");
   const [ownerFilter, setOwnerFilter] = useState("");
   const [agoraTypeFilter, setAgoraTypeFilter] = useState("");
@@ -49,7 +48,7 @@ export function ContactsClient({
     const commitmentMin = advancedFilters.commitmentMin ? Number(advancedFilters.commitmentMin) : null;
     const commitmentMax = advancedFilters.commitmentMax ? Number(advancedFilters.commitmentMax) : null;
     return contacts.filter((c) => {
-      if (typeFilter && c.type !== typeFilter) return false;
+      if (advancedFilters.type && c.type !== advancedFilters.type) return false;
       if (tierFilter && c.tier !== tierFilter) return false;
       if (contextFilter && !c.recordContexts.includes(contextFilter)) return false;
       if (ownerFilter && c.ownerId !== ownerFilter) return false;
@@ -71,7 +70,7 @@ export function ContactsClient({
       }
       return true;
     });
-  }, [contacts, search, typeFilter, tierFilter, ownerFilter, agoraTypeFilter, contextFilter, advancedFilters]);
+  }, [contacts, search, tierFilter, ownerFilter, agoraTypeFilter, contextFilter, advancedFilters]);
 
   function upsertLocal(contact: ContactWithRelations) {
     setContacts((prev) => {
@@ -93,11 +92,28 @@ export function ContactsClient({
   function exportUrl() {
     const params = new URLSearchParams();
     if (search) params.set("search", search);
-    if (typeFilter) params.set("type", typeFilter);
+    if (advancedFilters.type) params.set("type", advancedFilters.type);
     if (tierFilter) params.set("tier", tierFilter);
     if (ownerFilter) params.set("ownerId", ownerFilter);
     return `/api/contacts/export?${params.toString()}`;
   }
+
+  function clearFilters() {
+    setSearch("");
+    setTierFilter("");
+    setOwnerFilter("");
+    setAgoraTypeFilter("");
+    setContextFilter("");
+    setAdvancedFilters(EMPTY_ADVANCED_FILTERS);
+  }
+
+  const anyFilterActive =
+    !!search ||
+    !!tierFilter ||
+    !!ownerFilter ||
+    !!agoraTypeFilter ||
+    !!contextFilter ||
+    activeAdvancedCount > 0;
 
   return (
     <div>
@@ -123,14 +139,6 @@ export function ContactsClient({
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
-        <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-          <option value="">All general types</option>
-          {Object.values(ContactType).map((t) => (
-            <option key={t} value={t}>
-              {CONTACT_TYPE_LABELS[t]}
-            </option>
-          ))}
-        </select>
         <select value={tierFilter} onChange={(e) => setTierFilter(e.target.value)}>
           <option value="">All tiers</option>
           {Object.values(ContactTier).map((t) => (
@@ -158,6 +166,11 @@ export function ContactsClient({
         <button className="btn" onClick={() => setShowAllFilters(true)}>
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
+        {anyFilterActive && (
+          <button className="btn ghost" onClick={clearFilters}>
+            Clear filters
+          </button>
+        )}
         <div className="spacer" />
         {canEdit && (
           <button className="btn" onClick={() => setCreatingList(true)} disabled={filtered.length === 0}>
