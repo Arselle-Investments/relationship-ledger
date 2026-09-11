@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Deliverable } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 import { DeliverableWithContacts } from "@/types/deliverable";
-import { computeDeliverableContacts } from "@/lib/deliverables";
+import { computeDeliverableContacts, KNOWN_AGORA_DELIVERABLE_FIELDS } from "@/lib/deliverables";
 
 export function DeliverableModal({
   entry,
@@ -22,12 +22,13 @@ export function DeliverableModal({
   const isEdit = !!entry;
   const [name, setName] = useState(entry?.deliverable.name ?? "");
   const [tagMatchesText, setTagMatchesText] = useState((entry?.deliverable.tagMatches ?? []).join("\n"));
+  const [customFieldKeysText, setCustomFieldKeysText] = useState((entry?.deliverable.customFieldKeys ?? []).join("\n"));
   const [notes, setNotes] = useState(entry?.deliverable.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function parsedTagMatches(): string[] {
-    return tagMatchesText
+  function parseLines(text: string): string[] {
+    return text
       .split("\n")
       .map((t) => t.trim())
       .filter(Boolean);
@@ -39,13 +40,14 @@ export function DeliverableModal({
       setError("Name is required.");
       return;
     }
-    const tagMatches = parsedTagMatches();
-    if (tagMatches.length === 0) {
-      setError("Add at least one tag to match on — one per line.");
+    const tagMatches = parseLines(tagMatchesText);
+    const customFieldKeys = parseLines(customFieldKeysText);
+    if (tagMatches.length === 0 && customFieldKeys.length === 0) {
+      setError("Add at least one matching tag or Agora custom field.");
       return;
     }
     setSaving(true);
-    const payload = { name: name.trim(), tagMatches, notes: notes.trim() };
+    const payload = { name: name.trim(), tagMatches, customFieldKeys, notes: notes.trim() };
 
     const res = await fetch(isEdit ? `/api/deliverables/${entry!.deliverable.id}` : "/api/deliverables", {
       method: isEdit ? "PATCH" : "POST",
@@ -95,6 +97,33 @@ export function DeliverableModal({
               A contact counts as having received this if any of these appear (as a substring, case-insensitive) in
               one of their tags. Add more than one line when Agora has tagged the same thing more than one way — e.g.
               &ldquo;Hiawatha Recipient&rdquo; and &ldquo;Received Hiawatha Email 2026&rdquo; for the same send.
+            </div>
+          </div>
+          <div className="field">
+            <label>Matching Agora custom fields (one per line)</label>
+            <textarea
+              value={customFieldKeysText}
+              onChange={(e) => setCustomFieldKeysText(e.target.value)}
+              style={{ minHeight: 70, fontFamily: "'Work Sans',sans-serif" }}
+              placeholder={"RECEIVED HIAWATHA EMAIL 2026"}
+            />
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+              {KNOWN_AGORA_DELIVERABLE_FIELDS.filter((f) => !customFieldKeysText.includes(f)).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className="tag"
+                  style={{ cursor: "pointer", border: "none" }}
+                  onClick={() => setCustomFieldKeysText((prev) => (prev.trim() ? `${prev.trim()}\n${f}` : f))}
+                >
+                  + {f}
+                </button>
+              ))}
+            </div>
+            <div className="helptext">
+              A contact counts as having received this if any of these Agora custom fields (not a tag — a genuinely
+              different thing in Agora) has a real value on their record. Click a suggestion above to add it, or type
+              the field name exactly as Agora exports it (all caps).
             </div>
           </div>
           <div className="field">

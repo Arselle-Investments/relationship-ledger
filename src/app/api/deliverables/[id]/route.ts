@@ -20,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const deliverable = await prisma.deliverable.update({
     where: { id },
-    data: { name: data.name, tagMatches: data.tagMatches, notes: data.notes },
+    data: { name: data.name, tagMatches: data.tagMatches, customFieldKeys: data.customFieldKeys, notes: data.notes },
   });
 
   return NextResponse.json({ deliverable });

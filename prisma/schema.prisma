@@ -539,6 +539,14 @@ model Deliverable {
   id         String   @id @default(cuid())
   name       String
   tagMatches String[] @default([])
+  // Keys into Contact.agoraRaw (Agora's own custom fields, e.g. "RECEIVED
+  // HIAWATHA EMAIL 2026") — the authoritative source when Agora tracks this
+  // deliverable as a custom field rather than a tag (tags and custom fields
+  // are genuinely different things in Agora; a tag can drift out of sync
+  // with the custom field it was meant to mirror). A contact counts as
+  // received if EITHER a tagMatches substring or a non-blank value on any of
+  // these keys hits — see computeDeliverableContacts.
+  customFieldKeys String[] @default([])
   notes      String?  @default("")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

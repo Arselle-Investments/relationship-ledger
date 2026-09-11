@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const data = parsed.data;
 
   const deliverable = await prisma.deliverable.create({
-    data: { name: data.name, tagMatches: data.tagMatches, notes: data.notes },
+    data: { name: data.name, tagMatches: data.tagMatches, customFieldKeys: data.customFieldKeys, notes: data.notes },
   });
 
   return NextResponse.json({ deliverable }, { status: 201 });

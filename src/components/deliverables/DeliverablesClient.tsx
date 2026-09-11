@@ -122,7 +122,7 @@ export function DeliverablesClient({
           <div style={{ marginTop: 12 }}>
             {deliverablesForLookup.length === 0 ? (
               <div className="helptext" style={{ margin: 0 }}>
-                No deliverable currently matches a tag on {lookupContact.name}&rsquo;s record.
+                No deliverable currently matches {lookupContact.name}&rsquo;s tags or Agora custom fields.
               </div>
             ) : (
               <div className="helptext" style={{ margin: 0 }}>
@@ -151,7 +151,7 @@ export function DeliverablesClient({
 
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
-          Who&rsquo;s received a letter, deck, or similar send — driven by Agora&rsquo;s own contact tags
+          Who&rsquo;s received a letter, deck, or similar send — driven by Agora&rsquo;s own tags and custom fields
         </div>
         <div className="spacer" />
         {canEdit && (
@@ -164,7 +164,7 @@ export function DeliverablesClient({
       {deliverables.length === 0 ? (
         <div className="empty">
           <h3>No deliverables tracked yet</h3>
-          <div>Add one and point it at the Agora tag(s) that mark who received it.</div>
+          <div>Add one and point it at the Agora tag(s) or custom field(s) that mark who received it.</div>
         </div>
       ) : (
         deliverables.map((entry) => {
@@ -174,9 +174,16 @@ export function DeliverablesClient({
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, flexWrap: "wrap" }}>
                 <div style={{ cursor: "pointer" }} onClick={() => toggleExpand(entry.deliverable.id)}>
                   <h3 style={{ fontSize: 16 }}>{entry.deliverable.name}</h3>
-                  <div className="muted" style={{ fontSize: 11.5, marginTop: 3 }}>
-                    Matches tag{entry.deliverable.tagMatches.length === 1 ? "" : "s"}: {entry.deliverable.tagMatches.join(" · ")}
-                  </div>
+                  {entry.deliverable.tagMatches.length > 0 && (
+                    <div className="muted" style={{ fontSize: 11.5, marginTop: 3 }}>
+                      Tag{entry.deliverable.tagMatches.length === 1 ? "" : "s"}: {entry.deliverable.tagMatches.join(" · ")}
+                    </div>
+                  )}
+                  {entry.deliverable.customFieldKeys.length > 0 && (
+                    <div className="muted" style={{ fontSize: 11.5, marginTop: 3 }}>
+                      Agora field{entry.deliverable.customFieldKeys.length === 1 ? "" : "s"}: {entry.deliverable.customFieldKeys.join(" · ")}
+                    </div>
+                  )}
                   {entry.deliverable.notes && (
                     <div className="muted" style={{ fontSize: 12.5, marginTop: 3 }}>
                       {entry.deliverable.notes}
@@ -206,7 +213,7 @@ export function DeliverablesClient({
                   <ContactsTable
                     contacts={entry.contacts}
                     onOpenContact={setOpenContact}
-                    emptyMessage="No contacts currently carry a matching tag."
+                    emptyMessage="No contacts currently match on tag or Agora custom field."
                   />
                 </div>
               )}
