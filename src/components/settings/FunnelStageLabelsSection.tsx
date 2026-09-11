@@ -49,7 +49,7 @@ export function FunnelStageLabelsSection({ settings, canEdit }: { settings: Sett
     <div className="card" style={{ padding: 22, maxWidth: 640, marginBottom: 24 }}>
       <h3 style={{ marginBottom: 6 }}>Funnel stage names</h3>
       <div className="helptext" style={{ marginBottom: 14 }}>
-        Rename how each stage reads on the Fund Raise &rarr; Funnel page. Doesn&rsquo;t change the underlying
+        Rename how each stage reads on the AREF I Prospects &rarr; Funnel page. Doesn&rsquo;t change the underlying
         pipeline logic or any contact&rsquo;s actual stage — just the label shown here. Clear a row (or hit Reset)
         to go back to the default.
       </div>

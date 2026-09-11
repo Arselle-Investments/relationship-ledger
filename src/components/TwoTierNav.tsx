@@ -127,7 +127,7 @@ const SECTIONS: SectionDef[] = [
     subsections: [
       {
         key: "fund-raise",
-        label: "Fund Raise",
+        label: "AREF I Prospects",
         tabs: [
           { href: "/funnel", label: "Funnel" },
           { href: "/target-companies", label: "Target Companies" },

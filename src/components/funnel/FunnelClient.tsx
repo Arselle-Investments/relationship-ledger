@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
+import { belongsInFundFunnel } from "@/lib/fund-signal";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -37,13 +38,17 @@ export function FunnelClient({
   const [contacts, setContacts] = useState(initialContacts);
   const labels = useMemo(() => mergeStageLabels(stageLabelOverrides), [stageLabelOverrides]);
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [showAllContacts, setShowAllContacts] = useState(false);
   const contactTypes = useMemo(
     () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
     [contacts]
   );
+  const fundProspects = useMemo(() => contacts.filter(belongsInFundFunnel), [contacts]);
+  const hiddenCount = contacts.length - fundProspects.length;
+  const scopedContacts = showAllContacts ? contacts : fundProspects;
   const filteredContacts = useMemo(
-    () => (typeFilter === "ALL" ? contacts : contacts.filter((c) => c.agoraType === typeFilter)),
-    [contacts, typeFilter]
+    () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => c.agoraType === typeFilter)),
+    [scopedContacts, typeFilter]
   );
   const pipelineCounts = useMemo(() => buildFunnelCounts(filteredContacts, PIPELINE_STAGES), [filteredContacts]);
   const droppedCounts = useMemo(() => buildFunnelCounts(filteredContacts, DROPPED_STAGES), [filteredContacts]);
@@ -462,6 +467,10 @@ export function FunnelClient({
         </div>
         <div className="spacer" />
         <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={showAllContacts} onChange={(e) => setShowAllContacts(e.target.checked)} />
+          Show all contacts
+        </label>
+        <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
           Filter by contact type
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
             <option value="ALL">All contact types</option>
@@ -473,6 +482,13 @@ export function FunnelClient({
           </select>
         </label>
       </div>
+      {!showAllContacts && hiddenCount > 0 && (
+        <div className="helptext" style={{ marginBottom: 12 }}>
+          Showing only contacts with real evidence of AREF I fund interest — {hiddenCount} others (mostly Not
+          Started with no fund signal, or marked Deal-side only) are held back. Check &ldquo;Show all contacts&rdquo;
+          to see everyone.
+        </div>
+      )}
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
         <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search a contact&apos;s funnel stage</div>
