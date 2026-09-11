@@ -141,6 +141,7 @@ const SECTIONS: SectionDef[] = [
         tabs: [
           { href: "/deals", label: "Deals" },
           { href: "/deals/recipients", label: "Deal Recipients" },
+          { href: "/deals/funnel", label: "Deal Cap Funnel" },
           { href: "/deals/target-lps", label: "Target LPs" },
         ],
       },
