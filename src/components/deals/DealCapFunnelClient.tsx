@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, Contact, Deal, DealFeedback, FundraisingStage } from "@prisma/client";
-import { FEEDBACK_STATUS_LABELS } from "@/lib/deal-constants";
+import { Company, Contact, Deal, DealFeedback, DealStatus, FundraisingStage } from "@prisma/client";
+import { DEAL_STATUS_LABELS, FEEDBACK_STATUS_LABELS } from "@/lib/deal-constants";
 import { FUNDRAISING_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 
 type FeedbackWithRelations = DealFeedback & { company: Company | null; contact: Contact | null };
@@ -16,18 +16,35 @@ type DealWithFeedback = Deal & { feedback: FeedbackWithRelations[] };
  * instead of a firehose of empty/dormant stages.
  */
 export function DealCapFunnelClient({ deals }: { deals: DealWithFeedback[] }) {
+  const [activeOnly, setActiveOnly] = useState(true);
+  const filtered = useMemo(
+    () => (activeOnly ? deals.filter((d) => d.status === DealStatus.ACTIVE) : deals),
+    [deals, activeOnly]
+  );
+
   return (
     <div>
-      <div className="helptext" style={{ marginBottom: 16 }}>
-        Feedback stages for each currently Active deal. Click a stage to see who&rsquo;s there.
+      <div className="toolbar" style={{ marginBottom: 10 }}>
+        <div className="helptext" style={{ margin: 0 }}>
+          Feedback stages for each deal. Click a stage to see who&rsquo;s there.
+        </div>
+        <div className="spacer" />
+        <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+          <input type="checkbox" checked={activeOnly} onChange={(e) => setActiveOnly(e.target.checked)} />
+          Active deals only
+        </label>
       </div>
-      {deals.length === 0 ? (
+      {filtered.length === 0 ? (
         <div className="empty">
-          <h3>No active deals</h3>
-          <div>Funnels show up here for deals marked Active on the Deals tab.</div>
+          <h3>No deals to show</h3>
+          <div>
+            {activeOnly
+              ? "No deals are currently marked Active on the Deals tab."
+              : "No deals on file yet."}
+          </div>
         </div>
       ) : (
-        deals.map((deal) => <DealFunnelCard key={deal.id} deal={deal} />)
+        filtered.map((deal) => <DealFunnelCard key={deal.id} deal={deal} />)
       )}
     </div>
   );
@@ -46,9 +63,12 @@ function DealFunnelCard({ deal }: { deal: DealWithFeedback }) {
   return (
     <div className="card" style={{ padding: 16, marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-        <Link href={`/deals/${deal.id}`} style={{ fontWeight: 600, fontSize: 15 }}>
-          {deal.name}
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <Link href={`/deals/${deal.id}`} style={{ fontWeight: 600, fontSize: 15 }}>
+            {deal.name}
+          </Link>
+          <span className="tag">{DEAL_STATUS_LABELS[deal.status]}</span>
+        </div>
         <span className="helptext" style={{ margin: 0 }}>
           {deal.feedback.length} piece{deal.feedback.length === 1 ? "" : "s"} of feedback
         </span>

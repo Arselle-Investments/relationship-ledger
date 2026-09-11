@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
 import { prisma } from "@/lib/prisma";
 import { DealCapFunnelClient } from "@/components/deals/DealCapFunnelClient";
-import { Role, DealStatus } from "@prisma/client";
+import { Role } from "@prisma/client";
 
 export default async function DealCapFunnelPage() {
   const session = await auth();
@@ -11,7 +11,6 @@ export default async function DealCapFunnelPage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const deals = await prisma.deal.findMany({
-    where: { status: DealStatus.ACTIVE },
     include: { feedback: { include: { company: true, contact: true }, orderBy: { createdAt: "desc" } } },
     orderBy: { name: "asc" },
   });
