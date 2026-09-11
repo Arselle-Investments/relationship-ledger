@@ -34,7 +34,6 @@ export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
   OUTREACH_SENT: "",
   INITIAL_INTEREST: "brass",
   MEETING_OCCURRED: "brass",
-  FOLLOW_UP_ENGAGEMENT: "brass",
   ACTIVE_PROSPECT: "brass",
   DUE_DILIGENCE: "brass",
   COMMITTED: "forest",

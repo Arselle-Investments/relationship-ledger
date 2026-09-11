@@ -5,6 +5,13 @@ import { AuthError, requireEditor } from "@/lib/permissions";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { safeCell } from "@/lib/excel-safety";
 
+// Sources that mean "this company's data came from Agora in the first
+// place" — round-tripping one of these back to Agora as "new" would be
+// nonsensical, so they're excluded regardless of agoraExportedAt (which
+// historically wasn't stamped for every creation path, e.g. companies
+// created as a side effect of an Agora contact import).
+const AGORA_SOURCES = ["Agora Contact Export", "Agora Org Export"];
+
 /**
  * Companion to /api/contacts/export-new-for-agora, same convention: exports
  * every company added here since the last time this ran, for hand-import
@@ -27,7 +34,11 @@ export async function POST(req: NextRequest) {
   const since = days && Number.isFinite(days) && days > 0 ? new Date(Date.now() - days * 86_400_000) : null;
 
   const companies = await prisma.company.findMany({
-    where: { agoraExportedAt: null, ...(since ? { createdAt: { gte: since } } : {}) },
+    where: {
+      agoraExportedAt: null,
+      NOT: { sources: { hasSome: AGORA_SOURCES } },
+      ...(since ? { createdAt: { gte: since } } : {}),
+    },
     orderBy: { createdAt: "asc" },
   });
 

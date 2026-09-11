@@ -58,10 +58,30 @@ function PipelineIcon() {
   );
 }
 
+function DataQualityIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="10.5" cy="10.5" r="6.5" />
+      <path d="m20 20-4.3-4.3" />
+      <path d="m8 10.5 1.8 1.8L13.5 8" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg {...ICON_PROPS}>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 13.5a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.04 1.56V19a2 2 0 1 1-4 0v-.09A1.7 1.7 0 0 0 8.96 17.3a1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.56-1.04H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.56-1.04 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34H9a1.7 1.7 0 0 0 1.04-1.56V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1.04 1.56 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87V9a1.7 1.7 0 0 0 1.56 1.04H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.56 1.04Z" />
+    </svg>
+  );
+}
+
 const SECTION_ICONS: Record<string, () => React.ReactElement> = {
   relationships: RelationshipsIcon,
   outreach: OutreachIcon,
   pipeline: PipelineIcon,
+  "data-quality": DataQualityIcon,
 };
 
 const SECTIONS: SectionDef[] = [
@@ -137,6 +157,8 @@ const UTILITY_SECTIONS: SectionDef[] = [
     tabs: [
       { href: "/inbox", label: "Correspondence" },
       { href: "/new-contacts", label: "New Contacts" },
+      { href: "/contacts/review", label: "Duplicate Contacts" },
+      { href: "/new-companies", label: "New Companies" },
       { href: "/companies/review", label: "Duplicate Companies" },
       { href: "/data-hygiene", label: "Data Hygiene" },
       { href: "/agora-sync", label: "Agora Sync" },
@@ -162,13 +184,17 @@ export function TwoTierNav({
   activeHref,
   inboxCount,
   newContactsCount,
+  newCompaniesCount,
   companyReviewCount,
+  contactReviewCount,
   dataHygieneCount,
 }: {
   activeHref: string;
   inboxCount?: number;
   newContactsCount?: number;
+  newCompaniesCount?: number;
   companyReviewCount?: number;
+  contactReviewCount?: number;
   dataHygieneCount?: number;
 }) {
   const initialLocation = locate(activeHref);
@@ -216,17 +242,26 @@ export function TwoTierNav({
           );
         })}
         <div className="section-spacer" />
-        {UTILITY_SECTIONS.map((s) => (
-          <button
-            key={s.key}
-            type="button"
-            className={`section-pill ${activeSection === s.key ? "active" : ""}`}
-            onClick={() => selectSection(s)}
-          >
-            {s.label}
-          </button>
-        ))}
-        <Link href="/settings" className={`settings-link ${activeHref === "/settings" ? "active" : ""}`}>
+        {UTILITY_SECTIONS.map((s) => {
+          const Icon = SECTION_ICONS[s.key];
+          return (
+            <button
+              key={s.key}
+              type="button"
+              className={`section-pill ${activeSection === s.key ? "active" : ""}`}
+              onClick={() => selectSection(s)}
+            >
+              {Icon && <Icon />}
+              {s.label}
+            </button>
+          );
+        })}
+        <Link
+          href="/settings"
+          className={`settings-link ${activeHref === "/settings" ? "active" : ""}`}
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          <SettingsIcon />
           Settings
         </Link>
       </div>
@@ -253,7 +288,9 @@ export function TwoTierNav({
               {tab.label}
               {tab.href === "/inbox" && !!inboxCount && <span className="n">{inboxCount}</span>}
               {tab.href === "/new-contacts" && !!newContactsCount && <span className="n">{newContactsCount}</span>}
+              {tab.href === "/new-companies" && !!newCompaniesCount && <span className="n">{newCompaniesCount}</span>}
               {tab.href === "/companies/review" && !!companyReviewCount && <span className="n">{companyReviewCount}</span>}
+              {tab.href === "/contacts/review" && !!contactReviewCount && <span className="n">{contactReviewCount}</span>}
               {tab.href === "/data-hygiene" && !!dataHygieneCount && <span className="n">{dataHygieneCount}</span>}
             </Link>
           ))}

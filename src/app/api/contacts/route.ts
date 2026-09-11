@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       priorityQuarter: data.priorityQuarter || null,
       tags: data.tags,
       notes: data.notes ?? "",
+      closeProbability: data.closeProbability ?? null,
     },
     include: { owner: true, warmPath: true },
   });

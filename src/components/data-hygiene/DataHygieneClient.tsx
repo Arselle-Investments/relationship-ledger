@@ -1,10 +1,23 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { User } from "@prisma/client";
 import { STALE_REASON_FILTER_LABELS, StaleContact, StaleReasonCode } from "@/lib/followups";
+import { ContactModal } from "@/components/contacts/ContactModal";
 
-export function DataHygieneClient({ initialStale }: { initialStale: StaleContact[] }) {
-  const [stale] = useState(initialStale);
+export function DataHygieneClient({
+  initialStale,
+  team,
+  canEdit,
+}: {
+  initialStale: StaleContact[];
+  team: User[];
+  canEdit: boolean;
+}) {
+  const router = useRouter();
+  const stale = initialStale;
+  const [editing, setEditing] = useState<StaleContact | null>(null);
   const [reasonFilter, setReasonFilter] = useState<Set<StaleReasonCode>>(new Set());
   const [ownerFilter, setOwnerFilter] = useState("");
   const [staleSearch, setStaleSearch] = useState("");
@@ -123,7 +136,7 @@ export function DataHygieneClient({ initialStale }: { initialStale: StaleContact
               </thead>
               <tbody>
                 {filteredStale.map((c) => (
-                  <tr key={c.id}>
+                  <tr key={c.id} onClick={() => setEditing(c)}>
                     <td className="name-cell">{c.name}</td>
                     <td>{c.org || <span className="muted">—</span>}</td>
                     <td>{c.owner?.name || <span className="muted">—</span>}</td>
@@ -140,6 +153,23 @@ export function DataHygieneClient({ initialStale }: { initialStale: StaleContact
             </table>
           )}
         </>
+      )}
+
+      {editing && (
+        <ContactModal
+          contact={editing}
+          team={team}
+          canEdit={canEdit}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+          onDeleted={() => {
+            setEditing(null);
+            router.refresh();
+          }}
+        />
       )}
     </div>
   );

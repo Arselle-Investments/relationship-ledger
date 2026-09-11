@@ -98,7 +98,6 @@ enum FundraisingStage {
   OUTREACH_SENT
   INITIAL_INTEREST
   MEETING_OCCURRED
-  FOLLOW_UP_ENGAGEMENT
   ACTIVE_PROSPECT // deliberate, targeted courting for a specific raise — more intentional than a general follow-up
   DUE_DILIGENCE
   COMMITTED
@@ -173,6 +172,13 @@ model Contact {
   // this same ambiguity doesn't apply there: the person invests personally,
   // not their employer.
   recordContexts RecordContext[] @default([])
+
+  // A 1-5 team judgment call on how likely this person is to actually close,
+  // shown as stars in the Funnel view. Most useful for Active prospect, where
+  // "same stage" can still mean very different odds, but not restricted to
+  // it — nothing enforces a stage here, since a rough read can be worth
+  // recording earlier too. Null means nobody's rated it yet.
+  closeProbability Int?
 
   tasks Task[]
   correspondence Correspondence[]
@@ -324,6 +330,23 @@ model DealOutreach {
 // sorted and joined — a different cluster (even if it overlaps) gets its own
 // key and still surfaces normally.
 model CompanyMergeDismissal {
+  id        String   @id @default(cuid())
+  groupKey  String   @unique
+  createdAt DateTime @default(now())
+}
+
+// Remembers an org string (from a Contact with no matching Company record)
+// that a human looked at on the New Companies queue and decided doesn't need
+// its own Company record (e.g. "Private Investor," a placeholder, a one-off).
+// orgKey is the normalized org text so re-typed variants still match.
+model NewCompanyDismissal {
+  id        String   @id @default(cuid())
+  orgKey    String   @unique
+  createdAt DateTime @default(now())
+}
+
+// Same idea as CompanyMergeDismissal, for the Contacts duplicate-review queue.
+model ContactMergeDismissal {
   id        String   @id @default(cuid())
   groupKey  String   @unique
   createdAt DateTime @default(now())

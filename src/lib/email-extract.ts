@@ -32,3 +32,25 @@ export function extractEmailFromText(text: string): string | null {
     .find((m) => !m.endsWith("@arselleinvestments.com") && !isStaffEmail(m) && isRealContactEmail(m));
   return candidate ?? null;
 }
+
+// Local-part separators that plausibly split a first and last name —
+// deliberately not splitting on plain runs of digits/letters with no
+// separator (e.g. "jsmith23"), since a wrong guess there is worse than none.
+const NAME_LIKE_LOCAL_RE = /^([a-zA-Z]+)[._-]([a-zA-Z]+)$/;
+
+/**
+ * Best-effort "firstname.lastname@" -> "Firstname Lastname" guess, for when
+ * a message gives an email but no name at all — common on a forwarded
+ * intro or a bare signature line. Only fires on an unambiguous two-part
+ * local part; anything else (a single word, three-plus parts, initials)
+ * is left alone rather than guessed at.
+ */
+export function guessNameFromEmail(email: string): string | null {
+  const local = email.split("@")[0];
+  const match = local.match(NAME_LIKE_LOCAL_RE);
+  if (!match) return null;
+  const [, first, last] = match;
+  if (first.length < 2 || last.length < 2) return null;
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  return `${cap(first)} ${cap(last)}`;
+}

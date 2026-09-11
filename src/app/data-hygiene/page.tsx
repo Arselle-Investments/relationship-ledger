@@ -12,16 +12,21 @@ export default async function DataHygienePage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, settings] = await Promise.all([
+  const [contacts, settings, team] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
     getSettings(),
+    prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   const stale = getStaleContacts(contacts, settings.staleDays);
 
   return (
     <AppShell activeHref="/data-hygiene" user={user} dataHygieneCount={stale.length}>
-      <DataHygieneClient initialStale={stale} />
+      <DataHygieneClient
+        initialStale={stale}
+        team={team}
+        canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
+      />
     </AppShell>
   );
 }

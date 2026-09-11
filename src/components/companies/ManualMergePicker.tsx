@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Company } from "@prisma/client";
-import { detectCompanyConflicts, defaultResolutions, ConflictField } from "@/lib/company-conflicts";
-import { MergeConflictModal } from "./MergeConflictModal";
+import { MergePreviewModal, PreviewField } from "@/components/MergePreviewModal";
 
 type CompanyWithCounts = Company & { _count: { contacts: number; feedback: number; outreach: number }; fromAgora: boolean };
 
@@ -12,9 +11,9 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [primaryId, setPrimaryId] = useState<string>("");
-  const [pendingConflicts, setPendingConflicts] = useState<ConflictField[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<{ fields: PreviewField[]; tags: string[]; sources: string[] } | null>(null);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -38,19 +37,49 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
     setSelectedIds(new Set());
     setPrimaryId("");
     setSearch("");
-    setPendingConflicts(null);
+    setPendingPreview(null);
     setError(null);
     setOpen(false);
   }
 
-  async function doMerge(resolutions?: Record<string, string>) {
+  async function openPreview() {
+    if (selected.length < 2 || !primaryId) return;
+    setError(null);
+    const secondaryIds = selected.filter((c) => c.id !== primaryId).map((c) => c.id);
+    const res = await fetch("/api/companies/merge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ primaryId, secondaryIds, dryRun: true }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(json.error ?? "Something went wrong.");
+      return;
+    }
+    const p = json.preview;
+    setPendingPreview({
+      tags: p.tags ?? [],
+      sources: p.sources ?? [],
+      fields: [
+        { key: "city", label: "City", value: p.city ?? "" },
+        { key: "website", label: "Website", value: p.website ?? "" },
+        { key: "linkedinUrl", label: "LinkedIn", value: p.linkedinUrl ?? "" },
+        { key: "aum", label: "AUM", value: p.aum ?? "" },
+        { key: "founded", label: "Founded", value: p.founded ?? "" },
+        { key: "priorityQuarter", label: "Priority quarter", value: p.priorityQuarter ?? "" },
+        { key: "notes", label: "Notes", value: p.notes ?? "", multiline: true },
+      ],
+    });
+  }
+
+  async function confirmMerge(edited: Record<string, string>) {
     setError(null);
     setBusy(true);
     const secondaryIds = selected.filter((c) => c.id !== primaryId).map((c) => c.id);
     const res = await fetch("/api/companies/merge", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ primaryId, secondaryIds, resolutions }),
+      body: JSON.stringify({ primaryId, secondaryIds, resolutions: edited }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -62,16 +91,6 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
     // the ids just merged away — simplest to reload rather than try to keep
     // every derived list on the page in sync by hand.
     window.location.reload();
-  }
-
-  function handleMergeClick() {
-    if (selected.length < 2 || !primaryId) return;
-    const conflicts = detectCompanyConflicts(selected);
-    if (conflicts.length === 0) {
-      doMerge();
-      return;
-    }
-    setPendingConflicts(conflicts);
   }
 
   return (
@@ -137,7 +156,7 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
           {error && <div className="error-text" style={{ marginBottom: 10 }}>{error}</div>}
 
           <div style={{ display: "flex", gap: 8 }}>
-            <button className="btn small primary" onClick={handleMergeClick} disabled={selected.length < 2 || busy}>
+            <button className="btn small primary" onClick={openPreview} disabled={selected.length < 2 || busy}>
               {busy ? "Merging…" : `Merge ${selected.length || ""} selected`}
             </button>
             <button className="btn small ghost" onClick={reset} disabled={busy}>
@@ -147,12 +166,16 @@ export function ManualMergePicker({ companies }: { companies: CompanyWithCounts[
         </div>
       )}
 
-      {pendingConflicts && (
-        <MergeConflictModal
-          conflicts={pendingConflicts}
-          defaultValues={defaultResolutions(pendingConflicts, selected.find((c) => c.id === primaryId)!)}
-          onCancel={() => setPendingConflicts(null)}
-          onConfirm={(resolutions) => doMerge(resolutions)}
+      {pendingPreview && (
+        <MergePreviewModal
+          title="Review before merging"
+          fields={pendingPreview.fields}
+          arrayFields={[
+            { label: "Tags", values: pendingPreview.tags },
+            { label: "Sources", values: pendingPreview.sources },
+          ]}
+          onCancel={() => setPendingPreview(null)}
+          onConfirm={confirmMerge}
           busy={busy}
         />
       )}

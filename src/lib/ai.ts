@@ -130,7 +130,7 @@ export async function classifyStageSignal(params: {
         content: `You're tracking an LP/investor's position in a fundraising pipeline. The possible stages are: ${statusList}.
 
 Important stage definitions:
-- DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's FOLLOW_UP_ENGAGEMENT unless the message explicitly mentions an NDA or data room access.
+- DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's still ACTIVE_PROSPECT unless the message explicitly mentions an NDA or data room access.
 - PASSED_OPEN means they declined this specific deal but remain open to future ones (a soft no).
 - PASSED_NOT_INTERESTED means a genuine, unambiguous no — not just declining one deal, but signaling they don't want to hear about future ones either.
 - DO_NOT_CONTACT is stronger than PASSED_NOT_INTERESTED — only suggest it when the message explicitly asks to stop being contacted (e.g. "please remove me from your list," "do not email me again"), not just a firm no on the fund.
@@ -378,6 +378,92 @@ const RESEARCH_TOOL = {
     required: ["bio", "bioSource", "news"],
   },
 };
+
+export type CompanyResearch = {
+  website: string | null;
+  linkedinUrl: string | null;
+  aum: string | null;
+  founded: string | null;
+  blurb: string | null;
+};
+
+const COMPANY_RESEARCH_TOOL = {
+  name: "company_research",
+  description: "Structured research findings about a company/investment firm, extracted from web search results.",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      website: { type: ["string", "null"], description: "The firm's official website URL. Null if not confidently found." },
+      linkedinUrl: { type: ["string", "null"], description: "The firm's LinkedIn company page URL. Null if not found." },
+      aum: {
+        type: ["string", "null"],
+        description: "Assets under management, as free text (e.g. '~$10B+'). Null if not publicly disclosed or not found.",
+      },
+      founded: { type: ["string", "null"], description: "Year founded, as free text. Null if not found." },
+      blurb: {
+        type: ["string", "null"],
+        description: "1-3 sentence description of what the firm does/invests in. Null if nothing credible was found.",
+      },
+    },
+    required: ["website", "linkedinUrl", "aum", "founded", "blurb"],
+  },
+};
+
+/**
+ * Same idea as researchContact, for a company/firm name instead of a person —
+ * used to pre-fill a draft when creating a new Company record from an org
+ * string the team already has on file. Same two-pass shape and the same
+ * "come back empty rather than guess" contract on a name with no public
+ * presence or too ambiguous to resolve confidently.
+ */
+export async function researchCompany(params: { name: string; city: string | null }): Promise<CompanyResearch> {
+  const anthropic = getClient();
+
+  const searchStep = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 1500,
+    tools: [{ type: "web_search_20250305", name: "web_search", max_uses: 4 }],
+    messages: [
+      {
+        role: "user",
+        content: `Research this investment firm/company using web search. Find its official website, LinkedIn company page, assets under management (AUM) if publicly disclosed, year founded, and a short description of what it invests in or does.
+
+Company: ${params.name}${params.city ? ` (based in ${params.city})` : ""}
+
+Report what you find, with source URLs. If you can't confidently find this specific firm — e.g. the name is too generic/common and results are ambiguous — say so clearly rather than guessing or substituting a different firm with a similar name.`,
+      },
+    ],
+  });
+  const findingsText = searchStep.content
+    .filter((c) => c.type === "text")
+    .map((c) => (c.type === "text" ? c.text : ""))
+    .join("\n\n");
+
+  const extractStep = await anthropic.messages.create({
+    model: MODEL,
+    max_tokens: 600,
+    tools: [COMPANY_RESEARCH_TOOL],
+    tool_choice: { type: "tool", name: "company_research" },
+    messages: [
+      {
+        role: "user",
+        content: `Extract structured findings from this research summary about ${params.name}. Only include information clearly about this specific firm — discard anything uncertain, generic, or about a different firm with a similar name.\n\n${
+          findingsText || "No findings — the search returned nothing usable."
+        }`,
+      },
+    ],
+  });
+  const toolUse = extractStep.content.find((c) => c.type === "tool_use");
+  if (!toolUse || toolUse.type !== "tool_use") return { website: null, linkedinUrl: null, aum: null, founded: null, blurb: null };
+  const input = toolUse.input as CompanyResearch;
+  return {
+    website: input.website || null,
+    linkedinUrl: input.linkedinUrl || null,
+    aum: input.aum || null,
+    founded: input.founded || null,
+    blurb: input.blurb || null,
+  };
+}
 
 /**
  * Looks up a contact's public footprint on the open web — a short bio snippet

@@ -30,11 +30,10 @@ export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   OUTREACH_SENT: "Outreach sent",
   INITIAL_INTEREST: "Initial interest",
   MEETING_OCCURRED: "Meeting occurred",
-  FOLLOW_UP_ENGAGEMENT: "Follow-up engagement",
   ACTIVE_PROSPECT: "Active prospect",
   DUE_DILIGENCE: "Due diligence / Data room",
   COMMITTED: "Committed",
-  PASSED_OPEN: "Passed (open to future funds)",
+  PASSED_OPEN: "Fund II Prospects",
   PASSED_NOT_INTERESTED: "Passed (not interested)",
   DO_NOT_CONTACT: "Do not contact",
 };
@@ -50,7 +49,7 @@ export const EM_STAGE_LABELS: Record<FundraisingStage, string> = {
 // space is tight (funnel bars, table cells) — the full label above is used
 // everywhere else (dropdowns, detail views).
 export const FUNDRAISING_STAGE_SHORT_LABELS: Partial<Record<FundraisingStage, string>> = {
-  PASSED_OPEN: "Passed (open)",
+  PASSED_OPEN: "Fund II Prospects",
   PASSED_NOT_INTERESTED: "Passed (no interest)",
 };
 

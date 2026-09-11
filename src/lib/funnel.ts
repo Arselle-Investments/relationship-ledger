@@ -1,24 +1,32 @@
 import { FundraisingStage } from "@prisma/client";
 import { ContactWithRelations } from "@/types/contact";
 
-// The fundraising pipeline order shown in Fund Raise -> Funnel. PASSED and
-// DO_NOT_CONTACT are terminal drop-offs, not forward stages, but still worth
-// showing so the team can see how much falls out, and where. Committed is
-// deliberately last — it's the actual finish line, not just "the stage before
-// the drop-off stages" — so it renders after every drop-off outcome.
-export const FUNDRAISING_STAGES: FundraisingStage[] = [
+// The fundraising pipeline order shown in Fund Raise -> Funnel, split into two
+// visual groups. PIPELINE_STAGES is the live, forward-moving funnel — Committed
+// is deliberately last, since it's the actual finish line for this raise, not
+// just "the stage before the drop-off stages." DROPPED_STAGES are the
+// terminal drop-offs/parking stages (a soft pass worth re-approaching for
+// Fund II, a genuine no, or a firm stop) — still worth showing so the team can
+// see how much falls out and where, but rendered in their own box below the
+// live pipeline so Committed reads as the finish line, not just one more bar
+// before the drop-offs.
+export const PIPELINE_STAGES: FundraisingStage[] = [
   FundraisingStage.NOT_STARTED,
   FundraisingStage.OUTREACH_SENT,
   FundraisingStage.INITIAL_INTEREST,
   FundraisingStage.MEETING_OCCURRED,
-  FundraisingStage.FOLLOW_UP_ENGAGEMENT,
   FundraisingStage.ACTIVE_PROSPECT,
   FundraisingStage.DUE_DILIGENCE,
+  FundraisingStage.COMMITTED,
+];
+
+export const DROPPED_STAGES: FundraisingStage[] = [
   FundraisingStage.PASSED_OPEN,
   FundraisingStage.PASSED_NOT_INTERESTED,
   FundraisingStage.DO_NOT_CONTACT,
-  FundraisingStage.COMMITTED,
 ];
+
+export const FUNDRAISING_STAGES: FundraisingStage[] = [...PIPELINE_STAGES, ...DROPPED_STAGES];
 
 // Heatmap colors for the funnel bars: a light-to-dark forest-green ramp for
 // forward progress (culminating in the deepest green at Committed, reusing
@@ -31,7 +39,6 @@ export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   OUTREACH_SENT: "#D7E3E1",
   INITIAL_INTEREST: "#BCD0CC",
   MEETING_OCCURRED: "#9CB9B3",
-  FOLLOW_UP_ENGAGEMENT: "#7C9992",
   // Breaks from the green progress ramp on purpose — a deliberately-targeted
   // prospect is a distinct designation, not just "one rung further along."
   ACTIVE_PROSPECT: "#C9A66B",
@@ -54,8 +61,11 @@ export function fundraisingStageTextColor(status: FundraisingStage): string {
   return DARK_STAGES.has(status) ? "#FFFFFF" : "var(--ink)";
 }
 
-export function buildFunnelCounts(contacts: ContactWithRelations[]): { status: FundraisingStage; count: number }[] {
-  return FUNDRAISING_STAGES.map((status) => ({
+export function buildFunnelCounts(
+  contacts: ContactWithRelations[],
+  stages: FundraisingStage[] = FUNDRAISING_STAGES
+): { status: FundraisingStage; count: number }[] {
+  return stages.map((status) => ({
     status,
     count: contacts.filter((c) => c.status === status).length,
   }));

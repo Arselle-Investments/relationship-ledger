@@ -15,6 +15,7 @@ import { ContactResearchSection } from "./ContactResearchSection";
 import { ContactAgoraSection, isBlank } from "./ContactAgoraSection";
 import { ViewField } from "./ViewField";
 import { TaskModal } from "@/components/tasks/TaskModal";
+import { ProbabilityBars } from "@/components/ProbabilityBars";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -38,6 +39,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       priorityQuarter: "",
       tags: "",
       notes: "",
+      closeProbability: null,
     };
   }
   return {
@@ -56,6 +58,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     priorityQuarter: contact.priorityQuarter ?? "",
     tags: (contact.tags ?? []).join(", "),
     notes: contact.notes ?? "",
+    closeProbability: contact.closeProbability ?? null,
   };
 }
 
@@ -204,6 +207,7 @@ export function ContactModal({
         .map((t) => t.trim())
         .filter(Boolean),
       notes: values.notes,
+      closeProbability: values.closeProbability,
     };
 
     const res = await fetch(isEdit ? `/api/contacts/${contact!.id}` : "/api/contacts", {
@@ -268,6 +272,12 @@ export function ContactModal({
               <ViewField label="Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
+              {values.status === FundraisingStage.ACTIVE_PROSPECT && (
+                <ViewField
+                  label="Probability"
+                  value={<ProbabilityBars value={values.closeProbability} canEdit={false} onChange={() => {}} />}
+                />
+              )}
               {values.email && <ViewField label="Email" value={<EmailValue email={values.email} />} />}
               {values.phone && <ViewField label="Phone" value={values.phone} />}
               {values.city && <ViewField label="City / region" value={values.city} />}
@@ -329,6 +339,20 @@ export function ContactModal({
                       </option>
                     ))}
                   </select>
+                  {values.status === FundraisingStage.ACTIVE_PROSPECT && (
+                    <div style={{ marginTop: 8 }}>
+                      {contact && contact.status !== FundraisingStage.ACTIVE_PROSPECT && (
+                        <div className="helptext" style={{ marginBottom: 4 }}>
+                          Now an Active prospect — worth adding a probability?
+                        </div>
+                      )}
+                      <ProbabilityBars
+                        value={values.closeProbability}
+                        canEdit={canEdit}
+                        onChange={(next) => set("closeProbability", next)}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div className="field">
                   <label>Owner</label>

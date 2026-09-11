@@ -240,6 +240,13 @@ export function InboxClient({
     <div>
       <EmlImportSection canEdit={canEdit} />
 
+      <div className="stat-row" style={{ marginBottom: 16 }}>
+        <div className="stat-card">
+          <div className="num">{stageSuggestions.length}</div>
+          <div className="label">Pending stage suggestions</div>
+        </div>
+      </div>
+
       <h3 style={{ marginBottom: 10 }}>Suggested stage changes</h3>
       <div className="eyebrow" style={{ marginBottom: 14 }}>
         Correspondence that looks like it signals a pipeline move. Review before anything on the contact changes

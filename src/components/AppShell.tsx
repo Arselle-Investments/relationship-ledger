@@ -9,7 +9,9 @@ export function AppShell({
   children,
   inboxCount,
   newContactsCount,
+  newCompaniesCount,
   companyReviewCount,
+  contactReviewCount,
   dataHygieneCount,
 }: {
   activeHref: string;
@@ -17,7 +19,9 @@ export function AppShell({
   children: React.ReactNode;
   inboxCount?: number;
   newContactsCount?: number;
+  newCompaniesCount?: number;
   companyReviewCount?: number;
+  contactReviewCount?: number;
   dataHygieneCount?: number;
 }) {
   const canEdit = user.role === Role.ADMIN || user.role === Role.EDITOR;
@@ -62,7 +66,9 @@ export function AppShell({
         activeHref={activeHref}
         inboxCount={inboxCount}
         newContactsCount={newContactsCount}
+        newCompaniesCount={newCompaniesCount}
         companyReviewCount={companyReviewCount}
+        contactReviewCount={contactReviewCount}
         dataHygieneCount={dataHygieneCount}
       />
 

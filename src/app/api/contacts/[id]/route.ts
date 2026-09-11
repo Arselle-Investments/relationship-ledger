@@ -72,6 +72,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.priorityQuarter !== undefined ? { priorityQuarter: data.priorityQuarter || null } : {}),
       ...(data.tags !== undefined ? { tags: data.tags } : {}),
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
+      ...(data.closeProbability !== undefined ? { closeProbability: data.closeProbability } : {}),
     },
     include: { owner: true, warmPath: true },
   });

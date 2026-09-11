@@ -2,12 +2,26 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FundraisingStage, User } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
-import { buildFunnelCounts, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
+import { ContactType, FundraisingStage, User } from "@prisma/client";
+import { CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
+import { ProbabilityBars } from "@/components/ProbabilityBars";
+
+// Several original tracker statuses (Second Close Prospect, Longer-Term
+// Active, Strategic Target, etc.) all collapse into the single Active
+// prospect stage — this pulls the original label back out of its preserved
+// tag so that finer-grained categorization isn't lost when a stage is
+// expanded here.
+const AREF_STATUS_TAG_PREFIX = "AREF I Status: ";
+function arefSubcategory(tags: string[]): string | null {
+  const tag = tags.find((t) => t.startsWith(AREF_STATUS_TAG_PREFIX));
+  return tag ? tag.slice(AREF_STATUS_TAG_PREFIX.length) : null;
+}
+
+type StageSortKey = "name" | "category" | "probability" | "org" | "type";
 
 export function FunnelClient({
   contacts: initialContacts,
@@ -19,10 +33,19 @@ export function FunnelClient({
   canEdit: boolean;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
-  const counts = useMemo(() => buildFunnelCounts(contacts), [contacts]);
+  const [typeFilter, setTypeFilter] = useState<ContactType | "ALL">("ALL");
+  const filteredContacts = useMemo(
+    () => (typeFilter === "ALL" ? contacts : contacts.filter((c) => c.type === typeFilter)),
+    [contacts, typeFilter]
+  );
+  const pipelineCounts = useMemo(() => buildFunnelCounts(filteredContacts, PIPELINE_STAGES), [filteredContacts]);
+  const droppedCounts = useMemo(() => buildFunnelCounts(filteredContacts, DROPPED_STAGES), [filteredContacts]);
+  const counts = useMemo(() => [...pipelineCounts, ...droppedCounts], [pipelineCounts, droppedCounts]);
   // NOT_STARTED is excluded from the scale and always drawn full — with it
   // included, its huge head-of-funnel count squashes every other stage into a
   // sliver. Every other bar still scales true-to-count against each other.
+  // The two boxes share one scale so a bar's width still means the same thing
+  // whichever box it's in.
   const maxActive = Math.max(1, ...counts.filter((c) => c.status !== FundraisingStage.NOT_STARTED).map((c) => c.count));
   const [expanded, setExpanded] = useState<Set<FundraisingStage>>(new Set());
   const [creatingListFor, setCreatingListFor] = useState<FundraisingStage | null>(null);
@@ -31,6 +54,12 @@ export function FunnelClient({
   const [selectedByStage, setSelectedByStage] = useState<Map<FundraisingStage, Set<string>>>(new Map());
   const [bulkTaskStage, setBulkTaskStage] = useState<FundraisingStage | null>(null);
   const [bulkTaskMsg, setBulkTaskMsg] = useState<string | null>(null);
+  const [bulkMoveTarget, setBulkMoveTarget] = useState<Record<string, FundraisingStage | "">>({});
+  const [bulkMoveNote, setBulkMoveNote] = useState<Record<string, string>>({});
+  const [bulkMoveProbability, setBulkMoveProbability] = useState<Record<string, number | null>>({});
+  const [bulkMoveBusy, setBulkMoveBusy] = useState<FundraisingStage | null>(null);
+  const [bulkMoveError, setBulkMoveError] = useState<string | null>(null);
+  const [sortByStage, setSortByStage] = useState<Record<string, StageSortKey>>({});
   const [stageSearch, setStageSearch] = useState("");
   const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
   const stageRefs = useRef<Map<FundraisingStage, HTMLDivElement | null>>(new Map());
@@ -51,13 +80,83 @@ export function FunnelClient({
   const matchesByStage = useMemo(() => {
     const map = new Map<FundraisingStage, ContactWithRelations[]>();
     for (const status of expanded) {
-      map.set(
-        status,
-        contacts.filter((c) => c.status === status).sort((a, b) => a.name.localeCompare(b.name))
-      );
+      const sortKey = sortByStage[status] ?? "name";
+      const rows = filteredContacts.filter((c) => c.status === status);
+      rows.sort((a, b) => {
+        if (sortKey === "probability") {
+          const diff = (b.closeProbability ?? 0) - (a.closeProbability ?? 0);
+          return diff !== 0 ? diff : a.name.localeCompare(b.name);
+        }
+        if (sortKey === "category") {
+          const ac = arefSubcategory(a.tags) ?? "";
+          const bc = arefSubcategory(b.tags) ?? "";
+          return ac === bc ? a.name.localeCompare(b.name) : ac.localeCompare(bc);
+        }
+        if (sortKey === "org") {
+          const ao = a.org ?? "";
+          const bo = b.org ?? "";
+          return ao === bo ? a.name.localeCompare(b.name) : ao.localeCompare(bo);
+        }
+        if (sortKey === "type") {
+          const at = a.agoraType ?? "";
+          const bt = b.agoraType ?? "";
+          return at === bt ? a.name.localeCompare(b.name) : at.localeCompare(bt);
+        }
+        return a.name.localeCompare(b.name);
+      });
+      map.set(status, rows);
     }
     return map;
-  }, [contacts, expanded]);
+  }, [contacts, expanded, sortByStage]);
+
+  async function updateProbability(contactId: string, next: number | null) {
+    setContacts((prev) => prev.map((c) => (c.id === contactId ? { ...c, closeProbability: next } : c)));
+    await fetch(`/api/contacts/${contactId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ closeProbability: next }),
+    });
+  }
+
+  async function moveSelectedToStage(status: FundraisingStage) {
+    const target = bulkMoveTarget[status];
+    if (!target) return;
+    setBulkMoveError(null);
+    setBulkMoveBusy(status);
+    const probability = bulkMoveProbability[status];
+    const res = await fetch("/api/contacts/bulk-status", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contactIds: Array.from(selectedFor(status)),
+        status: target,
+        note: bulkMoveNote[status] ?? "",
+        ...(target === FundraisingStage.ACTIVE_PROSPECT && probability ? { closeProbability: probability } : {}),
+      }),
+    });
+    const json = await res.json().catch(() => ({}));
+    setBulkMoveBusy(null);
+    if (!res.ok) {
+      setBulkMoveError(json.error ?? "Something went wrong.");
+      return;
+    }
+    setContacts((prev) =>
+      prev.map((c) =>
+        selectedFor(status).has(c.id)
+          ? { ...c, status: target, closeProbability: probability ?? c.closeProbability }
+          : c
+      )
+    );
+    setSelectedByStage((prev) => {
+      const next = new Map(prev);
+      next.set(status, new Set());
+      return next;
+    });
+    setBulkMoveTarget((prev) => ({ ...prev, [status]: "" }));
+    setBulkMoveNote((prev) => ({ ...prev, [status]: "" }));
+    setBulkMoveProbability((prev) => ({ ...prev, [status]: null }));
+    setBulkTaskMsg(`Moved ${json.moved} contact${json.moved === 1 ? "" : "s"} to ${FUNDRAISING_STAGE_LABELS[target]}.`);
+  }
 
   function toggleStage(status: FundraisingStage) {
     setExpanded((prev) => {
@@ -130,12 +229,242 @@ export function FunnelClient({
     }
   }
 
+  function renderStageBar(status: FundraisingStage, count: number) {
+    const widthPct = status === FundraisingStage.NOT_STARTED ? 100 : Math.max(4, Math.round((count / maxActive) * 100));
+    const color = FUNDRAISING_STAGE_COLORS[status];
+    const isOpen = expanded.has(status);
+    const matches = matchesByStage.get(status) ?? [];
+    const selected = selectedFor(status);
+    return (
+      <div
+        key={status}
+        ref={(el) => {
+          stageRefs.current.set(status, el);
+        }}
+        style={{ marginBottom: 14 }}
+      >
+        <div
+          onClick={() => toggleStage(status)}
+          style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
+        >
+          <div style={{ width: 170, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
+            {FUNDRAISING_STAGE_LABELS[status]}
+          </div>
+          <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
+            <div
+              style={{
+                width: `${widthPct}%`,
+                height: "100%",
+                background: color,
+                borderRadius: 6,
+                transition: "width .2s",
+              }}
+            />
+          </div>
+          <div style={{ width: 36, textAlign: "right", fontFamily: "'Poppins',sans-serif", fontWeight: 600, flex: "none" }}>
+            {count}
+          </div>
+        </div>
+
+        {isOpen && (
+          <div
+            style={{
+              marginTop: 10,
+              padding: 16,
+              background: "var(--paper-raised)",
+              border: "1px solid var(--line)",
+              borderRadius: 8,
+            }}
+          >
+            {canEdit && (
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
+                {createdListFor.has(status) ? (
+                  <div className="helptext" style={{ margin: 0 }}>
+                    Created. <Link href="/lists">View in Mailing Lists</Link>. It&rsquo;ll stay current as
+                    contacts move through this stage.
+                  </div>
+                ) : (
+                  <button
+                    className="btn small"
+                    onClick={() => createListForStage(status)}
+                    disabled={creatingListFor === status}
+                  >
+                    {creatingListFor === status ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
+                  </button>
+                )}
+                {selected.size > 0 && (
+                  <button className="btn small primary" onClick={() => setBulkTaskStage(status)}>
+                    Create task for {selected.size} selected
+                  </button>
+                )}
+                {selected.size > 0 && (
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }} onClick={(e) => e.stopPropagation()}>
+                    <select
+                      value={bulkMoveTarget[status] ?? ""}
+                      onChange={(e) =>
+                        setBulkMoveTarget((prev) => ({ ...prev, [status]: e.target.value as FundraisingStage }))
+                      }
+                      style={{ fontSize: 12.5 }}
+                    >
+                      <option value="">Move {selected.size} to…</option>
+                      {Object.values(FundraisingStage)
+                        .filter((s) => s !== status)
+                        .map((s) => (
+                          <option key={s} value={s}>
+                            {FUNDRAISING_STAGE_LABELS[s]}
+                          </option>
+                        ))}
+                    </select>
+                    {bulkMoveTarget[status] && bulkMoveTarget[status] !== FundraisingStage.NOT_STARTED && (
+                      <input
+                        type="text"
+                        placeholder="Note (required)"
+                        value={bulkMoveNote[status] ?? ""}
+                        onChange={(e) => setBulkMoveNote((prev) => ({ ...prev, [status]: e.target.value }))}
+                        style={{ fontSize: 12.5, width: 160 }}
+                      />
+                    )}
+                    {bulkMoveTarget[status] === FundraisingStage.ACTIVE_PROSPECT && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                        Probability
+                        <ProbabilityBars
+                          value={bulkMoveProbability[status] ?? null}
+                          canEdit
+                          onChange={(next) => setBulkMoveProbability((prev) => ({ ...prev, [status]: next }))}
+                          size="sm"
+                        />
+                      </label>
+                    )}
+                    <button
+                      className="btn small"
+                      onClick={() => moveSelectedToStage(status)}
+                      disabled={!bulkMoveTarget[status] || bulkMoveBusy === status}
+                    >
+                      {bulkMoveBusy === status ? "Moving…" : "Move"}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {bulkMoveError && <div className="error-text" style={{ marginBottom: 10 }}>{bulkMoveError}</div>}
+            {matches.length === 0 ? (
+              <div className="muted">No contacts in this stage.</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
+                  <div className="helptext" style={{ margin: 0 }}>
+                    Click a contact&rsquo;s name to see their details and correspondence
+                    {canEdit ? "; check a box to select them for a bulk action." : "."}
+                  </div>
+                  <div className="spacer" />
+                  <label style={{ fontSize: 12, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+                    Sort by
+                    <select
+                      value={sortByStage[status] ?? "name"}
+                      onChange={(e) =>
+                        setSortByStage((prev) => ({ ...prev, [status]: e.target.value as StageSortKey }))
+                      }
+                      style={{ fontSize: 12.5 }}
+                    >
+                      <option value="name">Name</option>
+                      <option value="category">Category</option>
+                      <option value="org">Organization</option>
+                      <option value="type">Investor type</option>
+                      <option value="probability">Probability</option>
+                    </select>
+                  </label>
+                </div>
+                <table>
+                  <thead>
+                    <tr>
+                      {canEdit && (
+                        <th>
+                          <input
+                            type="checkbox"
+                            checked={selected.size > 0 && selected.size === matches.length}
+                            onChange={() =>
+                              toggleAllForStage(
+                                status,
+                                matches.map((c) => c.id)
+                              )
+                            }
+                            title="Select all"
+                          />
+                        </th>
+                      )}
+                      <th>Name</th>
+                      <th>Organization</th>
+                      <th>Owner</th>
+                      <th>Investor type</th>
+                      <th>Category</th>
+                      <th>Probability</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {matches.map((c) => {
+                      const subcategory = arefSubcategory(c.tags);
+                      return (
+                        <tr key={c.id}>
+                          {canEdit && (
+                            <td onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selected.has(c.id)}
+                                onChange={() => toggleContact(status, c.id)}
+                              />
+                            </td>
+                          )}
+                          <td className="name-cell" onClick={() => setEditingContact(c)} style={{ cursor: "pointer" }}>
+                            {c.name}
+                          </td>
+                          <td>{c.org || <span className="muted">—</span>}</td>
+                          <td className="muted">{c.owner?.name || "—"}</td>
+                          <td className="muted">{c.agoraType || "—"}</td>
+                          <td>
+                            {subcategory ? (
+                              <span className="tag">{subcategory}</span>
+                            ) : (
+                              <span className="muted">—</span>
+                            )}
+                          </td>
+                          <td>
+                            <ProbabilityBars
+                              value={c.closeProbability}
+                              canEdit={canEdit}
+                              onChange={(next) => updateProbability(c.id, next)}
+                            />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <div className="toolbar">
         <div className="eyebrow" style={{ fontSize: 11.5 }}>
           Click a stage to see which contacts sit there
         </div>
+        <div className="spacer" />
+        <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+          Filter by investor type
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "ALL")}>
+            <option value="ALL">All types</option>
+            {Object.values(ContactType).map((t) => (
+              <option key={t} value={t}>
+                {CONTACT_TYPE_LABELS[t]}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div className="card" style={{ padding: 16, marginBottom: 16 }}>
@@ -205,137 +534,15 @@ export function FunnelClient({
 
       {bulkTaskMsg && <div className="helptext" style={{ marginBottom: 12 }}>{bulkTaskMsg}</div>}
 
-      <div className="card" style={{ padding: 22 }}>
-        {counts.map(({ status, count }) => {
-          const widthPct =
-            status === FundraisingStage.NOT_STARTED ? 100 : Math.max(4, Math.round((count / maxActive) * 100));
-          const color = FUNDRAISING_STAGE_COLORS[status];
-          const isOpen = expanded.has(status);
-          const matches = matchesByStage.get(status) ?? [];
-          const selected = selectedFor(status);
-          return (
-            <div
-              key={status}
-              ref={(el) => {
-                stageRefs.current.set(status, el);
-              }}
-              style={{ marginBottom: 14 }}
-            >
-              <div
-                onClick={() => toggleStage(status)}
-                style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
-              >
-                <div style={{ width: 170, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
-                  {FUNDRAISING_STAGE_LABELS[status]}
-                </div>
-                <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
-                  <div
-                    style={{
-                      width: `${widthPct}%`,
-                      height: "100%",
-                      background: color,
-                      borderRadius: 6,
-                      transition: "width .2s",
-                    }}
-                  />
-                </div>
-                <div style={{ width: 36, textAlign: "right", fontFamily: "'Poppins',sans-serif", fontWeight: 600, flex: "none" }}>
-                  {count}
-                </div>
-              </div>
+      <div className="card" style={{ padding: 22, marginBottom: 16 }}>
+        {pipelineCounts.map(({ status, count }) => renderStageBar(status, count))}
+      </div>
 
-              {isOpen && (
-                <div
-                  style={{
-                    marginTop: 10,
-                    padding: 16,
-                    background: "var(--paper-raised)",
-                    border: "1px solid var(--line)",
-                    borderRadius: 8,
-                  }}
-                >
-                  {canEdit && (
-                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14, flexWrap: "wrap" }}>
-                      {createdListFor.has(status) ? (
-                        <div className="helptext" style={{ margin: 0 }}>
-                          Created. <Link href="/lists">View in Mailing Lists</Link>. It&rsquo;ll stay current as
-                          contacts move through this stage.
-                        </div>
-                      ) : (
-                        <button
-                          className="btn small"
-                          onClick={() => createListForStage(status)}
-                          disabled={creatingListFor === status}
-                        >
-                          {creatingListFor === status ? "Creating…" : "Create auto-refreshing mailing list from this stage"}
-                        </button>
-                      )}
-                      {selected.size > 0 && (
-                        <button className="btn small primary" onClick={() => setBulkTaskStage(status)}>
-                          Create task for {selected.size} selected
-                        </button>
-                      )}
-                    </div>
-                  )}
-                  {matches.length === 0 ? (
-                    <div className="muted">No contacts in this stage.</div>
-                  ) : (
-                    <>
-                      <div className="helptext" style={{ marginBottom: 8 }}>
-                        Click a contact&rsquo;s name to see their details and correspondence
-                        {canEdit ? "; check a box to select them for a bulk task." : "."}
-                      </div>
-                      <table>
-                        <thead>
-                          <tr>
-                            {canEdit && (
-                              <th>
-                                <input
-                                  type="checkbox"
-                                  checked={selected.size > 0 && selected.size === matches.length}
-                                  onChange={() =>
-                                    toggleAllForStage(
-                                      status,
-                                      matches.map((c) => c.id)
-                                    )
-                                  }
-                                  title="Select all"
-                                />
-                              </th>
-                            )}
-                            <th>Name</th>
-                            <th>Organization</th>
-                            <th>Owner</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {matches.map((c) => (
-                            <tr key={c.id}>
-                              {canEdit && (
-                                <td onClick={(e) => e.stopPropagation()}>
-                                  <input
-                                    type="checkbox"
-                                    checked={selected.has(c.id)}
-                                    onChange={() => toggleContact(status, c.id)}
-                                  />
-                                </td>
-                              )}
-                              <td className="name-cell" onClick={() => setEditingContact(c)} style={{ cursor: "pointer" }}>
-                                {c.name}
-                              </td>
-                              <td>{c.org || <span className="muted">—</span>}</td>
-                              <td className="muted">{c.owner?.name || "—"}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <div className="eyebrow" style={{ fontSize: 11.5, marginBottom: 8 }}>
+        Fund II prospects &amp; drop-offs
+      </div>
+      <div className="card" style={{ padding: 22 }}>
+        {droppedCounts.map(({ status, count }) => renderStageBar(status, count))}
       </div>
 
       {editingContact && (

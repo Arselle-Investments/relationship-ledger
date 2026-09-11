@@ -17,6 +17,7 @@ export const contactInputSchema = z.object({
   priorityQuarter: z.string().trim().optional().nullable(),
   tags: z.array(z.string().trim()).default([]),
   notes: z.string().optional().default(""),
+  closeProbability: z.number().int().min(1).max(5).optional().nullable(),
 });
 
 export type ContactInput = z.infer<typeof contactInputSchema>;

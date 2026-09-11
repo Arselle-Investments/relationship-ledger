@@ -21,4 +21,5 @@ export type ContactFormValues = {
   priorityQuarter: string;
   tags: string; // comma-separated in the form, split on submit
   notes: string;
+  closeProbability: number | null;
 };

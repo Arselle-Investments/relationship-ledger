@@ -47,6 +47,7 @@ export default async function CompanyReviewPage() {
       <CompanyReviewClient
         initialClusters={clusters}
         allCompanies={companies}
+        dismissedKeys={Array.from(dismissedKeys)}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

@@ -11,7 +11,9 @@ export default async function AgoraSyncPage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const pendingCount = await prisma.contact.count({ where: { agoraExportedAt: null } });
-  const companyPendingCount = await prisma.company.count({ where: { agoraExportedAt: null } });
+  const companyPendingCount = await prisma.company.count({
+    where: { agoraExportedAt: null, NOT: { sources: { hasSome: ["Agora Contact Export", "Agora Org Export"] } } },
+  });
 
   return (
     <AppShell activeHref="/agora-sync" user={user}>
