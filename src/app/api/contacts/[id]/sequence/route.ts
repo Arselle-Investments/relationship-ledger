@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const updated = await prisma.contact.update({
     where: { id },
     data: { activeSequence },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
   return NextResponse.json({ contact: updated });
 }
@@ -62,7 +62,7 @@ export async function PATCH(_req: NextRequest, { params }: { params: Promise<{ i
   const updated = await prisma.contact.update({
     where: { id },
     data: { activeSequence: updatedSequence, lastContact: new Date(today) },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
   return NextResponse.json({ contact: updated });
 }
@@ -77,7 +77,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const updated = await prisma.contact.update({
     where: { id },
     data: { activeSequence: Prisma.JsonNull },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
   return NextResponse.json({ contact: updated });
 }

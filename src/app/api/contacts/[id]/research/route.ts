@@ -31,7 +31,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
       researchNews: research.news,
       researchUpdatedAt: new Date(),
     },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
 
   return NextResponse.json({ contact });

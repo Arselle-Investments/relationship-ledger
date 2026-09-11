@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const contact = await prisma.contact.findUnique({
     where: { id },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
   if (!contact) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
   return NextResponse.json({ contact });
@@ -74,7 +74,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
       ...(data.closeProbability !== undefined ? { closeProbability: data.closeProbability } : {}),
     },
-    include: { owner: true, warmPath: true },
+    include: { owner: true, warmPath: true, company: true },
   });
 
   if (data.status !== undefined && data.status !== existing.status) {

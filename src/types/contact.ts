@@ -1,8 +1,12 @@
-import { Contact, ContactTier, ContactType, FundraisingStage, User } from "@prisma/client";
+import { Company, Contact, ContactTier, ContactType, FundraisingStage, User } from "@prisma/client";
 
 export type ContactWithRelations = Contact & {
   owner: User | null;
   warmPath: User | null;
+  // Only populated by queries that explicitly include it (Contacts and
+  // Companies pages, where a linked company matters); every other caller of
+  // this shared type still works without fetching a join it doesn't need.
+  company?: Company | null;
 };
 
 export type ContactFormValues = {

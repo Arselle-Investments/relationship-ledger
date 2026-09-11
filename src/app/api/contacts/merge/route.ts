@@ -170,6 +170,6 @@ export async function POST(req: NextRequest) {
     await tx.contact.deleteMany({ where: { id: { in: secondaryIds } } });
   });
 
-  const merged = await prisma.contact.findUnique({ where: { id: primaryId }, include: { owner: true, warmPath: true } });
+  const merged = await prisma.contact.findUnique({ where: { id: primaryId }, include: { owner: true, warmPath: true, company: true } });
   return NextResponse.json({ contact: merged });
 }

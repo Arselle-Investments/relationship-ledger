@@ -12,7 +12,7 @@ export default async function ContactsPage() {
 
   const [contacts, team] = await Promise.all([
     prisma.contact.findMany({
-      include: { owner: true, warmPath: true },
+      include: { owner: true, warmPath: true, company: true },
       orderBy: { name: "asc" },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
