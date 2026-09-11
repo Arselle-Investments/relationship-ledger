@@ -3,8 +3,8 @@ import { prisma } from "@/lib/prisma";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
 import { inboundMessageSchema } from "@/lib/correspondence-schema";
-import { isStaffEmail } from "@/lib/staff-emails";
-import { extractEmailFromText, isRealContactEmail } from "@/lib/email-extract";
+import { isStaffEmail, isStaffName } from "@/lib/staff-emails";
+import { extractEmailFromText, guessNameFromEmail, guessOrgFromEmail, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -57,11 +57,26 @@ export async function POST(req: NextRequest) {
     extracted.email = null;
     extracted.name = null;
   }
+  // A staff member's own name can slip through even when the email the model
+  // (or header) landed on isn't theirs — e.g. a quoted "From: Aaron Greeno"
+  // line in a forwarded thread. Never accept one of our own as "the contact."
+  if (isStaffName(extracted.name)) {
+    extracted.name = null;
+  }
   // The model sometimes finds a name but misses the email even when one's
   // sitting right in the message (a signature block, a quoted reply) — a
   // plain regex scan catches those cases the AI extraction didn't.
   if (!extracted.email) {
     extracted.email = extractEmailFromText(data.bodyText);
+  }
+  // Best-effort fill-ins from the email itself when nothing else supplied a
+  // name/org — better than leaving a new-contact suggestion with a blank
+  // name and a real email sitting right next to it.
+  if (!extracted.name && extracted.email) {
+    extracted.name = guessNameFromEmail(extracted.email);
+  }
+  if (!extracted.org && extracted.email) {
+    extracted.org = guessOrgFromEmail(extracted.email);
   }
 
   let contactId: string | null = null;

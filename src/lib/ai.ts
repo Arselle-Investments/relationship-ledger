@@ -34,13 +34,30 @@ const EXTRACT_TOOL = {
   input_schema: {
     type: "object" as const,
     properties: {
-      name: { type: ["string", "null"], description: "Sender's full name, or null if not determinable." },
-      email: { type: ["string", "null"], description: "Sender's email address, or null if not present." },
-      org: { type: ["string", "null"], description: "Sender's organization/company, or null if not determinable." },
+      name: { type: ["string", "null"], description: "Sender's full name, or null if not determinable. Never the literal word \"unknown\" — use null instead." },
+      email: { type: ["string", "null"], description: "Sender's email address, or null if not present. Never the literal word \"unknown\" — use null instead." },
+      org: {
+        type: ["string", "null"],
+        description:
+          "Sender's own organization/company, or null if not determinable. Never Arselle Investments (or any name/variant for our own firm) — that's whoever forwarded the message, not the sender's org. Never the literal word \"unknown\" — use null instead.",
+      },
     },
     required: ["name", "email", "org"],
   },
 };
+
+// Guards against the two failure modes seen in practice: the model returning
+// the literal word "unknown" instead of null, and (for a forwarded internal
+// email) returning our own firm's name as the external sender's org, since
+// "Arselle Investments" is usually just what's in the email signature of
+// whoever forwarded it, not the actual sender's employer.
+const JUNK_VALUE_RE = /^unknown$|^n\/?a$/i;
+const OWN_FIRM_RE = /arselle/i;
+
+function sanitizeExtracted(value: string | null): string | null {
+  if (!value || JUNK_VALUE_RE.test(value.trim())) return null;
+  return value;
+}
 
 /**
  * Reads an inbound message (subject + body, typically a forwarded email) and
@@ -58,7 +75,7 @@ export async function extractContactFromMessage(subject: string, bodyText: strin
     messages: [
       {
         role: "user",
-        content: `This is a message forwarded into a shared team inbox. Identify the EXTERNAL sender (not anyone at our own company) — their name, email, and organization if mentioned. If this is a reply chain, use the most recent external sender.\n\nSubject: ${subject}\n\nBody:\n${bodyText.slice(0, 8000)}`,
+        content: `This is a message forwarded into a shared team inbox. Identify the EXTERNAL sender (not anyone at our own company, Arselle Investments) — their name, email, and organization if mentioned. If this is a reply chain, use the most recent external sender. Never return "Arselle Investments" as the org — that's our own firm, not theirs. If a field genuinely can't be determined, use null, never the word "unknown".\n\nSubject: ${subject}\n\nBody:\n${bodyText.slice(0, 8000)}`,
       },
     ],
   });
@@ -68,10 +85,11 @@ export async function extractContactFromMessage(subject: string, bodyText: strin
     return { name: null, email: null, org: null };
   }
   const input = toolUse.input as ExtractedContact;
+  const org = sanitizeExtracted(input.org || null);
   return {
-    name: input.name || null,
-    email: input.email || null,
-    org: input.org || null,
+    name: sanitizeExtracted(input.name || null),
+    email: sanitizeExtracted(input.email || null),
+    org: org && OWN_FIRM_RE.test(org) ? null : org,
   };
 }
 

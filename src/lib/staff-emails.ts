@@ -12,3 +12,13 @@ export const STAFF_EMAILS = new Set(DEV_TEAM.map((m) => m.email.toLowerCase()));
 export function isStaffEmail(email: string | null | undefined): boolean {
   return !!email && STAFF_EMAILS.has(email.toLowerCase());
 }
+
+// Same guard, by name instead of email — a forwarded thread's visible names
+// are sometimes ours even when the address the AI/header-parser landed on
+// isn't (a team member's display name on an internal note, a reply-all cc),
+// so a staff name is never accepted as "the contact" either.
+const STAFF_NAMES = new Set(DEV_TEAM.map((m) => m.name.toLowerCase()));
+
+export function isStaffName(name: string | null | undefined): boolean {
+  return !!name && STAFF_NAMES.has(name.trim().toLowerCase());
+}

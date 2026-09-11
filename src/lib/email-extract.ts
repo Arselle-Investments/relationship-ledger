@@ -63,3 +63,39 @@ export function guessNameFromEmail(email: string): string | null {
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
   return `${cap(first)} ${cap(last)}`;
 }
+
+// Personal/free email providers a domain-derived org guess would be nonsense
+// for ("gmail.com" isn't anyone's employer) — kept short and well-known
+// rather than exhaustive, since the failure mode of missing one is just a
+// blank org, not a wrong one.
+const PERSONAL_EMAIL_DOMAINS = new Set([
+  "gmail.com",
+  "yahoo.com",
+  "hotmail.com",
+  "outlook.com",
+  "aol.com",
+  "icloud.com",
+  "me.com",
+  "live.com",
+  "msn.com",
+  "comcast.net",
+  "protonmail.com",
+  "ymail.com",
+]);
+
+/**
+ * Best-effort "name@stepstonegroup.com" -> "Stepstonegroup" guess for when a
+ * message gives no org at all — the domain is at least a real signal, even
+ * an imperfectly capitalized one a human can clean up. Skips personal email
+ * providers (see PERSONAL_EMAIL_DOMAINS) and multi-part domains under a
+ * shared registrar suffix (co.uk, com.au, etc.) rather than guess wrong.
+ */
+export function guessOrgFromEmail(email: string): string | null {
+  const domain = email.split("@")[1]?.toLowerCase();
+  if (!domain || PERSONAL_EMAIL_DOMAINS.has(domain)) return null;
+  const parts = domain.split(".");
+  if (parts.length < 2) return null;
+  const name = parts[0];
+  if (name.length < 3) return null;
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}

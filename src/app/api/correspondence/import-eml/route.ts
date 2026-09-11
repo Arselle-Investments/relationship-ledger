@@ -4,8 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { extractContactFromMessage } from "@/lib/ai";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
-import { isStaffEmail } from "@/lib/staff-emails";
-import { extractEmailFromText, isRealContactEmail } from "@/lib/email-extract";
+import { isStaffEmail, isStaffName } from "@/lib/staff-emails";
+import { extractEmailFromText, guessNameFromEmail, guessOrgFromEmail, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
 import { CorrespondenceStatus } from "@prisma/client";
@@ -85,6 +85,9 @@ export async function POST(req: NextRequest) {
         headerEmail = null;
         headerName = null;
       }
+      if (isStaffName(headerName)) {
+        headerName = null;
+      }
 
       // A confident header-based match means there's nothing left for AI to
       // add — org is already on file for an existing contact, and identity
@@ -117,6 +120,9 @@ export async function POST(req: NextRequest) {
           extractedEmail = null;
           extractedName = null;
         }
+        if (isStaffName(extractedName)) {
+          extractedName = null;
+        }
         if (!extractedEmail) {
           extractedEmail = extractEmailFromText(bodyText);
         }
@@ -128,6 +134,18 @@ export async function POST(req: NextRequest) {
         }
         if (!contactId && extractedName && extractedName !== headerName) {
           contactId = await findContactByNameFallback(extractedName);
+        }
+        // Best-effort fill-ins from the email itself when nothing else
+        // supplied a name/org — better than a suggested contact with a
+        // blank name sitting right next to a real email address.
+        if (!extractedName && extractedEmail) {
+          extractedName = guessNameFromEmail(extractedEmail);
+          if (!contactId && extractedName) {
+            contactId = await findContactByNameFallback(extractedName);
+          }
+        }
+        if (!extractedOrg && extractedEmail) {
+          extractedOrg = guessOrgFromEmail(extractedEmail);
         }
       }
 
