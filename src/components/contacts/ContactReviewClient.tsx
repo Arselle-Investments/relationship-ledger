@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Contact, User } from "@prisma/client";
 import { clusterByFuzzyName, groupKeyFor } from "@/lib/contact-dedupe";
 import { MergePreviewModal, PreviewField } from "@/components/MergePreviewModal";
+import { contactSourceLabel } from "@/lib/contact-source";
 
 type ContactWithCounts = Contact & {
   owner: User | null;
@@ -329,6 +330,7 @@ export function ContactReviewClient({
                     <th>Organization</th>
                     <th>Email</th>
                     <th>Owner</th>
+                    <th>Source</th>
                     <th>Tags</th>
                     <th>Tasks</th>
                     <th>Correspondence</th>
@@ -351,6 +353,7 @@ export function ContactReviewClient({
                       <td className="muted">{c.org || "—"}</td>
                       <td className="muted">{c.email || "—"}</td>
                       <td className="muted">{c.owner?.name || "—"}</td>
+                      <td className="muted">{contactSourceLabel(c)}</td>
                       <td className="muted">{c.tags.length}</td>
                       <td className="muted">{c._count.tasks}</td>
                       <td className="muted">{c._count.correspondence}</td>

@@ -239,6 +239,7 @@ export function CompanyReviewClient({
                   <tr>
                     <th></th>
                     <th>Company</th>
+                    <th>Source</th>
                     <th>Contacts</th>
                     <th>Deal feedback</th>
                     <th>Deals sent</th>
@@ -265,6 +266,7 @@ export function CompanyReviewClient({
                           </span>
                         )}
                       </td>
+                      <td className="muted">{c.sources.length > 0 ? c.sources.join(", ") : "—"}</td>
                       <td className="muted">{c._count.contacts}</td>
                       <td className="muted">{c._count.feedback}</td>
                       <td className="muted">{c._count.outreach}</td>
