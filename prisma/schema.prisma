@@ -524,6 +524,25 @@ model MailingList {
   updatedAt DateTime @updatedAt
 }
 
+// A record of "who's received this" — a letter, a deck, a case study, a
+// portal invite, whatever Agora already tracks as a contact tag. Distinct
+// from MailingList: a Mailing List is an outreach tool for sending
+// something; a Deliverable is a lookback report over what's already gone
+// out, which is what data due diligence actually needs to check. A contact
+// counts as having received a deliverable if any one of tagMatches appears
+// as a substring of one of their tags (case-insensitive) — a list rather
+// than a single string because Agora's own tag wording for the same real
+// deliverable has drifted more than once (e.g. "Hiawatha Recipient" vs.
+// "Received Hiawatha Email 2026").
+model Deliverable {
+  id         String   @id @default(cuid())
+  name       String
+  tagMatches String[] @default([])
+  notes      String?  @default("")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
 enum ConferenceType {
   CONFERENCE
   NETWORKING

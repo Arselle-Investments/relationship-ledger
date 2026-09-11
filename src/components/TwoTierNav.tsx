@@ -92,6 +92,7 @@ const SECTIONS: SectionDef[] = [
       { href: "/contacts", label: "Contacts" },
       { href: "/companies", label: "Companies" },
       { href: "/lists", label: "Mailing Lists" },
+      { href: "/deliverables", label: "Deliverables" },
     ],
   },
   {
