@@ -63,8 +63,8 @@ export function AgoraTemplateSection({
       <div className="helptext" style={{ marginBottom: 14 }}>
         Every contact export above is built from this column list. When Agora adds or renames a custom field,
         upload their latest template file here — every export immediately picks up the new column layout, no
-        code change or deploy needed. A brand-new column shows up in the file right away; it's just sent blank
-        until someone maps it to a real value here in the Ledger.
+        code change or deploy needed. A brand-new column shows up in the file right away; it&rsquo;s just sent
+        blank until someone maps it to a real value here in the Ledger.
       </div>
 
       <div style={{ fontSize: 12.5, marginBottom: 10 }}>
