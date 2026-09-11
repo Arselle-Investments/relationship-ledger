@@ -12,6 +12,13 @@ function isBlankAgoraValue(value: unknown): boolean {
 // prospect at all.
 const AREF_TAG_RE = /^AREF I |^Invited to AREF Fund/i;
 
+// Applied by a human reviewer (the Bianca cleanup pass) to a contact that
+// otherwise would have shown up as a fund prospect by default — e.g.
+// progressed past Not Started, but the "progress" wasn't really fund
+// engagement (an internal/mistaken contact, a deal-only relationship, etc).
+// This always wins over any positive signal below.
+const EXCLUDED_TAG = "Not a Fund Prospect";
+
 /**
  * Whether there's real evidence this contact is an AREF I fund prospect —
  * a recordContext explicitly marking them FUND, Agora's own "AREF I
@@ -50,6 +57,7 @@ export function isDealOnlySignal(contact: Pick<Contact, "recordContexts">): bool
 export function belongsInFundFunnel(
   contact: Pick<Contact, "recordContexts" | "tags" | "agoraRaw" | "status">
 ): boolean {
+  if (contact.tags.includes(EXCLUDED_TAG)) return false;
   if (isDealOnlySignal(contact)) return false;
   if (contact.status === "NOT_STARTED" && !hasFundSignal(contact)) return false;
   return true;
