@@ -243,15 +243,44 @@ model Company {
   // comment. Null means no signal either way.
   recordContext RecordContext?
 
+  // The AREF I Prospects funnel stage for this company itself (family
+  // offices, RIAs, etc. tracked as a firm rather than through one person) —
+  // separate from any individual fund-side contact's own status. Only
+  // meaningful when recordContext is FUND. Backfilled once from the
+  // fundraising tracker's "Engagement Status" column and, where a linked
+  // contact was already further along, rolled up to match that contact one
+  // time; from then on the company and its contacts move independently, so
+  // this never auto-syncs again.
+  status FundraisingStage @default(NOT_STARTED)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  contacts Contact[]
-  feedback DealFeedback[]
-  outreach DealOutreach[]
+  contacts     Contact[]
+  feedback     DealFeedback[]
+  outreach     DealOutreach[]
+  stageChanges CompanyStatusChange[]
 
   @@index([name])
   @@index([recordContext])
+  @@index([status])
+}
+
+// Same audit trail as ContactStatusChange, but for a company's own funnel
+// stage — see Company.status.
+model CompanyStatusChange {
+  id            String            @id @default(cuid())
+  companyId     String
+  company       Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  fromStatus    FundraisingStage?
+  toStatus      FundraisingStage
+  note          String
+  source        StageChangeSource @default(MANUAL)
+  changedByName String?
+  createdAt     DateTime          @default(now())
+
+  @@index([companyId])
+  @@index([toStatus])
 }
 
 enum DealStatus {

@@ -11,8 +11,9 @@ export default async function FunnelPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, team, settings] = await Promise.all([
+  const [contacts, companies, team, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.company.findMany({ where: { recordContext: "FUND" }, include: { contacts: true } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     getSettings(),
   ]);
@@ -21,6 +22,7 @@ export default async function FunnelPage() {
     <AppShell activeHref="/funnel" user={user}>
       <FunnelClient
         contacts={contacts}
+        companies={companies}
         team={team}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
         stageLabelOverrides={settings.funnelStageLabels as Partial<Record<FundraisingStage, string>> | null}

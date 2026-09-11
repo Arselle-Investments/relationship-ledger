@@ -2,10 +2,11 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FundraisingStage, User } from "@prisma/client";
+import { Company, Contact, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { belongsInFundFunnel } from "@/lib/fund-signal";
+import { belongsInCompanyFundFunnel } from "@/lib/company-fund-signal";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -23,14 +24,30 @@ function arefSubcategory(tags: string[]): string | null {
 }
 
 type StageSortKey = "name" | "category" | "probability" | "org" | "type";
+type FundCompany = Company & { contacts: Contact[] };
+type KindFilter = "ALL" | "CONTACT" | "COMPANY" | "ADVISOR";
+
+function isAdvisorContact(c: ContactWithRelations): boolean {
+  return c.agoraType === "Advisor" || c.type === "BROKER_ADVISOR";
+}
+function isAdvisorCompany(co: FundCompany): boolean {
+  return co.type === "BROKER_ADVISOR";
+}
+// A company's own contacts include deal-side people too — only the ones that
+// also read as fund prospects belong nested under the company here.
+function companyFundContacts(co: FundCompany): Contact[] {
+  return co.contacts.filter(belongsInFundFunnel);
+}
 
 export function FunnelClient({
   contacts: initialContacts,
+  companies,
   team,
   canEdit,
   stageLabelOverrides,
 }: {
   contacts: ContactWithRelations[];
+  companies: FundCompany[];
   team: User[];
   canEdit: boolean;
   stageLabelOverrides?: Partial<Record<FundraisingStage, string>> | null;
@@ -38,7 +55,9 @@ export function FunnelClient({
   const [contacts, setContacts] = useState(initialContacts);
   const labels = useMemo(() => mergeStageLabels(stageLabelOverrides), [stageLabelOverrides]);
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
+  const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
   const [showAllContacts, setShowAllContacts] = useState(false);
+  const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const contactTypes = useMemo(
     () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
     [contacts]
@@ -50,8 +69,31 @@ export function FunnelClient({
     () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => c.agoraType === typeFilter)),
     [scopedContacts, typeFilter]
   );
-  const pipelineCounts = useMemo(() => buildFunnelCounts(filteredContacts, PIPELINE_STAGES), [filteredContacts]);
-  const droppedCounts = useMemo(() => buildFunnelCounts(filteredContacts, DROPPED_STAGES), [filteredContacts]);
+  const fundCompanies = useMemo(() => companies.filter(belongsInCompanyFundFunnel), [companies]);
+  // A fund contact nested under a company (shown as its own row) is left out
+  // of the flat contact list in the default/company/advisor views, so they
+  // aren't counted twice — but "just contacts" shows everyone flat, company
+  // affiliation or not.
+  const nestedContactIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const co of fundCompanies) for (const c of companyFundContacts(co)) ids.add(c.id);
+    return ids;
+  }, [fundCompanies]);
+  const finalContacts = useMemo(() => {
+    if (kindFilter === "COMPANY") return [];
+    let base = filteredContacts;
+    if (kindFilter === "ADVISOR") base = base.filter(isAdvisorContact);
+    if (kindFilter !== "CONTACT") base = base.filter((c) => !nestedContactIds.has(c.id));
+    return base;
+  }, [filteredContacts, kindFilter, nestedContactIds]);
+  const finalCompanies = useMemo(() => {
+    if (kindFilter === "CONTACT") return [];
+    if (kindFilter === "ADVISOR") return fundCompanies.filter(isAdvisorCompany);
+    return fundCompanies;
+  }, [fundCompanies, kindFilter]);
+  const combinedRows = useMemo(() => [...finalContacts, ...finalCompanies], [finalContacts, finalCompanies]);
+  const pipelineCounts = useMemo(() => buildFunnelCounts(combinedRows, PIPELINE_STAGES), [combinedRows]);
+  const droppedCounts = useMemo(() => buildFunnelCounts(combinedRows, DROPPED_STAGES), [combinedRows]);
   const counts = useMemo(() => [...pipelineCounts, ...droppedCounts], [pipelineCounts, droppedCounts]);
   // NOT_STARTED is excluded from the scale and always drawn full — with it
   // included, its huge head-of-funnel count squashes every other stage into a
@@ -89,11 +131,31 @@ export function FunnelClient({
     });
   }
 
+  const companyMatchesByStage = useMemo(() => {
+    const map = new Map<FundraisingStage, FundCompany[]>();
+    for (const status of expanded) {
+      map.set(
+        status,
+        finalCompanies.filter((co) => co.status === status).sort((a, b) => a.name.localeCompare(b.name))
+      );
+    }
+    return map;
+  }, [finalCompanies, expanded]);
+
+  function toggleCompanyExpanded(id: string) {
+    setExpandedCompanies((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   const matchesByStage = useMemo(() => {
     const map = new Map<FundraisingStage, ContactWithRelations[]>();
     for (const status of expanded) {
       const sortKey = sortByStage[status] ?? "name";
-      const rows = filteredContacts.filter((c) => c.status === status);
+      const rows = finalContacts.filter((c) => c.status === status);
       rows.sort((a, b) => {
         if (sortKey === "probability") {
           const diff = (b.closeProbability ?? 0) - (a.closeProbability ?? 0);
@@ -119,7 +181,7 @@ export function FunnelClient({
       map.set(status, rows);
     }
     return map;
-  }, [contacts, expanded, sortByStage]);
+  }, [finalContacts, expanded, sortByStage]);
 
   async function updateProbability(contactId: string, next: number | null) {
     setContacts((prev) => prev.map((c) => (c.id === contactId ? { ...c, closeProbability: next } : c)));
@@ -246,6 +308,7 @@ export function FunnelClient({
     const color = FUNDRAISING_STAGE_COLORS[status];
     const isOpen = expanded.has(status);
     const matches = matchesByStage.get(status) ?? [];
+    const companyMatches = companyMatchesByStage.get(status) ?? [];
     const selected = selectedFor(status);
     return (
       <div
@@ -359,9 +422,82 @@ export function FunnelClient({
               </div>
             )}
             {bulkMoveError && <div className="error-text" style={{ marginBottom: 10 }}>{bulkMoveError}</div>}
-            {matches.length === 0 ? (
-              <div className="muted">No contacts in this stage.</div>
-            ) : (
+            {companyMatches.length > 0 && (
+              <div style={{ marginBottom: matches.length > 0 ? 16 : 0 }}>
+                {companyMatches.map((co) => {
+                  const nested = companyFundContacts(co);
+                  const isCoOpen = expandedCompanies.has(co.id);
+                  return (
+                    <div
+                      key={co.id}
+                      className="card"
+                      style={{ padding: "10px 14px", marginBottom: 8, background: "var(--paper)" }}
+                    >
+                      <div
+                        onClick={() => nested.length > 0 && toggleCompanyExpanded(co.id)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                          cursor: nested.length > 0 ? "pointer" : "default",
+                        }}
+                      >
+                        <span style={{ fontWeight: 600, fontSize: 13.5 }}>{co.name}</span>
+                        <span className="tag">Company</span>
+                        {isAdvisorCompany(co) && <span className="tag">Advisor</span>}
+                        <div className="spacer" />
+                        {nested.length > 0 && (
+                          <span className="muted" style={{ fontSize: 12 }}>
+                            {isCoOpen ? "▲" : "▼"} {nested.length} contact{nested.length === 1 ? "" : "s"}
+                          </span>
+                        )}
+                      </div>
+                      {isCoOpen && nested.length > 0 && (
+                        <table style={{ marginTop: 10 }}>
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Stage</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {nested.map((c) => (
+                              <tr key={c.id}>
+                                <td
+                                  className="name-cell"
+                                  style={{ cursor: "pointer" }}
+                                  onClick={() => setEditingContact(contacts.find((x) => x.id === c.id) ?? null)}
+                                >
+                                  {c.name}
+                                </td>
+                                <td>
+                                  <span
+                                    style={{
+                                      display: "inline-block",
+                                      fontSize: 11.5,
+                                      fontWeight: 700,
+                                      padding: "2px 9px",
+                                      borderRadius: 20,
+                                      background: FUNDRAISING_STAGE_COLORS[c.status],
+                                      color: fundraisingStageTextColor(c.status),
+                                    }}
+                                  >
+                                    {labels[c.status]}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {matches.length === 0 && companyMatches.length === 0 ? (
+              <div className="muted">Nothing in this stage.</div>
+            ) : matches.length === 0 ? null : (
               <>
                 <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, flexWrap: "wrap" }}>
                   <div className="helptext" style={{ margin: 0 }}>
@@ -479,6 +615,15 @@ export function FunnelClient({
                 {t}
               </option>
             ))}
+          </select>
+        </label>
+        <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
+          Show
+          <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as KindFilter)}>
+            <option value="ALL">Contacts &amp; companies</option>
+            <option value="CONTACT">Just contacts</option>
+            <option value="COMPANY">Just companies</option>
+            <option value="ADVISOR">Just advisors</option>
           </select>
         </label>
       </div>

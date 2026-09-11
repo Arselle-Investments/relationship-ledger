@@ -1,5 +1,4 @@
 import { FundraisingStage } from "@prisma/client";
-import { ContactWithRelations } from "@/types/contact";
 
 // The fundraising pipeline order shown in Fund Raise -> Funnel, split into two
 // visual groups. PIPELINE_STAGES is the live, forward-moving funnel — Committed
@@ -61,13 +60,13 @@ export function fundraisingStageTextColor(status: FundraisingStage): string {
   return DARK_STAGES.has(status) ? "#FFFFFF" : "var(--ink)";
 }
 
-export function buildFunnelCounts(
-  contacts: ContactWithRelations[],
+export function buildFunnelCounts<T extends { status: FundraisingStage }>(
+  items: T[],
   stages: FundraisingStage[] = FUNDRAISING_STAGES
 ): { status: FundraisingStage; count: number }[] {
   return stages.map((status) => ({
     status,
-    count: contacts.filter((c) => c.status === status).length,
+    count: items.filter((c) => c.status === status).length,
   }));
 }
 
