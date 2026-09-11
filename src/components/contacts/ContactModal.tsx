@@ -269,7 +269,7 @@ export function ContactModal({
             <>
               {hasJobTitle && <ViewField label="Job title" value={jobTitle} />}
               {values.org && <ViewField label="Organization" value={values.org} />}
-              <ViewField label="Type" value={CONTACT_TYPE_LABELS[values.type]} />
+              <ViewField label="General Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
               {values.status === FundraisingStage.ACTIVE_PROSPECT && (
@@ -309,7 +309,7 @@ export function ContactModal({
               </div>
               <div className="field-row">
                 <div className="field">
-                  <label>Type</label>
+                  <label>General Type</label>
                   <select value={values.type} onChange={(e) => set("type", e.target.value as ContactType)} disabled={!canEdit}>
                     {TYPE_OPTIONS.map((t) => (
                       <option key={t} value={t}>

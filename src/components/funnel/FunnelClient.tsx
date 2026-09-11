@@ -372,7 +372,7 @@ export function FunnelClient({
                       <option value="name">Name</option>
                       <option value="category">Category</option>
                       <option value="org">Organization</option>
-                      <option value="type">Investor type</option>
+                      <option value="type">Contact Type</option>
                       <option value="probability">Probability</option>
                     </select>
                   </label>
@@ -398,7 +398,7 @@ export function FunnelClient({
                       <th>Name</th>
                       <th>Organization</th>
                       <th>Owner</th>
-                      <th>Investor type</th>
+                      <th>Contact Type</th>
                       <th>Category</th>
                       <th>Probability</th>
                     </tr>
@@ -458,9 +458,9 @@ export function FunnelClient({
         </div>
         <div className="spacer" />
         <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
-          Filter by investor type
+          Filter by general type
           <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value as ContactType | "ALL")}>
-            <option value="ALL">All types</option>
+            <option value="ALL">All general types</option>
             {Object.values(ContactType).map((t) => (
               <option key={t} value={t}>
                 {CONTACT_TYPE_LABELS[t]}

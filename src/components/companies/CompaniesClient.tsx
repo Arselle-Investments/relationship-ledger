@@ -99,7 +99,11 @@ export function CompaniesClient({
   const groups = useMemo(() => {
     const contactsByOrgKey = new Map<string, ContactWithRelations[]>();
     for (const c of contacts) {
-      const org = c.org?.trim();
+      // A linked company record is the source of truth for where this
+      // contact belongs — falling back to the free-text org only when no
+      // link exists keeps contacts grouped correctly even after a company
+      // rename/merge leaves the contact's own org string stale.
+      const org = (c.company?.name ?? c.org)?.trim();
       if (!org) continue;
       const key = org.toLowerCase();
       if (!contactsByOrgKey.has(key)) contactsByOrgKey.set(key, []);
@@ -450,7 +454,7 @@ export function CompaniesClient({
                 <thead>
                   <tr>
                     <th>Name</th>
-                    <th>Type</th>
+                    <th>Contact Type</th>
                     <th>Location</th>
                     <th>Owner</th>
                   </tr>

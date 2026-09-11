@@ -64,7 +64,7 @@ export function ContactsClient({
       if (commitmentMin !== null && (c.commitmentLow == null || c.commitmentLow < commitmentMin)) return false;
       if (commitmentMax !== null && (c.commitmentHigh == null || c.commitmentHigh > commitmentMax)) return false;
       if (q) {
-        const haystack = [c.name, c.org ?? "", c.primaryLocation ?? "", c.agoraType ?? "", ...(c.tags ?? [])]
+        const haystack = [c.name, c.org ?? "", c.company?.name ?? "", c.primaryLocation ?? "", c.agoraType ?? "", ...(c.tags ?? [])]
           .join(" ")
           .toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -119,12 +119,12 @@ export function ContactsClient({
       <div className="toolbar">
         <input
           type="text"
-          placeholder="Search name, org, tag..."
+          placeholder="Search name, company, tag..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-          <option value="">All types</option>
+          <option value="">All general types</option>
           {Object.values(ContactType).map((t) => (
             <option key={t} value={t}>
               {CONTACT_TYPE_LABELS[t]}
@@ -148,7 +148,7 @@ export function ContactsClient({
           ))}
         </select>
         <select value={agoraTypeFilter} onChange={(e) => setAgoraTypeFilter(e.target.value)}>
-          <option value="">All Agora types</option>
+          <option value="">All contact types</option>
           {agoraTypes.map((t) => (
             <option key={t} value={t}>
               {t}
@@ -196,7 +196,7 @@ export function ContactsClient({
             <tr>
               <th>Name</th>
               <th>Organization</th>
-              <th>Type</th>
+              <th>Contact Type</th>
               <th>Fund/Deal</th>
               <th>Location</th>
               <th>Owner</th>

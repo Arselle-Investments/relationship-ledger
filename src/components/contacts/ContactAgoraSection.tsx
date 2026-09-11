@@ -52,7 +52,7 @@ export function ContactAgoraSection({ contact }: { contact: ContactWithRelations
       >
         Agora profile
       </label>
-      {contact.agoraType && <ViewField label="Agora type" value={contact.agoraType} />}
+      {contact.agoraType && <ViewField label="Contact Type" value={contact.agoraType} />}
       {contact.primaryLocation && <ViewField label="Primary location" value={contact.primaryLocation} />}
       {contact.staffNames.length > 0 && <ViewField label="Staff members" value={contact.staffNames.join(", ")} />}
       {(contact.commitmentLow != null || contact.commitmentHigh != null) && (
