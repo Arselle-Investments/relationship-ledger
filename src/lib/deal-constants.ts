@@ -19,6 +19,15 @@ export const DEAL_STATUS_TAG_CLASS: Record<DealStatus, string> = {
 // class lines up with the criteria capital partners are filtered by.
 export const DEAL_ASSET_CLASS_OPTIONS = ["Industrial", "Multifamily", "Retail", "Self-Storage", "Other (Write-In)"];
 
+// Starter checklist for Company.targetAssetClasses/investmentStructures/
+// investmentStrategies — every one of these is a write-in field underneath,
+// so this is only a baseline; whatever's already on file gets merged in
+// alongside it (see CompaniesClient), and any new write-in becomes a
+// selectable option for the next company too.
+export const COMPANY_ASSET_CLASS_OPTIONS = ["Industrial", "Multifamily", "Retail", "Self-Storage", "Office", "Hospitality", "Land"];
+export const COMPANY_INVESTMENT_STRUCTURE_OPTIONS = ["LP Equity", "Co-GP", "Structured Equity", "Debt Capital", "Other Strategic"];
+export const COMPANY_INVESTMENT_STRATEGY_OPTIONS = ["Core", "Core+", "Value-Add", "Opportunistic"];
+
 // Deal feedback (company/LP-level) uses the same fundraising pipeline as
 // Contact — re-exported under this name so existing deal-feedback callers
 // read naturally, without implying it's a separate vocabulary. PASSED_OPEN is

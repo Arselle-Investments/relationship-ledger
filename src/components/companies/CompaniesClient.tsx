@@ -4,12 +4,19 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, RecordContext, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
-import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
+import {
+  FEEDBACK_STATUS_LABELS,
+  FEEDBACK_STATUS_TAG_CLASS,
+  COMPANY_ASSET_CLASS_OPTIONS,
+  COMPANY_INVESTMENT_STRUCTURE_OPTIONS,
+  COMPANY_INVESTMENT_STRATEGY_OPTIONS,
+} from "@/lib/deal-constants";
 import { RECORD_CONTEXT_LABELS, RECORD_CONTEXT_TAG_CLASS } from "@/lib/record-context";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { ViewField } from "@/components/contacts/ViewField";
 import { TaskModal } from "@/components/tasks/TaskModal";
+import { MultiSelectWriteIn } from "@/components/MultiSelectWriteIn";
 import {
   CompaniesFilterModal,
   CompanyAdvancedFilters,
@@ -100,6 +107,22 @@ export function CompaniesClient({
   const investmentStrategies = useMemo(
     () => Array.from(new Set(companies.flatMap((c) => c.investmentStrategies))).sort(),
     [companies]
+  );
+
+  // Baseline checklist options for the editable multi-selects, merged with
+  // whatever's already on file so a prior write-in shows up as a normal
+  // checkbox for every company after that, not just the one it was typed on.
+  const assetClassOptions = useMemo(
+    () => Array.from(new Set([...COMPANY_ASSET_CLASS_OPTIONS, ...assetClasses])).sort(),
+    [assetClasses]
+  );
+  const investmentStructureOptions = useMemo(
+    () => Array.from(new Set([...COMPANY_INVESTMENT_STRUCTURE_OPTIONS, ...investmentStructures])).sort(),
+    [investmentStructures]
+  );
+  const investmentStrategyOptions = useMemo(
+    () => Array.from(new Set([...COMPANY_INVESTMENT_STRATEGY_OPTIONS, ...investmentStrategies])).sort(),
+    [investmentStrategies]
   );
   const allTags = useMemo(() => Array.from(new Set(companies.flatMap((c) => c.tags))).sort(), [companies]);
   const priorityQuarters = useMemo(
@@ -518,43 +541,31 @@ export function CompaniesClient({
                     <div className="field-row" style={{ marginBottom: 16 }}>
                       <div className="field">
                         <label>Asset classes</label>
-                        <input
-                          placeholder="e.g. Industrial, Multifamily, Retail"
-                          defaultValue={activeCompany.targetAssetClasses.join(", ")}
+                        <MultiSelectWriteIn
+                          options={assetClassOptions}
+                          selected={activeCompany.targetAssetClasses}
                           disabled={!canEdit}
-                          onBlur={(e) =>
-                            patchCompany(activeCompany.id, {
-                              targetAssetClasses: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
-                            })
-                          }
+                          onChange={(next) => patchCompany(activeCompany.id, { targetAssetClasses: next })}
                         />
                       </div>
                       <div className="field">
                         <label>Investment structures</label>
-                        <input
-                          placeholder="e.g. LP Equity, Co-GP, Debt Capital"
-                          defaultValue={activeCompany.investmentStructures.join(", ")}
+                        <MultiSelectWriteIn
+                          options={investmentStructureOptions}
+                          selected={activeCompany.investmentStructures}
                           disabled={!canEdit}
-                          onBlur={(e) =>
-                            patchCompany(activeCompany.id, {
-                              investmentStructures: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
-                            })
-                          }
+                          onChange={(next) => patchCompany(activeCompany.id, { investmentStructures: next })}
                         />
                       </div>
                     </div>
                     <div className="field-row" style={{ marginBottom: 16 }}>
                       <div className="field">
                         <label>Investment strategy</label>
-                        <input
-                          placeholder="e.g. Core, Core+, Value-Add / Opp"
-                          defaultValue={activeCompany.investmentStrategies.join(", ")}
+                        <MultiSelectWriteIn
+                          options={investmentStrategyOptions}
+                          selected={activeCompany.investmentStrategies}
                           disabled={!canEdit}
-                          onBlur={(e) =>
-                            patchCompany(activeCompany.id, {
-                              investmentStrategies: e.target.value.split(",").map((v) => v.trim()).filter(Boolean),
-                            })
-                          }
+                          onChange={(next) => patchCompany(activeCompany.id, { investmentStrategies: next })}
                         />
                       </div>
                       <div className="field">
