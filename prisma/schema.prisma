@@ -420,6 +420,7 @@ model CapitalSource {
 enum StageChangeSource {
   MANUAL // a person changed the status directly
   AI_SUGGESTED // a person confirmed an AI-proposed stage change from correspondence
+  AI_AUTO_APPLIED // Settings > Auto-apply AI stage suggestions was on, so no one confirmed it
 }
 
 // One row per status transition, so the funnel/pipeline view can show movement
@@ -622,6 +623,16 @@ model Settings {
   defaultCadenceDays Int    @default(14)
   staleDays          Int    @default(45)
   stuckDays          Int    @default(30)
+  // When on, a correspondence's AI-classified stage suggestion is applied to
+  // the linked contact/consultant/capital source immediately instead of
+  // waiting for a human to confirm it from the Inbox. Off by default — see
+  // maybeCreateStageSuggestion in stage-signal.ts.
+  autoApplyStageSuggestions Boolean @default(false)
+  // Partial<Record<FundraisingStage, string>> — team-chosen display-label
+  // overrides for the Funnel view's stage names (e.g. renaming "Fund II
+  // Prospects" back to something else) without touching code. Null/missing
+  // key means "use the built-in default" (FUNDRAISING_STAGE_LABELS).
+  funnelStageLabels Json?
 }
 
 model SequenceTemplate {

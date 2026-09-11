@@ -8,6 +8,8 @@ import { SequenceTemplatesSection } from "./SequenceTemplatesSection";
 import { ContactImportSection } from "./ContactImportSection";
 import { AgoraReplaceSection } from "./AgoraReplaceSection";
 import { DangerZoneSection } from "./DangerZoneSection";
+import { AiAutomationSection } from "./AiAutomationSection";
+import { FunnelStageLabelsSection } from "./FunnelStageLabelsSection";
 
 export function SettingsClient({
   initialSettings,
@@ -27,6 +29,8 @@ export function SettingsClient({
   return (
     <div>
       <CadenceSection settings={initialSettings} canEdit={canEdit} />
+      <FunnelStageLabelsSection settings={initialSettings} canEdit={canEdit} />
+      <AiAutomationSection settings={initialSettings} canEdit={canEdit} />
       <TeamRolesSection initialTeam={initialTeam} currentUserId={currentUserId} isAdmin={isAdmin} />
       <SequenceTemplatesSection initialTemplates={initialTemplates} canEdit={canEdit} />
       {canEdit && <ContactImportSection />}

@@ -188,6 +188,9 @@ export function ActivityTimeline({
                       {entry.data.source === "AI_SUGGESTED" && (
                         <span className="tag forest">AI-confirmed</span>
                       )}
+                      {entry.data.source === "AI_AUTO_APPLIED" && (
+                        <span className="tag brass">Auto-applied</span>
+                      )}
                     </span>
                   </div>
                   {entry.data.note && <div className="timeline-body">{entry.data.note}</div>}

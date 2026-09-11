@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
-import { recordStageChange } from "@/lib/stage-history";
-import { validateStatusNoteRule } from "@/lib/contact-schema";
+import { applyStageSuggestion } from "@/lib/apply-stage-suggestion";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { FundraisingStage, SuggestionState, StageChangeSource } from "@prisma/client";
 
@@ -35,37 +34,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const overrideStatus: FundraisingStage | undefined =
     body.status && Object.values(FundraisingStage).includes(body.status) ? body.status : undefined;
   const nextStatus = overrideStatus || correspondence.suggestedStatus;
-  const rationaleNote = () =>
+  const note =
     overrideStatus && overrideStatus !== correspondence.suggestedStatus
       ? `Set to ${FUNDRAISING_STAGE_LABELS[overrideStatus]} when reviewing this correspondence (AI had suggested ${FUNDRAISING_STAGE_LABELS[correspondence.suggestedStatus!]}). ${correspondence.suggestionRationale ?? ""}`.trim()
-      : correspondence.suggestionRationale || "Confirmed from AI-suggested correspondence.";
+      : undefined;
 
-  if (correspondence.contactId) {
-    const contact = await prisma.contact.findUnique({ where: { id: correspondence.contactId } });
-    if (!contact) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
-
-    const note = rationaleNote();
-    const noteError = validateStatusNoteRule({ previousStatus: contact.status, nextStatus, notes: note });
-    if (noteError) return NextResponse.json({ error: noteError }, { status: 400 });
-
-    await prisma.contact.update({ where: { id: contact.id }, data: { status: nextStatus, notes: note } });
-    await recordStageChange({
-      contactId: contact.id,
-      fromStatus: contact.status,
-      toStatus: nextStatus,
-      note,
-      changedByName: actingUser.name,
-      source: StageChangeSource.AI_SUGGESTED,
-    });
-  } else if (correspondence.consultantId) {
-    const consultant = await prisma.consultant.findUnique({ where: { id: correspondence.consultantId } });
-    if (!consultant) return NextResponse.json({ error: "Consultant not found." }, { status: 404 });
-    await prisma.consultant.update({ where: { id: consultant.id }, data: { outreachStatus: nextStatus } });
-  } else if (correspondence.capitalSourceId) {
-    const capitalSource = await prisma.capitalSource.findUnique({ where: { id: correspondence.capitalSourceId } });
-    if (!capitalSource) return NextResponse.json({ error: "Capital source not found." }, { status: 404 });
-    await prisma.capitalSource.update({ where: { id: capitalSource.id }, data: { outreachStatus: nextStatus } });
-  }
+  const result = await applyStageSuggestion({
+    correspondence,
+    status: nextStatus,
+    changedByName: actingUser.name,
+    source: StageChangeSource.AI_SUGGESTED,
+    note,
+  });
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: 400 });
 
   const updated = await prisma.correspondence.update({
     where: { id },

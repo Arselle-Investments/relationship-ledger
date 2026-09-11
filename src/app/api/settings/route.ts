@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { getSettings, updateSettings } from "@/lib/settings";
+import { FundraisingStage } from "@prisma/client";
 
 export async function GET() {
   try {
@@ -17,6 +18,8 @@ const schema = z.object({
   defaultCadenceDays: z.number().int().positive().optional(),
   staleDays: z.number().int().positive().optional(),
   stuckDays: z.number().int().positive().optional(),
+  autoApplyStageSuggestions: z.boolean().optional(),
+  funnelStageLabels: z.record(z.enum(Object.values(FundraisingStage) as [string, ...string[]]), z.string()).optional(),
 });
 
 export async function PATCH(req: NextRequest) {

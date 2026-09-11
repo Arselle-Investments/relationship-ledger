@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { classifyStageSignal } from "@/lib/ai";
 import { getRecentStageHistorySummary } from "@/lib/stage-history";
-import { Correspondence, SuggestionState } from "@prisma/client";
+import { getSettings } from "@/lib/settings";
+import { applyStageSuggestion } from "@/lib/apply-stage-suggestion";
+import { Correspondence, StageChangeSource, SuggestionState } from "@prisma/client";
 
 /**
  * Runs stage classification for one piece of correspondence already linked to
@@ -61,12 +63,37 @@ export async function maybeCreateStageSuggestion(params: {
 
   if (!signal.suggestedStatus) return null;
 
-  return prisma.correspondence.update({
+  const correspondence = await prisma.correspondence.update({
     where: { id: params.correspondenceId },
     data: {
       suggestedStatus: signal.suggestedStatus,
       suggestionRationale: signal.rationale,
       suggestionState: SuggestionState.PENDING,
     },
+  });
+
+  const settings = await getSettings();
+  if (!settings.autoApplyStageSuggestions) return correspondence;
+
+  // Settings > Auto-apply AI stage suggestions is on — skip the human
+  // confirmation step and apply it immediately. Still recorded as its own
+  // StageChangeSource so the activity timeline is honest that no one actually
+  // reviewed this one.
+  const result = await applyStageSuggestion({
+    correspondence,
+    status: signal.suggestedStatus,
+    changedByName: null,
+    source: StageChangeSource.AI_AUTO_APPLIED,
+  });
+  if ("error" in result) {
+    // The usual cause is validateStatusNoteRule requiring a note the AI
+    // rationale didn't clear — leave it PENDING for a human instead of
+    // silently dropping the suggestion.
+    return correspondence;
+  }
+
+  return prisma.correspondence.update({
+    where: { id: params.correspondenceId },
+    data: { suggestionState: SuggestionState.CONFIRMED },
   });
 }

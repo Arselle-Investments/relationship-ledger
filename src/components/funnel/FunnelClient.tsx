@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ContactType, FundraisingStage, User } from "@prisma/client";
-import { CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { CONTACT_TYPE_LABELS, mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
@@ -27,12 +27,15 @@ export function FunnelClient({
   contacts: initialContacts,
   team,
   canEdit,
+  stageLabelOverrides,
 }: {
   contacts: ContactWithRelations[];
   team: User[];
   canEdit: boolean;
+  stageLabelOverrides?: Partial<Record<FundraisingStage, string>> | null;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
+  const labels = useMemo(() => mergeStageLabels(stageLabelOverrides), [stageLabelOverrides]);
   const [typeFilter, setTypeFilter] = useState<ContactType | "ALL">("ALL");
   const filteredContacts = useMemo(
     () => (typeFilter === "ALL" ? contacts : contacts.filter((c) => c.type === typeFilter)),
@@ -155,7 +158,7 @@ export function FunnelClient({
     setBulkMoveTarget((prev) => ({ ...prev, [status]: "" }));
     setBulkMoveNote((prev) => ({ ...prev, [status]: "" }));
     setBulkMoveProbability((prev) => ({ ...prev, [status]: null }));
-    setBulkTaskMsg(`Moved ${json.moved} contact${json.moved === 1 ? "" : "s"} to ${FUNDRAISING_STAGE_LABELS[target]}.`);
+    setBulkTaskMsg(`Moved ${json.moved} contact${json.moved === 1 ? "" : "s"} to ${labels[target]}.`);
   }
 
   function toggleStage(status: FundraisingStage) {
@@ -217,8 +220,8 @@ export function FunnelClient({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: `${FUNDRAISING_STAGE_LABELS[status]} (auto-refreshing)`,
-        description: `Contacts currently in "${FUNDRAISING_STAGE_LABELS[status]}". Created from the Funnel view; refreshes automatically as stages change.`,
+        name: `${labels[status]} (auto-refreshing)`,
+        description: `Contacts currently in "${labels[status]}". Created from the Funnel view; refreshes automatically as stages change.`,
         mode: "DYNAMIC",
         filterStatus: status,
       }),
@@ -248,7 +251,7 @@ export function FunnelClient({
           style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
         >
           <div style={{ width: 170, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
-            {FUNDRAISING_STAGE_LABELS[status]}
+            {labels[status]}
           </div>
           <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
             <div
@@ -311,7 +314,7 @@ export function FunnelClient({
                         .filter((s) => s !== status)
                         .map((s) => (
                           <option key={s} value={s}>
-                            {FUNDRAISING_STAGE_LABELS[s]}
+                            {labels[s]}
                           </option>
                         ))}
                     </select>
@@ -514,7 +517,7 @@ export function FunnelClient({
                 color: fundraisingStageTextColor(lookupContact.status),
               }}
             >
-              {FUNDRAISING_STAGE_LABELS[lookupContact.status]}
+              {labels[lookupContact.status]}
             </span>
             <button className="btn small" onClick={() => jumpToStage(lookupContact.status)}>
               Jump to this stage

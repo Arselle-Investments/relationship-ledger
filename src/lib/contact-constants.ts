@@ -55,6 +55,22 @@ export const FUNDRAISING_STAGE_SHORT_LABELS: Partial<Record<FundraisingStage, st
 
 export const ACTIVE_OUTREACH_STAGES: FundraisingStage[] = [FundraisingStage.OUTREACH_SENT];
 
+// Merges Settings.funnelStageLabels (team-chosen renames, edited from
+// Settings > Funnel stages) onto the built-in defaults — an override is only
+// used where it's a non-empty string, so clearing a row's input in the
+// Settings UI falls back to the default rather than showing a blank label.
+export function mergeStageLabels(
+  overrides: Partial<Record<FundraisingStage, string>> | null | undefined
+): Record<FundraisingStage, string> {
+  if (!overrides) return FUNDRAISING_STAGE_LABELS;
+  const merged = { ...FUNDRAISING_STAGE_LABELS };
+  for (const key of Object.keys(overrides) as FundraisingStage[]) {
+    const value = overrides[key];
+    if (value && value.trim()) merged[key] = value.trim();
+  }
+  return merged;
+}
+
 function invert<T extends string>(labels: Record<T, string>): Record<string, T> {
   const out: Record<string, T> = {};
   for (const key in labels) {
