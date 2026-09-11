@@ -22,8 +22,9 @@ const AGORA_SOURCES = ["Agora Contact Export", "Agora Org Export"];
  * Optional ?days=N narrows this to companies added in the last N days.
  */
 export async function POST(req: NextRequest) {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     throw e;
@@ -79,17 +80,30 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const fileName = `arselle-new-companies-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-  await prisma.company.updateMany({
-    where: { id: { in: companies.map((c) => c.id) } },
-    data: { agoraExportedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.company.updateMany({
+      where: { id: { in: companies.map((c) => c.id) } },
+      data: { agoraExportedAt: new Date() },
+    }),
+    prisma.agoraExportLog.create({
+      data: {
+        kind: "companies-new",
+        fileName,
+        fileData: buffer,
+        recordCount: companies.length,
+        createdById: actingUser.id,
+        createdByName: actingUser.name,
+      },
+    }),
+  ]);
 
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="arselle-new-companies-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${fileName}"`,
     },
   });
 }

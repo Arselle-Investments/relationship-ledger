@@ -30,6 +30,7 @@ model User {
   warmPathFor    Contact[] @relation("ContactWarmPath")
   travelPlans    Travel[]
   editLogEntries EditLogEntry[]
+  agoraExportLogs AgoraExportLog[]
 }
 
 model Account {
@@ -685,4 +686,24 @@ model EditLogEntry {
 
   @@index([entityType, entityId])
   @@index([createdAt])
+}
+
+// One row per Agora export actually downloaded (new contacts, new companies,
+// or a changes batch) — the file itself is kept (not just a record that an
+// export happened) so "Redownload" hands back the exact bytes someone
+// already sent Agora, for comparison, rather than a freshly regenerated file
+// that could now differ from what was actually imported.
+model AgoraExportLog {
+  id            String   @id @default(cuid())
+  kind          String // "contacts-new" | "contacts-changes" | "companies-new"
+  fileName      String
+  fileData      Bytes
+  recordCount   Int
+  skippedCount  Int      @default(0) // e.g. contacts held back for missing/placeholder email
+  createdById   String?
+  createdBy     User?    @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  createdByName String?
+  createdAt     DateTime @default(now())
+
+  @@index([kind, createdAt])
 }

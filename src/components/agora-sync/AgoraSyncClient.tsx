@@ -3,17 +3,21 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { VerifyAgoraModal } from "./VerifyAgoraModal";
+import { ExportLogEntry, ExportLogTable } from "./ExportLogTable";
 
 export function AgoraSyncClient({
   pendingCount,
   companyPendingCount,
+  initialExportLogs,
   canEdit,
 }: {
   pendingCount: number;
   companyPendingCount: number;
+  initialExportLogs: ExportLogEntry[];
   canEdit: boolean;
 }) {
   const router = useRouter();
+  const [exportLogs, setExportLogs] = useState(initialExportLogs);
   const [exportDays, setExportDays] = useState("");
   const [exporting, setExporting] = useState(false);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
@@ -25,12 +29,21 @@ export function AgoraSyncClient({
   const [verifyFile, setVerifyFile] = useState<File | null>(null);
   const verifyFileInputRef = useRef<HTMLInputElement>(null);
 
+  async function refreshLogs() {
+    const res = await fetch("/api/agora-export-log");
+    if (res.ok) {
+      const json = await res.json();
+      setExportLogs(json.logs);
+    }
+  }
+
   async function downloadExport(url: string, filenamePrefix: string) {
     const res = await fetch(url, { method: "POST" });
     if (!res.ok) {
       const json = await res.json().catch(() => ({}));
       return { ok: false as const, error: json.error ?? "Something went wrong." };
     }
+    const skippedNoEmail = Number(res.headers.get("X-Skipped-No-Email") ?? "0");
     const blob = await res.blob();
     const objectUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -40,7 +53,7 @@ export function AgoraSyncClient({
     a.click();
     a.remove();
     URL.revokeObjectURL(objectUrl);
-    return { ok: true as const };
+    return { ok: true as const, skippedNoEmail };
   }
 
   async function handleExport() {
@@ -49,8 +62,17 @@ export function AgoraSyncClient({
     const url = exportDays ? `/api/contacts/export-new-for-agora?days=${exportDays}` : "/api/contacts/export-new-for-agora";
     const result = await downloadExport(url, "arselle-new-contacts-for-agora");
     setExporting(false);
-    setExportMsg(result.ok ? "Exported and marked as sent to Agora." : result.error);
-    if (result.ok) router.refresh();
+    setExportMsg(
+      result.ok
+        ? `Exported and marked as sent to Agora.${
+            result.skippedNoEmail ? ` ${result.skippedNoEmail} held back for missing/placeholder email — see Data Hygiene.` : ""
+          }`
+        : result.error
+    );
+    if (result.ok) {
+      router.refresh();
+      refreshLogs();
+    }
   }
 
   async function handleCompanyExport() {
@@ -62,7 +84,10 @@ export function AgoraSyncClient({
     const result = await downloadExport(url, "arselle-new-companies-for-agora");
     setCompanyExporting(false);
     setCompanyExportMsg(result.ok ? "Exported and marked as sent to Agora." : result.error);
-    if (result.ok) router.refresh();
+    if (result.ok) {
+      router.refresh();
+      refreshLogs();
+    }
   }
 
   async function handleChangesExport() {
@@ -71,7 +96,10 @@ export function AgoraSyncClient({
     const result = await downloadExport("/api/contacts/export-changes-for-agora", "arselle-contact-changes-for-agora");
     setChangesExporting(false);
     setChangesExportMsg(result.ok ? "Exported. Re-run any time to pick up what's changed since." : result.error);
-    if (result.ok) router.refresh();
+    if (result.ok) {
+      router.refresh();
+      refreshLogs();
+    }
   }
 
   if (!canEdit) {
@@ -178,6 +206,16 @@ export function AgoraSyncClient({
         <button className="btn" onClick={() => verifyFileInputRef.current?.click()}>
           Verify against Agora
         </button>
+      </div>
+
+      <div className="card" style={{ padding: 20, marginTop: 20 }}>
+        <h3 style={{ marginBottom: 6 }}>Export log</h3>
+        <div className="helptext" style={{ marginBottom: 14 }}>
+          Every Agora export actually downloaded from here, most recent first — who ran it, when, and how many
+          records. Redownload hands back the exact file that was sent, for comparison, even if records have
+          changed since.
+        </div>
+        <ExportLogTable logs={exportLogs} />
       </div>
 
       {verifyFile && (

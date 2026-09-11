@@ -14,12 +14,26 @@ export default async function AgoraSyncPage() {
   const companyPendingCount = await prisma.company.count({
     where: { agoraExportedAt: null, NOT: { sources: { hasSome: ["Agora Contact Export", "Agora Org Export"] } } },
   });
+  const exportLogs = await prisma.agoraExportLog.findMany({
+    select: {
+      id: true,
+      kind: true,
+      fileName: true,
+      recordCount: true,
+      skippedCount: true,
+      createdByName: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 100,
+  });
 
   return (
     <AppShell activeHref="/agora-sync" user={user}>
       <AgoraSyncClient
         pendingCount={pendingCount}
         companyPendingCount={companyPendingCount}
+        initialExportLogs={exportLogs}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

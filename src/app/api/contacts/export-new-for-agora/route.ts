@@ -2,24 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
-import { FUNDRAISING_STAGE_LABELS, CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
-import { safeCell } from "@/lib/excel-safety";
+import { hasRealEmailForAgora } from "@/lib/followups";
+import { AGORA_TEMPLATE_HEADERS, buildAgoraContactRow } from "@/lib/agora-export-template";
 
 /**
  * Exports every contact added here since the last time this ran (whether
- * created manually or confirmed from the Inbox), for hand-import into Agora
- * to keep it the source of truth. Marks them exported so re-running this
- * later only ever picks up what's genuinely new — never re-sends the same
- * contact twice. Column headers are a placeholder using our own field names;
- * expect to adjust these once we see Agora's actual expected import format.
+ * created manually or confirmed from the Inbox), formatted to match Agora's
+ * own "Import/Update Contacts" template exactly (see agora-export-template.ts)
+ * so the file drops straight into their importer. Marks everything actually
+ * included as exported, so re-running this later only ever picks up what's
+ * genuinely new.
+ *
+ * Agora requires a real email on every imported contact — anyone with no
+ * email, or one of our historical "needemail@..." placeholders, is held back
+ * from the file entirely (and stays "pending" rather than getting marked
+ * exported) so they don't silently get skipped or Agora-rejected without a
+ * paper trail. They already surface in Data Quality -> Data Hygiene under
+ * "No email on file" / "Placeholder email" for the team to fix.
  *
  * Optional ?days=N narrows this to contacts added in the last N days —
  * useful for sending Agora a manageable, recent batch rather than
  * everything that's ever accumulated since the last export.
  */
 export async function POST(req: NextRequest) {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     throw e;
@@ -31,62 +39,62 @@ export async function POST(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({
     where: { agoraExportedAt: null, ...(since ? { createdAt: { gte: since } } : {}) },
-    include: { owner: true, warmPath: true },
+    include: { company: true },
     orderBy: { createdAt: "asc" },
   });
 
-  if (contacts.length === 0) {
+  const exportable = contacts.filter((c) => hasRealEmailForAgora(c.email));
+  const skipped = contacts.length - exportable.length;
+
+  if (exportable.length === 0) {
     return NextResponse.json(
-      { error: since ? "No new contacts in that window." : "No new contacts since the last Agora export." },
+      {
+        error:
+          contacts.length === 0
+            ? since
+              ? "No new contacts in that window."
+              : "No new contacts since the last Agora export."
+            : `${contacts.length} contact${contacts.length === 1 ? "" : "s"} pending, but none have a real email on file — see Data Hygiene.`,
+      },
       { status: 400 }
     );
   }
 
   const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet("New Contacts");
-  sheet.columns = [
-    { header: "Name", key: "name", width: 24 },
-    { header: "Organization", key: "org", width: 26 },
-    { header: "Type", key: "type", width: 18 },
-    { header: "Tier", key: "tier", width: 10 },
-    { header: "Status", key: "status", width: 18 },
-    { header: "Owner", key: "owner", width: 20 },
-    { header: "Email", key: "email", width: 26 },
-    { header: "Phone", key: "phone", width: 16 },
-    { header: "City", key: "city", width: 18 },
-    { header: "Tags", key: "tags", width: 24 },
-    { header: "Notes", key: "notes", width: 40 },
-    { header: "Added to Ledger", key: "createdAt", width: 16 },
-  ];
+  const sheet = workbook.addWorksheet("Template");
+  sheet.addRow([...AGORA_TEMPLATE_HEADERS]);
   sheet.getRow(1).font = { bold: true };
-  for (const c of contacts) {
-    sheet.addRow({
-      name: safeCell(c.name),
-      org: safeCell(c.org ?? ""),
-      type: CONTACT_TYPE_LABELS[c.type],
-      tier: CONTACT_TIER_LABELS[c.tier],
-      status: FUNDRAISING_STAGE_LABELS[c.status],
-      owner: safeCell(c.owner?.name ?? ""),
-      email: safeCell(c.email ?? ""),
-      phone: safeCell(c.phone ?? ""),
-      city: safeCell(c.city ?? ""),
-      tags: safeCell((c.tags ?? []).join(", ")),
-      notes: safeCell(c.notes ?? ""),
-      createdAt: c.createdAt.toISOString().slice(0, 10),
-    });
+  for (const c of exportable) {
+    sheet.addRow(buildAgoraContactRow(c, c.company));
   }
+  sheet.columns.forEach((col) => (col.width = 20));
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const fileName = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-  await prisma.contact.updateMany({
-    where: { id: { in: contacts.map((c) => c.id) } },
-    data: { agoraExportedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.contact.updateMany({
+      where: { id: { in: exportable.map((c) => c.id) } },
+      data: { agoraExportedAt: new Date() },
+    }),
+    prisma.agoraExportLog.create({
+      data: {
+        kind: "contacts-new",
+        fileName,
+        fileData: buffer,
+        recordCount: exportable.length,
+        skippedCount: skipped,
+        createdById: actingUser.id,
+        createdByName: actingUser.name,
+      },
+    }),
+  ]);
 
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${fileName}"`,
+      "X-Skipped-No-Email": String(skipped),
     },
   });
 }

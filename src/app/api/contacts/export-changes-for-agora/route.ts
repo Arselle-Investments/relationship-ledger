@@ -28,8 +28,9 @@ const FIELD_LABELS: Record<FieldKey, string> = {
  * picks up what's changed since this run.
  */
 export async function POST() {
+  let actingUser;
   try {
-    await requireEditor();
+    actingUser = await requireEditor();
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: e.status });
     throw e;
@@ -95,17 +96,30 @@ export async function POST() {
     });
   }
 
-  const buffer = await workbook.xlsx.writeBuffer();
+  const buffer = Buffer.from(await workbook.xlsx.writeBuffer());
+  const fileName = `arselle-contact-changes-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
-  await prisma.contact.updateMany({
-    where: { id: { in: toExport.map((c) => c.id) } },
-    data: { agoraChangesSyncedAt: new Date() },
-  });
+  await prisma.$transaction([
+    prisma.contact.updateMany({
+      where: { id: { in: toExport.map((c) => c.id) } },
+      data: { agoraChangesSyncedAt: new Date() },
+    }),
+    prisma.agoraExportLog.create({
+      data: {
+        kind: "contacts-changes",
+        fileName,
+        fileData: buffer,
+        recordCount: toExport.length,
+        createdById: actingUser.id,
+        createdByName: actingUser.name,
+      },
+    }),
+  ]);
 
   return new NextResponse(buffer, {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      "Content-Disposition": `attachment; filename="arselle-contact-changes-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx"`,
+      "Content-Disposition": `attachment; filename="${fileName}"`,
     },
   });
 }
