@@ -7,7 +7,6 @@ import { TeamRolesSection } from "./TeamRolesSection";
 import { SequenceTemplatesSection } from "./SequenceTemplatesSection";
 import { ContactImportSection } from "./ContactImportSection";
 import { AgoraReplaceSection } from "./AgoraReplaceSection";
-import { DangerZoneSection } from "./DangerZoneSection";
 import { AiAutomationSection } from "./AiAutomationSection";
 import { FunnelStageLabelsSection } from "./FunnelStageLabelsSection";
 
@@ -35,7 +34,6 @@ export function SettingsClient({
       <SequenceTemplatesSection initialTemplates={initialTemplates} canEdit={canEdit} />
       {canEdit && <ContactImportSection />}
       {isAdmin && <AgoraReplaceSection />}
-      {isAdmin && <DangerZoneSection />}
     </div>
   );
 }
