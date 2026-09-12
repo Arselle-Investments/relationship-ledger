@@ -1,6 +1,22 @@
 import { Company, Contact, RecordContext } from "@prisma/client";
-import { CONTACT_TIER_LABELS } from "@/lib/contact-constants";
+import { CONTACT_TIER_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { safeCell } from "@/lib/excel-safety";
+
+/**
+ * Column names for the 3 fields we've asked Agora to add (see the AREF I
+ * Stage Audit memo) — not yet part of their real template, so these are
+ * deliberately NOT in AGORA_TEMPLATE_HEADERS below (adding them there would
+ * put unrecognized columns in every export starting today). The mapping is
+ * ready now so that the moment Agora adds the field and someone uploads a
+ * revised template through Agora Sync, the column populates with a real
+ * value on the very next export instead of coming through blank.
+ */
+export const PENDING_AGORA_FIELDS = {
+  contactFunnelStage: "AREF I Funnel Stage",
+  orgRecordContexts: "Fund/Deal Classification (Organization)",
+  orgFunnelStage: "AREF I Funnel Stage (Organization)",
+} as const;
 
 /**
  * Agora's own "Import/Update Contacts" template — headers and column order
