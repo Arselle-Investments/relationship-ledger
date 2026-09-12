@@ -78,6 +78,13 @@ export const AGORA_TEMPLATE_HEADERS = [
   "AREF I Platform Case Studies sent? (Interaction Log - Deliverables Sent)",
   "AREF I Returns Bridge(s) sent? (Interaction Log - Deliverables Sent)",
   "AREF I First Close Announcement_6.22.26 (Marketing Campaigns)",
+  // Best-guess names, following the same "Add to Campaign - X (Marketing
+  // Campaigns)" pattern as the two above — added per the AREF I Stage Audit
+  // follow-up (2026-09-11). Not yet confirmed against Agora's real template;
+  // verify the exact column name there and correct if it differs.
+  "Add to Campaign - AREF I First Close Blast 6.6.26 (Marketing Campaigns)",
+  "Add to Campaign - Fund Interest (Marketing Campaigns)",
+  "Add to Campaign - Investor Communications - Email (Marketing Campaigns)",
   "Tier for Email Tracking (Marketing Campaigns)",
   "Advisory Board Member (Arselle Advisory Board Member)",
   "AREF I Prospect (Type of Prospect / Fundraising Tracking )",
@@ -185,6 +192,13 @@ export function buildAgoraContactRow(
     "AREF I Returns Bridge(s) sent? (Interaction Log - Deliverables Sent)": "",
     "AREF I First Close Announcement_6.22.26 (Marketing Campaigns)": yn(
       hasTag(tags, ["AREF I First Close Announc"])
+    ),
+    "Add to Campaign - AREF I First Close Blast 6.6.26 (Marketing Campaigns)": yn(
+      hasTag(tags, ["AREF I First Close Blast"])
+    ),
+    "Add to Campaign - Fund Interest (Marketing Campaigns)": yn(hasTag(tags, ["Fund Interest"])),
+    "Add to Campaign - Investor Communications - Email (Marketing Campaigns)": yn(
+      hasTag(tags, ["Investor Communications - Email", "Investor Communications"])
     ),
     "Tier for Email Tracking (Marketing Campaigns)": contact.emailTier != null ? String(contact.emailTier) : "",
     "Advisory Board Member (Arselle Advisory Board Member)": yn(hasTag(tags, ["Advisory Board Member"])),
