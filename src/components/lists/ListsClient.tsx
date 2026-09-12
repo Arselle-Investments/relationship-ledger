@@ -6,6 +6,7 @@ import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } fr
 import { ContactWithRelations } from "@/types/contact";
 import { MailingListWithContacts } from "@/types/mailing-list";
 import { ListModal } from "./ListModal";
+import { AddToListModal } from "./AddToListModal";
 import { UploadListSection } from "./UploadListSection";
 import { ContactsTable } from "@/components/ContactsTable";
 import { ContactModal } from "@/components/contacts/ContactModal";
@@ -58,6 +59,7 @@ export function ListsClient({
   const [lists, setLists] = useState(initialLists);
   const [contacts, setContacts] = useState(allContacts);
   const [editing, setEditing] = useState<MailingListWithContacts | null | "new">(null);
+  const [addingToList, setAddingToList] = useState(false);
   const [copyMsg, setCopyMsg] = useState<string | null>(null);
   const [contactSearch, setContactSearch] = useState("");
   const [lookupContact, setLookupContact] = useState<ContactWithRelations | null>(null);
@@ -277,6 +279,11 @@ export function ListsClient({
       <div className="toolbar">
         <div className="spacer" />
         {canEdit && (
+          <button className="btn" onClick={() => setAddingToList(true)}>
+            Add to list
+          </button>
+        )}
+        {canEdit && (
           <button className="btn primary" onClick={() => setEditing("new")}>
             Create list
           </button>
@@ -355,6 +362,16 @@ export function ListsClient({
           onClose={() => setEditing(null)}
           onSaved={upsertLocal}
           onDeleted={removeLocal}
+        />
+      )}
+
+      {addingToList && (
+        <AddToListModal
+          lists={lists}
+          allContacts={contacts}
+          onClose={() => setAddingToList(false)}
+          onUpdated={upsertLocal}
+          onContactUpdated={handleContactSaved}
         />
       )}
 
