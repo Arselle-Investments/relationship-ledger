@@ -6,6 +6,7 @@ import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } fr
 import { ContactWithRelations } from "@/types/contact";
 import { MailingListWithContacts } from "@/types/mailing-list";
 import { ListModal } from "./ListModal";
+import { UploadListSection } from "./UploadListSection";
 import { ContactsTable } from "@/components/ContactsTable";
 import { ContactModal } from "@/components/contacts/ContactModal";
 
@@ -188,6 +189,8 @@ export function ListsClient({
 
   return (
     <div>
+      {canEdit && <UploadListSection onCreated={upsertLocal} />}
+
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>
         <div style={{ fontWeight: 600, fontSize: 13.5, marginBottom: 8 }}>Search for a contact in mailing lists</div>
         <div style={{ position: "relative", maxWidth: 360 }}>

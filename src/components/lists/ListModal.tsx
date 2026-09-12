@@ -26,6 +26,7 @@ export function ListModal({
   const [description, setDescription] = useState(entry?.list.description ?? "");
   const [mode, setMode] = useState<MailingListMode>(entry?.list.mode ?? MailingListMode.STATIC);
   const [contactIds, setContactIds] = useState<Set<string>>(new Set(entry?.list.contactIds ?? []));
+  const [memberSearch, setMemberSearch] = useState("");
   const [filterType, setFilterType] = useState(entry?.list.filterType ?? "");
   const [filterTier, setFilterTier] = useState(entry?.list.filterTier ?? "");
   const [filterOwnerId, setFilterOwnerId] = useState(entry?.list.filterOwnerId ?? "");
@@ -34,14 +35,29 @@ export function ListModal({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  function toggleContact(id: string) {
+  function addContact(id: string) {
+    setContactIds((prev) => new Set(prev).add(id));
+    setMemberSearch("");
+  }
+
+  function removeContact(id: string) {
     setContactIds((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.delete(id);
       return next;
     });
   }
+
+  const selectedContacts = allContacts
+    .filter((c) => contactIds.has(c.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const memberSearchMatches =
+    memberSearch.trim().length === 0
+      ? []
+      : allContacts
+          .filter((c) => !contactIds.has(c.id) && c.name.toLowerCase().includes(memberSearch.trim().toLowerCase()))
+          .slice(0, 8);
 
   async function handleSave() {
     setError(null);
@@ -128,17 +144,65 @@ export function ListModal({
           {mode === MailingListMode.STATIC ? (
             <div className="field">
               <label>Contacts ({contactIds.size} selected)</label>
-              <div className="checkbox-list">
-                {allContacts.map((c) => (
-                  <label key={c.id}>
-                    <input
-                      type="checkbox"
-                      checked={contactIds.has(c.id)}
-                      onChange={() => toggleContact(c.id)}
-                    />
-                    {c.name} {c.org ? `(${c.org})` : ""}
-                  </label>
-                ))}
+              <div style={{ position: "relative" }}>
+                <input
+                  type="text"
+                  placeholder="Search a contact by name to add…"
+                  value={memberSearch}
+                  onChange={(e) => setMemberSearch(e.target.value)}
+                />
+                {memberSearchMatches.length > 0 && (
+                  <div
+                    className="card"
+                    style={{
+                      position: "absolute",
+                      top: "100%",
+                      left: 0,
+                      right: 0,
+                      zIndex: 5,
+                      marginTop: 4,
+                      padding: 4,
+                      maxHeight: 220,
+                      overflow: "auto",
+                    }}
+                  >
+                    {memberSearchMatches.map((c) => (
+                      <div
+                        key={c.id}
+                        className="lookup-row"
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: "7px 10px", borderRadius: 6, cursor: "pointer", fontSize: 13 }}
+                        onClick={() => addContact(c.id)}
+                      >
+                        {c.name} {c.org ? <span className="muted">({c.org})</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="checkbox-list" style={{ marginTop: 10 }}>
+                {selectedContacts.length === 0 ? (
+                  <div className="muted" style={{ fontSize: 12.5 }}>
+                    No contacts yet — search above to add some.
+                  </div>
+                ) : (
+                  selectedContacts.map((c) => (
+                    <div
+                      key={c.id}
+                      style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8, padding: "3px 0" }}
+                    >
+                      <span>
+                        {c.name} {c.org ? `(${c.org})` : ""}
+                      </span>
+                      <button
+                        type="button"
+                        className="btn small ghost"
+                        onClick={() => removeContact(c.id)}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           ) : (
