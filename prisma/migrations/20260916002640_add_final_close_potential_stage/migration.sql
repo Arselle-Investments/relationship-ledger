@@ -1,0 +1,2 @@
+-- AlterEnum
+ALTER TYPE "FundraisingStage" ADD VALUE 'FINAL_CLOSE_POTENTIAL';

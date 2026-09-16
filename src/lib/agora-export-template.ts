@@ -1,4 +1,4 @@
-import { Company, Contact, RecordContext } from "@prisma/client";
+import { Company, Contact, FundraisingStage, RecordContext } from "@prisma/client";
 import { CONTACT_TIER_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { safeCell } from "@/lib/excel-safety";
@@ -173,7 +173,10 @@ export function buildAgoraContactRow(
     Company: safeCell(company?.name ?? contact.org ?? ""),
     "Main Tax ID": "",
     "Main Tax ID Type": "",
-    "Email Marketing Preference": "",
+    // Our own hard stop maps onto Agora's real unsubscribe field — a person
+    // is either DO_NOT_CONTACT (write "Unsubscribed") or this stays blank
+    // rather than guessing at a preference we don't actually know.
+    "Email Marketing Preference": contact.status === FundraisingStage.DO_NOT_CONTACT ? "Unsubscribed" : "",
     "Receive Emails": "",
     "Low Commitment (Est.) (Interest Level)": contact.commitmentLow != null ? String(contact.commitmentLow) : "",
     "High Commitment (Est.) (Interest Level)": contact.commitmentHigh != null ? String(contact.commitmentHigh) : "",

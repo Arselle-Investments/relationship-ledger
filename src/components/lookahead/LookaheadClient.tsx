@@ -24,7 +24,11 @@ function fmtDate(d: string | Date) {
 // courted for the current raise, or already in the room on diligence — so
 // they're worth the eye jumping straight to instead of getting lost among
 // every other overdue/upcoming row.
-const HIGHLIGHT_STAGES: FundraisingStage[] = [FundraisingStage.ACTIVE_PROSPECT, FundraisingStage.DUE_DILIGENCE];
+const HIGHLIGHT_STAGES: FundraisingStage[] = [
+  FundraisingStage.ACTIVE_PROSPECT,
+  FundraisingStage.FINAL_CLOSE_POTENTIAL,
+  FundraisingStage.DUE_DILIGENCE,
+];
 function highlightRowStyle(status: FundraisingStage): React.CSSProperties | undefined {
   return HIGHLIGHT_STAGES.includes(status) ? { background: "var(--brass-bg)" } : undefined;
 }

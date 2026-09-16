@@ -15,6 +15,7 @@ export const PIPELINE_STAGES: FundraisingStage[] = [
   FundraisingStage.INITIAL_INTEREST,
   FundraisingStage.MEETING_OCCURRED,
   FundraisingStage.ACTIVE_PROSPECT,
+  FundraisingStage.FINAL_CLOSE_POTENTIAL,
   FundraisingStage.DUE_DILIGENCE,
   FundraisingStage.COMMITTED,
 ];
@@ -27,6 +28,13 @@ export const DROPPED_STAGES: FundraisingStage[] = [
 
 export const FUNDRAISING_STAGES: FundraisingStage[] = [...PIPELINE_STAGES, ...DROPPED_STAGES];
 
+// The two stages worth recording a close probability against — the general
+// courting stage and its more advanced twin. See Contact.closeProbability.
+export const PROBABILITY_ELIGIBLE_STAGES: FundraisingStage[] = [
+  FundraisingStage.ACTIVE_PROSPECT,
+  FundraisingStage.FINAL_CLOSE_POTENTIAL,
+];
+
 // Heatmap colors for the funnel bars: an even light-to-dark forest-green
 // ombre across the whole live pipeline (reusing --forest's existing
 // "good/success" meaning elsewhere in the app), lightest at Not started and
@@ -36,11 +44,12 @@ export const FUNDRAISING_STAGES: FundraisingStage[] = [...PIPELINE_STAGES, ...DR
 // reach out again."
 export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   NOT_STARTED: "#F0F5F4",
-  OUTREACH_SENT: "#CCDDDB",
-  INITIAL_INTEREST: "#A7C7C3",
-  MEETING_OCCURRED: "#81B1AB",
-  ACTIVE_PROSPECT: "#5A9C94",
-  DUE_DILIGENCE: "#417A72",
+  OUTREACH_SENT: "#D4DEDC",
+  INITIAL_INTEREST: "#B8C7C5",
+  MEETING_OCCURRED: "#9CB0AD",
+  ACTIVE_PROSPECT: "#7F9A96",
+  FINAL_CLOSE_POTENTIAL: "#63837E",
+  DUE_DILIGENCE: "#476C67",
   COMMITTED: "#2B554F",
   PASSED_OPEN: "#C7BFAE",
   PASSED_NOT_INTERESTED: "#A85A40",
@@ -49,6 +58,7 @@ export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
 
 // Stages dark enough to need white text instead of ink.
 const DARK_STAGES = new Set<FundraisingStage>([
+  FundraisingStage.FINAL_CLOSE_POTENTIAL,
   FundraisingStage.DUE_DILIGENCE,
   FundraisingStage.COMMITTED,
   FundraisingStage.PASSED_NOT_INTERESTED,

@@ -27,13 +27,14 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 // (PASSED_OPEN) via FEEDBACK_STATUS_LABELS and EM_STAGE_LABELS respectively.
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   NOT_STARTED: "Not started",
-  OUTREACH_SENT: "Outreach sent",
-  INITIAL_INTEREST: "Initial interest",
-  MEETING_OCCURRED: "Meeting occurred",
-  ACTIVE_PROSPECT: "Active prospect",
-  DUE_DILIGENCE: "Due Diligence / Dataroom",
-  COMMITTED: "Committed",
-  PASSED_OPEN: "Fund II Prospects",
+  OUTREACH_SENT: "1. Outreach sent",
+  INITIAL_INTEREST: "2. Initial interest",
+  MEETING_OCCURRED: "3. Meeting occurred",
+  ACTIVE_PROSPECT: "4a. Active prospect",
+  FINAL_CLOSE_POTENTIAL: "4b. Final close potential",
+  DUE_DILIGENCE: "5. Due Diligence / Dataroom",
+  COMMITTED: "6. Committed",
+  PASSED_OPEN: "Fund II Prospect",
   PASSED_NOT_INTERESTED: "Passed (not interested)",
   DO_NOT_CONTACT: "Do not contact",
 };
@@ -49,7 +50,7 @@ export const EM_STAGE_LABELS: Record<FundraisingStage, string> = {
 // space is tight (funnel bars, table cells) — the full label above is used
 // everywhere else (dropdowns, detail views).
 export const FUNDRAISING_STAGE_SHORT_LABELS: Partial<Record<FundraisingStage, string>> = {
-  PASSED_OPEN: "Fund II Prospects",
+  PASSED_OPEN: "Fund II Prospect",
   PASSED_NOT_INTERESTED: "Passed (no interest)",
 };
 

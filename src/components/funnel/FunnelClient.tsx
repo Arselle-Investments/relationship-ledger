@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Company, Contact, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
-import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
+import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { belongsInFundFunnel } from "@/lib/fund-signal";
 import { belongsInCompanyFundFunnel } from "@/lib/company-fund-signal";
 import { ContactWithRelations } from "@/types/contact";
@@ -205,7 +205,7 @@ export function FunnelClient({
         contactIds: Array.from(selectedFor(status)),
         status: target,
         note: bulkMoveNote[status] ?? "",
-        ...(target === FundraisingStage.ACTIVE_PROSPECT && probability ? { closeProbability: probability } : {}),
+        ...(PROBABILITY_ELIGIBLE_STAGES.includes(target) && probability ? { closeProbability: probability } : {}),
       }),
     });
     const json = await res.json().catch(() => ({}));
@@ -399,7 +399,7 @@ export function FunnelClient({
                         style={{ fontSize: 12.5, width: 160 }}
                       />
                     )}
-                    {bulkMoveTarget[status] === FundraisingStage.ACTIVE_PROSPECT && (
+                    {bulkMoveTarget[status] && PROBABILITY_ELIGIBLE_STAGES.includes(bulkMoveTarget[status]) && (
                       <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
                         Probability
                         <ProbabilityBars

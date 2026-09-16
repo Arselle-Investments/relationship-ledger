@@ -100,6 +100,7 @@ enum FundraisingStage {
   INITIAL_INTEREST
   MEETING_OCCURRED
   ACTIVE_PROSPECT // deliberate, targeted courting for a specific raise — more intentional than a general follow-up
+  FINAL_CLOSE_POTENTIAL // a real signal they intend to close soon, but not yet at the NDA/data-room threshold that defines DUE_DILIGENCE
   DUE_DILIGENCE
   COMMITTED
   PASSED_OPEN // passed on this deal, open to future ones

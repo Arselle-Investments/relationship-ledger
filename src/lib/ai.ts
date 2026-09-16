@@ -148,7 +148,8 @@ export async function classifyStageSignal(params: {
         content: `You're tracking an LP/investor's position in a fundraising pipeline. The possible stages are: ${statusList}.
 
 Important stage definitions:
-- DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's still ACTIVE_PROSPECT unless the message explicitly mentions an NDA or data room access.
+- DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's still ACTIVE_PROSPECT (or FINAL_CLOSE_POTENTIAL, see below) unless the message explicitly mentions an NDA or data room access.
+- FINAL_CLOSE_POTENTIAL is a step beyond ACTIVE_PROSPECT: use it when the message gives a real signal they intend to close soon (e.g. discussing check size, timing, or wire instructions) but nothing yet about an NDA or data room — that stronger signal is still DUE_DILIGENCE.
 - PASSED_OPEN means they declined this specific deal but remain open to future ones (a soft no).
 - PASSED_NOT_INTERESTED means a genuine, unambiguous no — not just declining one deal, but signaling they don't want to hear about future ones either.
 - DO_NOT_CONTACT is stronger than PASSED_NOT_INTERESTED — only suggest it when the message explicitly asks to stop being contacted (e.g. "please remove me from your list," "do not email me again"), not just a firm no on the fund.

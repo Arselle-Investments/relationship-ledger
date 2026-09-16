@@ -44,6 +44,7 @@ export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
   INITIAL_INTEREST: "brass",
   MEETING_OCCURRED: "brass",
   ACTIVE_PROSPECT: "brass",
+  FINAL_CLOSE_POTENTIAL: "brass",
   DUE_DILIGENCE: "brass",
   COMMITTED: "forest",
   PASSED_OPEN: "",

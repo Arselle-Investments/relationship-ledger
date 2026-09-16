@@ -7,6 +7,7 @@ import {
   CONTACT_TIER_LABELS,
   FUNDRAISING_STAGE_LABELS,
 } from "@/lib/contact-constants";
+import { PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
 import { formatAssignees } from "@/lib/task-constants";
@@ -272,7 +273,7 @@ export function ContactModal({
               <ViewField label="General Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
-              {values.status === FundraisingStage.ACTIVE_PROSPECT && (
+              {PROBABILITY_ELIGIBLE_STAGES.includes(values.status) && (
                 <ViewField
                   label="Probability"
                   value={<ProbabilityBars value={values.closeProbability} canEdit={false} onChange={() => {}} />}
@@ -339,9 +340,9 @@ export function ContactModal({
                       </option>
                     ))}
                   </select>
-                  {values.status === FundraisingStage.ACTIVE_PROSPECT && (
+                  {PROBABILITY_ELIGIBLE_STAGES.includes(values.status) && (
                     <div style={{ marginTop: 8 }}>
-                      {contact && contact.status !== FundraisingStage.ACTIVE_PROSPECT && (
+                      {contact && !PROBABILITY_ELIGIBLE_STAGES.includes(contact.status) && (
                         <div className="helptext" style={{ marginBottom: 4 }}>
                           Now an Active prospect — worth adding a probability?
                         </div>

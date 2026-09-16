@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "arselle-ledger",
-      "runtimeExecutable": "C:\\Users\\ArielaOsuna\\AppData\\Local\\nodejs-portable\\node-v22.14.0-win-x64\\node.exe",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
       "runtimeArgs": ["node_modules/next/dist/bin/next", "dev"],
       "port": 3000
+    },
+    {
+      "name": "prisma-studio",
+      "runtimeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+      "runtimeArgs": ["node_modules/prisma/build/index.js", "studio", "--browser", "none"],
+      "port": 5555
     }
   ]
 }
