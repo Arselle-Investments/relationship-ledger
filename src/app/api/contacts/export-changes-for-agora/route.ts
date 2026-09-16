@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { AGORA_TEMPLATE_HEADERS, buildAgoraContactRow } from "@/lib/agora-export-template";
+import { getAgoraListColumnMappings } from "@/lib/mailing-lists";
 import { getSettings } from "@/lib/settings";
 
 // The same fields "Import from Agora" deliberately leaves alone (see
@@ -71,13 +72,14 @@ export async function POST() {
 
   const settings = await getSettings();
   const headers = (settings.agoraContactTemplateHeaders as string[] | null) ?? AGORA_TEMPLATE_HEADERS;
+  const listMappings = await getAgoraListColumnMappings();
 
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Template");
   sheet.addRow([...headers]);
   sheet.getRow(1).font = { bold: true };
   for (const c of toExport) {
-    sheet.addRow(buildAgoraContactRow(c, c.company, headers));
+    sheet.addRow(buildAgoraContactRow(c, c.company, headers, listMappings));
   }
   sheet.columns.forEach((col) => (col.width = 20));
 

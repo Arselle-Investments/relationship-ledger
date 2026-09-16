@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Contact, Correspondence } from "@prisma/client";
+import { Contact, Correspondence, ContactType, ContactTier, MailingList } from "@prisma/client";
 import { parseSignature } from "@/lib/signature-parse";
 import { extractHighlight } from "@/lib/correspondence-highlight";
 import { extractEmailFromText, guessNameFromEmail } from "@/lib/email-extract";
+import { CONTACT_TYPE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
+
+const TYPE_OPTIONS = Object.values(ContactType);
+const TIER_OPTIONS = Object.values(ContactTier);
 
 export type ContactDraft = {
   name: string;
@@ -13,9 +17,13 @@ export type ContactDraft = {
   phone: string;
   city: string;
   title: string;
+  type: ContactType;
+  tier: ContactTier;
+  tags: string;
+  priorityQuarter: string;
 };
 
-/** How many of the six draft fields actually have something in them — used to sort "most filled-in first." */
+/** How many of the six auto-filled draft fields actually have something in them — used to sort "most filled-in first." Doesn't count the manually-added fields (type/tier/tags/priority quarter) since those are never auto-extracted from the message. */
 export function draftCompleteness(draft: ContactDraft): number {
   return [draft.name, draft.org, draft.email, draft.phone, draft.city, draft.title].filter((v) => v.trim()).length;
 }
@@ -38,12 +46,17 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     phone: signature.phone ?? "",
     city: signature.city ?? "",
     title: signature.title ?? "",
+    type: ContactType.OTHER,
+    tier: ContactTier.TIER_2,
+    tags: "",
+    priorityQuarter: "",
   };
 }
 
 function CorrespondenceCard({
   item,
   contacts,
+  lists,
   canEdit,
   draft,
   onDraftChange,
@@ -54,6 +67,7 @@ function CorrespondenceCard({
 }: {
   item: Correspondence;
   contacts: Contact[];
+  lists: MailingList[];
   canEdit: boolean;
   draft: ContactDraft;
   onDraftChange: (patch: Partial<ContactDraft>) => void;
@@ -69,7 +83,24 @@ function CorrespondenceCard({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showFullMessage, setShowFullMessage] = useState(false);
+  const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set());
   const highlight = useMemo(() => extractHighlight(item.bodyText), [item.bodyText]);
+
+  // A brand-new contact can't already belong to anywhere yet, so — unlike
+  // the Contacts-page "Add to list" flow — there's no "already a member"
+  // state to account for here. A smart list filtered on type/tier/owner/
+  // status still has no safe way to "add" someone without changing an
+  // unrelated field, so those stay excluded, same rule as AddToListModal.
+  const addableLists = useMemo(() => lists.filter((l) => l.mode === "STATIC" || !!l.filterTag), [lists]);
+
+  function toggleList(id: string) {
+    setSelectedListIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   const existingMatches = useMemo(() => {
     const q = existingSearch.trim().toLowerCase();
@@ -100,6 +131,19 @@ function CorrespondenceCard({
       return;
     }
     setBusy(true);
+    const chosenLists = Array.from(selectedListIds)
+      .map((id) => addableLists.find((l) => l.id === id))
+      .filter((l): l is MailingList => !!l);
+    // A tag-based smart list's "membership" is just the tag itself, so it can
+    // go straight into the tags this contact is created with. A static
+    // list's contactIds need the new contact's id, which only exists after
+    // creation — those get patched in below instead.
+    const tagsFromLists = chosenLists.filter((l) => l.mode === "DYNAMIC" && l.filterTag).map((l) => l.filterTag!);
+    const staticLists = chosenLists.filter((l) => l.mode === "STATIC");
+    const tags = Array.from(
+      new Set([...draft.tags.split(",").map((t) => t.trim()).filter(Boolean), ...tagsFromLists])
+    );
+
     const res = await fetch(`/api/correspondence/${item.id}/link`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -111,14 +155,33 @@ function CorrespondenceCard({
         phone: draft.phone.trim() || null,
         city: draft.city.trim() || null,
         title: draft.title.trim() || null,
+        type: draft.type,
+        tier: draft.tier,
+        tags,
+        priorityQuarter: draft.priorityQuarter.trim() || null,
       }),
     });
     const json = await res.json();
-    setBusy(false);
     if (!res.ok) {
+      setBusy(false);
       setError(json.error ?? "Something went wrong.");
       return;
     }
+
+    const newContactId: string | null = json.correspondence?.contactId ?? null;
+    if (newContactId && staticLists.length > 0) {
+      await Promise.all(
+        staticLists.map((list) =>
+          fetch(`/api/lists/${list.id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contactIds: [...list.contactIds, newContactId] }),
+          }).catch(() => {})
+        )
+      );
+    }
+
+    setBusy(false);
     onResolved(item.id);
   }
 
@@ -258,6 +321,67 @@ function CorrespondenceCard({
             <label>Location</label>
             <input value={draft.city} onChange={(e) => onDraftChange({ city: e.target.value })} />
           </div>
+          <div className="field-row">
+            <div className="field">
+              <label>General Type</label>
+              <select value={draft.type} onChange={(e) => onDraftChange({ type: e.target.value as ContactType })}>
+                {TYPE_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {CONTACT_TYPE_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Tier</label>
+              <select value={draft.tier} onChange={(e) => onDraftChange({ tier: e.target.value as ContactTier })}>
+                {TIER_OPTIONS.map((t) => (
+                  <option key={t} value={t}>
+                    {CONTACT_TIER_LABELS[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="field-row">
+            <div className="field">
+              <label>Tags</label>
+              <input
+                placeholder="comma, separated"
+                value={draft.tags}
+                onChange={(e) => onDraftChange({ tags: e.target.value })}
+              />
+            </div>
+            <div className="field">
+              <label>Priority quarter</label>
+              <input
+                placeholder="e.g. 2026-Q4"
+                value={draft.priorityQuarter}
+                onChange={(e) => onDraftChange({ priorityQuarter: e.target.value })}
+              />
+            </div>
+          </div>
+          {addableLists.length > 0 && (
+            <div className="field">
+              <label>Mailing lists ({selectedListIds.size} selected)</label>
+              <div className="checkbox-list">
+                {addableLists.map((list) => (
+                  <label key={list.id}>
+                    <input
+                      type="checkbox"
+                      checked={selectedListIds.has(list.id)}
+                      onChange={() => toggleList(list.id)}
+                    />
+                    {list.name} {list.mode === "DYNAMIC" ? "(smart)" : ""}
+                  </label>
+                ))}
+              </div>
+              <div className="helptext">
+                A smart list filtered by type, tier, owner, or stage isn&rsquo;t shown — only static lists and
+                tag-based smart lists can be added to directly.
+              </div>
+            </div>
+          )}
           {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <button className="btn small primary" onClick={createNew} disabled={busy}>
@@ -333,11 +457,13 @@ export function NewContactsClient({
   initialSuggested,
   initialIgnored,
   contacts,
+  lists,
   canEdit,
 }: {
   initialSuggested: Correspondence[];
   initialIgnored: Correspondence[];
   contacts: Contact[];
+  lists: MailingList[];
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialSuggested);
@@ -420,6 +546,10 @@ export function NewContactsClient({
           phone: draft.phone.trim() || null,
           city: draft.city.trim() || null,
           title: draft.title.trim() || null,
+          type: draft.type,
+          tier: draft.tier,
+          tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
+          priorityQuarter: draft.priorityQuarter.trim() || null,
         }),
       });
       if (res.ok) {
@@ -553,6 +683,7 @@ export function NewContactsClient({
               key={item.id}
               item={item}
               contacts={contacts}
+              lists={lists}
               canEdit={canEdit}
               draft={draftFor(item)}
               onDraftChange={(patch) => updateDraft(item.id, patch)}

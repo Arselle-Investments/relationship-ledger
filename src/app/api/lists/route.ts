@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       filterOwnerId: data.filterOwnerId || null,
       filterTag: data.filterTag || null,
       filterStatus: data.filterStatus || null,
+      agoraColumn: data.agoraColumn || null,
     },
   });
 

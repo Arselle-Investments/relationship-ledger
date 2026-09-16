@@ -11,6 +11,7 @@ export const mailingListInputSchema = z.object({
   filterOwnerId: z.string().trim().optional().nullable(),
   filterTag: z.string().trim().optional().nullable(),
   filterStatus: z.nativeEnum(FundraisingStage).optional().nullable(),
+  agoraColumn: z.string().trim().optional().nullable(),
 });
 
 export type MailingListInput = z.infer<typeof mailingListInputSchema>;

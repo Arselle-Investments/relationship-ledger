@@ -10,7 +10,7 @@ export default async function NewContactsPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [suggested, ignored, contacts] = await Promise.all([
+  const [suggested, ignored, contacts, lists] = await Promise.all([
     prisma.correspondence.findMany({
       where: { status: CorrespondenceStatus.SUGGESTED },
       orderBy: { receivedAt: "desc" },
@@ -21,6 +21,7 @@ export default async function NewContactsPage() {
       take: 50,
     }),
     prisma.contact.findMany({ orderBy: { name: "asc" } }),
+    prisma.mailingList.findMany({ orderBy: { name: "asc" } }),
   ]);
 
   return (
@@ -29,6 +30,7 @@ export default async function NewContactsPage() {
         initialSuggested={suggested}
         initialIgnored={ignored}
         contacts={contacts}
+        lists={lists}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
       />
     </AppShell>

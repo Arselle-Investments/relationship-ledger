@@ -46,6 +46,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.filterOwnerId !== undefined ? { filterOwnerId: data.filterOwnerId || null } : {}),
       ...(data.filterTag !== undefined ? { filterTag: data.filterTag || null } : {}),
       ...(data.filterStatus !== undefined ? { filterStatus: data.filterStatus || null } : {}),
+      ...(data.agoraColumn !== undefined ? { agoraColumn: data.agoraColumn || null } : {}),
     },
   });
   const contacts = await computeListContacts(list);

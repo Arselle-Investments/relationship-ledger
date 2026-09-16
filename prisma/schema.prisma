@@ -553,6 +553,16 @@ model MailingList {
   filterTag     String?
   filterStatus  FundraisingStage?
 
+  // Which Agora "(Mailing Lists)" template column this list's membership
+  // should be written to on export ("Yes" if a contact is a member, blank
+  // otherwise) — e.g. this app's "Holiday Card 2025" list maps to Agora's
+  // "Arselle Holiday Card (Mailing Lists)" column. Deliberately independent
+  // of this list's own name/filterTag, so the two naming conventions can
+  // drift (as they already have) without needing a rename + tag migration on
+  // every contact just to keep exports correct. Null means this list isn't
+  // tied to any Agora column and only exists for in-app use.
+  agoraColumn String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

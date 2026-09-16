@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
-import { CorrespondenceStatus } from "@prisma/client";
+import { CorrespondenceStatus, ContactType, ContactTier } from "@prisma/client";
 
 const schema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("existing"), contactId: z.string().min(1) }),
@@ -15,6 +15,14 @@ const schema = z.discriminatedUnion("mode", [
     phone: z.string().trim().optional().nullable(),
     city: z.string().trim().optional().nullable(),
     title: z.string().trim().optional().nullable(),
+    // Richer fields the quick-create form can optionally set up front, so a
+    // contact confirmed straight from a Teams message doesn't need a second
+    // edit pass before it's ready for an Agora export (see
+    // buildAgoraContactRow — tags and tier both feed directly into it).
+    type: z.nativeEnum(ContactType).optional(),
+    tier: z.nativeEnum(ContactTier).optional(),
+    tags: z.array(z.string().trim()).optional(),
+    priorityQuarter: z.string().trim().optional().nullable(),
   }),
 ]);
 
@@ -54,6 +62,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         city: parsed.data.city || null,
         ownerId: actingUser.id,
         notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
+        ...(parsed.data.type ? { type: parsed.data.type } : {}),
+        ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
+        ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
+        priorityQuarter: parsed.data.priorityQuarter || null,
       },
     });
     contactId = contact.id;

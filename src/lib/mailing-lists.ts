@@ -1,6 +1,19 @@
 import { MailingList, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { ContactWithRelations } from "@/types/contact";
+import { AgoraListColumnMapping } from "@/lib/agora-export-template";
+
+/**
+ * Every mailing list an admin has opted into an Agora export column (see
+ * MailingList.agoraColumn) — only tag-based lists make sense here, since a
+ * static list's membership isn't expressed as a tag Agora could ever see.
+ */
+export async function getAgoraListColumnMappings(): Promise<AgoraListColumnMapping[]> {
+  const lists = await prisma.mailingList.findMany({
+    where: { agoraColumn: { not: null }, filterTag: { not: null } },
+  });
+  return lists.map((l) => ({ filterTag: l.filterTag!, agoraColumn: l.agoraColumn! }));
+}
 
 /**
  * STATIC lists have a fixed contactIds set; DYNAMIC lists recompute their

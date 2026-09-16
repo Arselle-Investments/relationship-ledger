@@ -21,12 +21,15 @@ export const PENDING_AGORA_FIELDS = {
 /**
  * Agora's own "Import/Update Contacts" template — headers and column order
  * copied verbatim from the workbook Agora sent us (Downloads/contacts-
- * template.xlsx, "Template" sheet), so a file built from this list drops
- * straight into their importer without remapping on their end. Only fields
- * we actually have a confident, direct source for are filled in below (see
- * buildAgoraContactRow); everything else is left blank rather than guessed,
- * since a wrong value in Agora is worse than an empty cell someone fills in
- * by hand.
+ * template (1).xlsx, "Template" sheet, confirmed against Bianca 2026-09-15),
+ * so a file built from this list drops straight into their importer without
+ * remapping on their end. Only fields we actually have a confident, direct
+ * source for are filled in below (see buildAgoraContactRow); everything else
+ * is left blank rather than guessed, since a wrong value in Agora is worse
+ * than an empty cell someone fills in by hand. This is also just the
+ * fallback for a fresh install or an explicit "reset to default" in Settings
+ * — the live template lives in Settings.agoraContactTemplateHeaders and can
+ * be revised there (see AgoraTemplateSection.tsx) without a code deploy.
  */
 export const AGORA_TEMPLATE_HEADERS = [
   "Email",
@@ -62,38 +65,21 @@ export const AGORA_TEMPLATE_HEADERS = [
   "Main Tax ID Type",
   "Email Marketing Preference",
   "Receive Emails",
-  "Date the Fund Overview Deck was Circulated (Interaction Log - Deliverables Sent)",
   "Low Commitment (Est.) (Interest Level)",
   "High Commitment (Est.) (Interest Level)",
-  "Fund Deck sent? (Interaction Log - Deliverables Sent)",
   "Acting on Behalf of Company? (Interest Level)",
   "Acting on Behalf of Self? (Interest Level)",
   "Primary Location (Primary Location )",
   "Asset Class (Strategy Segmentation)",
   "Equity Check Range (Strategy Segmentation)",
   "Risk Profile (Strategy Segmentation)",
-  "Add to Campaign - Holiday Card (Marketing Campaigns)",
-  "Add to Campaign - End of Year Letter (Marketing Campaigns)",
-  "Pipeline sent? (Interaction Log - Deliverables Sent)",
-  "AREF I Platform Case Studies sent? (Interaction Log - Deliverables Sent)",
-  "AREF I Returns Bridge(s) sent? (Interaction Log - Deliverables Sent)",
-  "AREF I First Close Announcement_6.22.26 (Marketing Campaigns)",
-  // Best-guess names, following the same "Add to Campaign - X (Marketing
-  // Campaigns)" pattern as the two above — added per the AREF I Stage Audit
-  // follow-up (2026-09-11). Not yet confirmed against Agora's real template;
-  // verify the exact column name there and correct if it differs.
-  "Add to Campaign - AREF I First Close Blast 6.6.26 (Marketing Campaigns)",
-  "Add to Campaign - Fund Interest (Marketing Campaigns)",
-  "Add to Campaign - Investor Communications - Email (Marketing Campaigns)",
-  "Tier for Email Tracking (Marketing Campaigns)",
-  "Advisory Board Member (Arselle Advisory Board Member)",
+  "Arselle Holiday Card (Mailing Lists)",
+  "End of Year Investor Letter (Mailing Lists)",
   "AREF I Prospect (Type of Prospect / Fundraising Tracking )",
   "AREF I - Emerging Mgr. Program (Type of Prospect / Fundraising Tracking )",
   "Deal LP or Opco / Mgmt Co. (Type of Prospect / Fundraising Tracking )",
-  "Date Corporate Overview was circulated (Interaction Log - Deliverables Sent)",
-  "Corporate Overview Deck sent? (Interaction Log - Deliverables Sent)",
   "Received Hiawatha Email 2026 (Interaction Log - Deliverables Sent)",
-  "Strip Center Retail Investment Thesis - Sent (Interaction Log - Deliverables Sent)",
+  "HNW Syndication – Hiawatha (Amonte) (Mailing Lists)",
 ] as const;
 
 function hasTag(tags: string[], substrings: string[]): boolean {
@@ -119,17 +105,31 @@ export function isKnownAgoraTemplateHeader(header: string): boolean {
 }
 
 /**
+ * Which Mailing Lists (see MailingList.agoraColumn) write into which of
+ * Agora's own "(Mailing Lists)" columns — e.g. this app's "Arselle Holiday
+ * Card" list, filtered on the "Arselle Holiday Card" tag, maps to Agora's
+ * "Arselle Holiday Card (Mailing Lists)" column. Built by the caller (a
+ * cheap findMany against MailingList) so this stays a pure function.
+ */
+export type AgoraListColumnMapping = { filterTag: string; agoraColumn: string };
+
+/**
  * Builds one export row, in the given header order (defaults to
  * AGORA_TEMPLATE_HEADERS — pass Settings.agoraContactTemplateHeaders when a
  * revised template has been uploaded). Every value is a direct read of a
  * field we're confident about — see the module comment for why ambiguous
- * columns are left blank instead of inferred; a header this function doesn't
- * recognize at all (from a revised template) is blank for the same reason.
+ * columns are left blank instead of inferred. A header this function doesn't
+ * explicitly populate falls back to the contact's own agoraRaw (Agora's last
+ * known value for that exact column, from the most recent "Import from
+ * Agora") rather than going blank — that's not a guess, it's just Agora's own
+ * data read back to it, for columns (like a mailing list with no
+ * agoraColumn mapping yet) this app doesn't independently track.
  */
 export function buildAgoraContactRow(
   contact: Contact,
   company: Company | null,
-  headers: readonly string[] = AGORA_TEMPLATE_HEADERS
+  headers: readonly string[] = AGORA_TEMPLATE_HEADERS,
+  listMappings: AgoraListColumnMapping[] = []
 ): string[] {
   const { first, last } = splitName(contact.name);
   const tags = contact.tags ?? [];
@@ -175,33 +175,18 @@ export function buildAgoraContactRow(
     "Main Tax ID Type": "",
     "Email Marketing Preference": "",
     "Receive Emails": "",
-    "Date the Fund Overview Deck was Circulated (Interaction Log - Deliverables Sent)": "",
     "Low Commitment (Est.) (Interest Level)": contact.commitmentLow != null ? String(contact.commitmentLow) : "",
     "High Commitment (Est.) (Interest Level)": contact.commitmentHigh != null ? String(contact.commitmentHigh) : "",
-    "Fund Deck sent? (Interaction Log - Deliverables Sent)": "",
     "Acting on Behalf of Company? (Interest Level)": "",
     "Acting on Behalf of Self? (Interest Level)": "",
     "Primary Location (Primary Location )": safeCell(contact.primaryLocation ?? ""),
     "Asset Class (Strategy Segmentation)": safeCell(assetClasses.join(", ")),
     "Equity Check Range (Strategy Segmentation)": equityCheckRange,
     "Risk Profile (Strategy Segmentation)": safeCell((company?.investmentStrategies ?? []).join(", ")),
-    "Add to Campaign - Holiday Card (Marketing Campaigns)": yn(hasTag(tags, ["Holiday Card"])),
-    "Add to Campaign - End of Year Letter (Marketing Campaigns)": yn(hasTag(tags, ["End Of Year Letter", "End of Year Letter"])),
-    "Pipeline sent? (Interaction Log - Deliverables Sent)": "",
-    "AREF I Platform Case Studies sent? (Interaction Log - Deliverables Sent)": "",
-    "AREF I Returns Bridge(s) sent? (Interaction Log - Deliverables Sent)": "",
-    "AREF I First Close Announcement_6.22.26 (Marketing Campaigns)": yn(
-      hasTag(tags, ["AREF I First Close Announc"])
-    ),
-    "Add to Campaign - AREF I First Close Blast 6.6.26 (Marketing Campaigns)": yn(
-      hasTag(tags, ["AREF I First Close Blast"])
-    ),
-    "Add to Campaign - Fund Interest (Marketing Campaigns)": yn(hasTag(tags, ["Fund Interest"])),
-    "Add to Campaign - Investor Communications - Email (Marketing Campaigns)": yn(
-      hasTag(tags, ["Investor Communications - Email", "Investor Communications"])
-    ),
-    "Tier for Email Tracking (Marketing Campaigns)": contact.emailTier != null ? String(contact.emailTier) : "",
-    "Advisory Board Member (Arselle Advisory Board Member)": yn(hasTag(tags, ["Advisory Board Member"])),
+    // The two "(Mailing Lists)" columns below are populated dynamically from
+    // listMappings instead of hardcoded here — see MailingList.agoraColumn —
+    // since which Ledger list/tag maps to which Agora column is now an
+    // admin-editable mapping, not a fixed pairing.
     "AREF I Prospect (Type of Prospect / Fundraising Tracking )": yn(
       hasTag(tags, ["AREF I Active Prospects Import", "AREF I Status:"])
     ),
@@ -209,13 +194,15 @@ export function buildAgoraContactRow(
     "Deal LP or Opco / Mgmt Co. (Type of Prospect / Fundraising Tracking )": yn(
       contact.recordContexts.includes(RecordContext.DEAL) || hasTag(tags, ["Capital Partner Outreach Import"])
     ),
-    "Date Corporate Overview was circulated (Interaction Log - Deliverables Sent)": "",
-    "Corporate Overview Deck sent? (Interaction Log - Deliverables Sent)": "",
     "Received Hiawatha Email 2026 (Interaction Log - Deliverables Sent)": yn(
       hasTag(tags, ["Received Hiawatha Email", "Hiawatha Recipient"])
     ),
-    "Strip Center Retail Investment Thesis - Sent (Interaction Log - Deliverables Sent)": "",
   };
 
-  return headers.map((h) => row[h] ?? "");
+  for (const mapping of listMappings) {
+    row[mapping.agoraColumn] = yn(hasTag(tags, [mapping.filterTag]));
+  }
+
+  const agoraRaw = (contact.agoraRaw as unknown as Record<string, string> | null) ?? null;
+  return headers.map((h) => row[h] ?? safeCell(agoraRaw?.[h.toUpperCase()] ?? ""));
 }

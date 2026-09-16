@@ -32,6 +32,7 @@ export function ListModal({
   const [filterOwnerId, setFilterOwnerId] = useState(entry?.list.filterOwnerId ?? "");
   const [filterTag, setFilterTag] = useState(entry?.list.filterTag ?? "");
   const [filterStatus, setFilterStatus] = useState(entry?.list.filterStatus ?? "");
+  const [agoraColumn, setAgoraColumn] = useState(entry?.list.agoraColumn ?? "");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -76,6 +77,7 @@ export function ListModal({
       filterOwnerId: mode === MailingListMode.DYNAMIC ? filterOwnerId || null : null,
       filterTag: mode === MailingListMode.DYNAMIC ? filterTag.trim() || null : null,
       filterStatus: mode === MailingListMode.DYNAMIC ? filterStatus || null : null,
+      agoraColumn: mode === MailingListMode.DYNAMIC && filterTag.trim() ? agoraColumn.trim() || null : null,
     };
 
     const res = await fetch(isEdit ? `/api/lists/${entry!.list.id}` : "/api/lists", {
@@ -248,6 +250,20 @@ export function ListModal({
                   <input value={filterTag} onChange={(e) => setFilterTag(e.target.value)} />
                 </div>
               </div>
+              {filterTag.trim() && (
+                <div className="field">
+                  <label>Agora column (optional)</label>
+                  <input
+                    placeholder="e.g. Arselle Holiday Card (Mailing Lists)"
+                    value={agoraColumn}
+                    onChange={(e) => setAgoraColumn(e.target.value)}
+                  />
+                  <div className="helptext">
+                    If this list corresponds to a column in Agora&rsquo;s own import template, paste its exact
+                    header here — every contact on this list will export as &ldquo;Yes&rdquo; in that column.
+                  </div>
+                </div>
+              )}
               <div className="field">
                 <label>Pipeline stage</label>
                 <select value={filterStatus ?? ""} onChange={(e) => setFilterStatus(e.target.value as FundraisingStage | "")}>
