@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ContactTier, ContactType, FundraisingStage, RecordContext } from "@prisma/client";
+import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 export const contactInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -35,7 +36,7 @@ export function validateStatusNoteRule(params: {
   const { previousStatus, nextStatus, notes } = params;
   const statusChanged = previousStatus === null || previousStatus !== nextStatus;
   if (nextStatus !== FundraisingStage.NOT_STARTED && statusChanged && !notes?.trim()) {
-    return `Add a quick note before marking this contact "${nextStatus}": what's the context?`;
+    return `Add a quick note before marking this contact "${FUNDRAISING_STAGE_LABELS[nextStatus]}": what's the context?`;
   }
   return null;
 }

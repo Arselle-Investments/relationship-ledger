@@ -195,41 +195,50 @@ export function FunnelClient({
   async function moveSelectedToStage(status: FundraisingStage) {
     const target = bulkMoveTarget[status];
     if (!target) return;
+    if (target !== FundraisingStage.NOT_STARTED && !bulkMoveNote[status]?.trim()) {
+      setBulkMoveError(`Add a quick note before marking this contact "${labels[target]}": what's the context?`);
+      return;
+    }
     setBulkMoveError(null);
     setBulkMoveBusy(status);
     const probability = bulkMoveProbability[status];
-    const res = await fetch("/api/contacts/bulk-status", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contactIds: Array.from(selectedFor(status)),
-        status: target,
-        note: bulkMoveNote[status] ?? "",
-        ...(PROBABILITY_ELIGIBLE_STAGES.includes(target) && probability ? { closeProbability: probability } : {}),
-      }),
-    });
-    const json = await res.json().catch(() => ({}));
-    setBulkMoveBusy(null);
-    if (!res.ok) {
-      setBulkMoveError(json.error ?? "Something went wrong.");
-      return;
+    try {
+      const res = await fetch("/api/contacts/bulk-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contactIds: Array.from(selectedFor(status)),
+          status: target,
+          note: bulkMoveNote[status] ?? "",
+          ...(PROBABILITY_ELIGIBLE_STAGES.includes(target) && probability ? { closeProbability: probability } : {}),
+        }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setBulkMoveError(json.error ?? "Something went wrong.");
+        return;
+      }
+      setContacts((prev) =>
+        prev.map((c) =>
+          selectedFor(status).has(c.id)
+            ? { ...c, status: target, closeProbability: probability ?? c.closeProbability }
+            : c
+        )
+      );
+      setSelectedByStage((prev) => {
+        const next = new Map(prev);
+        next.set(status, new Set());
+        return next;
+      });
+      setBulkMoveTarget((prev) => ({ ...prev, [status]: "" }));
+      setBulkMoveNote((prev) => ({ ...prev, [status]: "" }));
+      setBulkMoveProbability((prev) => ({ ...prev, [status]: null }));
+      setBulkTaskMsg(`Moved ${json.moved} contact${json.moved === 1 ? "" : "s"} to ${labels[target]}.`);
+    } catch {
+      setBulkMoveError("Something went wrong. Check your connection and try again.");
+    } finally {
+      setBulkMoveBusy(null);
     }
-    setContacts((prev) =>
-      prev.map((c) =>
-        selectedFor(status).has(c.id)
-          ? { ...c, status: target, closeProbability: probability ?? c.closeProbability }
-          : c
-      )
-    );
-    setSelectedByStage((prev) => {
-      const next = new Map(prev);
-      next.set(status, new Set());
-      return next;
-    });
-    setBulkMoveTarget((prev) => ({ ...prev, [status]: "" }));
-    setBulkMoveNote((prev) => ({ ...prev, [status]: "" }));
-    setBulkMoveProbability((prev) => ({ ...prev, [status]: null }));
-    setBulkTaskMsg(`Moved ${json.moved} contact${json.moved === 1 ? "" : "s"} to ${labels[target]}.`);
   }
 
   function toggleStage(status: FundraisingStage) {
@@ -396,7 +405,11 @@ export function FunnelClient({
                         placeholder="Note (required)"
                         value={bulkMoveNote[status] ?? ""}
                         onChange={(e) => setBulkMoveNote((prev) => ({ ...prev, [status]: e.target.value }))}
-                        style={{ fontSize: 12.5, width: 160 }}
+                        style={{
+                          fontSize: 12.5,
+                          width: 160,
+                          borderColor: bulkMoveNote[status]?.trim() ? undefined : "var(--rust)",
+                        }}
                       />
                     )}
                     {bulkMoveTarget[status] && PROBABILITY_ELIGIBLE_STAGES.includes(bulkMoveTarget[status]) && (
@@ -413,7 +426,11 @@ export function FunnelClient({
                     <button
                       className="btn small"
                       onClick={() => moveSelectedToStage(status)}
-                      disabled={!bulkMoveTarget[status] || bulkMoveBusy === status}
+                      disabled={
+                        !bulkMoveTarget[status] ||
+                        bulkMoveBusy === status ||
+                        (bulkMoveTarget[status] !== FundraisingStage.NOT_STARTED && !bulkMoveNote[status]?.trim())
+                      }
                     >
                       {bulkMoveBusy === status ? "Moving…" : "Move"}
                     </button>
