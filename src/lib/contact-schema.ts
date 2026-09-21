@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
+import { ContactTier, ContactType, FundraisingStage, RecordContext } from "@prisma/client";
 
 export const contactInputSchema = z.object({
   name: z.string().trim().min(1, "Name is required."),
@@ -18,6 +18,7 @@ export const contactInputSchema = z.object({
   tags: z.array(z.string().trim()).default([]),
   notes: z.string().optional().default(""),
   closeProbability: z.number().int().min(1).max(5).optional().nullable(),
+  recordContexts: z.array(z.nativeEnum(RecordContext)).optional(),
 });
 
 export type ContactInput = z.infer<typeof contactInputSchema>;

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
-import { CorrespondenceStatus, ContactType, ContactTier } from "@prisma/client";
+import { CorrespondenceStatus, ContactType, ContactTier, RecordContext } from "@prisma/client";
 
 const schema = z.discriminatedUnion("mode", [
   z.object({ mode: z.literal("existing"), contactId: z.string().min(1) }),
@@ -23,6 +23,7 @@ const schema = z.discriminatedUnion("mode", [
     tier: z.nativeEnum(ContactTier).optional(),
     tags: z.array(z.string().trim()).optional(),
     priorityQuarter: z.string().trim().optional().nullable(),
+    recordContexts: z.array(z.nativeEnum(RecordContext)).optional(),
   }),
 ]);
 
@@ -66,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
         ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
         priorityQuarter: parsed.data.priorityQuarter || null,
+        recordContexts: parsed.data.recordContexts ?? [],
       },
     });
     contactId = contact.id;

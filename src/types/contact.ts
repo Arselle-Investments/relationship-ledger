@@ -1,4 +1,4 @@
-import { Company, Contact, ContactTier, ContactType, FundraisingStage, User } from "@prisma/client";
+import { Company, Contact, ContactTier, ContactType, FundraisingStage, RecordContext, User } from "@prisma/client";
 
 export type ContactWithRelations = Contact & {
   owner: User | null;
@@ -26,4 +26,5 @@ export type ContactFormValues = {
   tags: string; // comma-separated in the form, split on submit
   notes: string;
   closeProbability: number | null;
+  recordContexts: RecordContext[];
 };

@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Contact, Correspondence, ContactType, ContactTier, MailingList } from "@prisma/client";
+import { Contact, Correspondence, ContactType, ContactTier, MailingList, RecordContext } from "@prisma/client";
 import { parseSignature } from "@/lib/signature-parse";
 import { extractHighlight } from "@/lib/correspondence-highlight";
 import { extractEmailFromText, guessNameFromEmail } from "@/lib/email-extract";
 import { CONTACT_TYPE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
+import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -21,6 +22,7 @@ export type ContactDraft = {
   tier: ContactTier;
   tags: string;
   priorityQuarter: string;
+  recordContexts: RecordContext[];
 };
 
 /** How many of the six auto-filled draft fields actually have something in them — used to sort "most filled-in first." Doesn't count the manually-added fields (type/tier/tags/priority quarter) since those are never auto-extracted from the message. */
@@ -50,6 +52,7 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     tier: ContactTier.TIER_2,
     tags: "",
     priorityQuarter: "",
+    recordContexts: [],
   };
 }
 
@@ -159,6 +162,7 @@ function CorrespondenceCard({
         tier: draft.tier,
         tags,
         priorityQuarter: draft.priorityQuarter.trim() || null,
+        recordContexts: draft.recordContexts,
       }),
     });
     const json = await res.json();
@@ -341,6 +345,27 @@ function CorrespondenceCard({
                   </option>
                 ))}
               </select>
+            </div>
+          </div>
+          <div className="field">
+            <label>Fund / Deal</label>
+            <div style={{ display: "flex", gap: 16 }}>
+              {Object.values(RecordContext).map((ctx) => (
+                <label key={ctx} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+                  <input
+                    type="checkbox"
+                    checked={draft.recordContexts.includes(ctx)}
+                    onChange={(e) =>
+                      onDraftChange({
+                        recordContexts: e.target.checked
+                          ? [...draft.recordContexts, ctx]
+                          : draft.recordContexts.filter((c) => c !== ctx),
+                      })
+                    }
+                  />
+                  {RECORD_CONTEXT_LABELS[ctx]}
+                </label>
+              ))}
             </div>
           </div>
           <div className="field-row">
@@ -550,6 +575,7 @@ export function NewContactsClient({
           tier: draft.tier,
           tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
           priorityQuarter: draft.priorityQuarter.trim() || null,
+          recordContexts: draft.recordContexts,
         }),
       });
       if (res.ok) {

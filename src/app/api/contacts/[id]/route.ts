@@ -73,6 +73,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.tags !== undefined ? { tags: data.tags } : {}),
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
       ...(data.closeProbability !== undefined ? { closeProbability: data.closeProbability } : {}),
+      ...(data.recordContexts !== undefined ? { recordContexts: data.recordContexts } : {}),
     },
     include: { owner: true, warmPath: true, company: true },
   });
