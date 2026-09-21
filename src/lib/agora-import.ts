@@ -20,27 +20,47 @@ function parseAgoraNumber(v: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-// Best-effort mapping from Agora's free-text "Type" into our own curated
-// ContactType enum. Agora's field is far higher-cardinality (and ~87% just
-// says "Investor"), so this is deliberately lossy — the exact Agora value is
+// Maps Agora's own "Type" picklist onto our curated ContactType subset — see
+// CONTACT_TYPE_LABELS and AGORA_ARCHIVED_CONTACT_TYPES in contact-constants.ts
+// for the full picture of what's in/out and why. Agora's exact wording is
 // always preserved separately in agoraType/agoraRaw regardless of how (or
-// whether) it maps here.
+// whether) it maps here — this table only has a few deliberate synonym-folds
+// (GP Fund/LP Fund -> Private Equity Fund, HNW Investor -> HNW, Family
+// Office/RIA -> Wealth Manager, per Bianca 2026-09-16/17); everything else not
+// listed here (Investor, Prospect, Potential Investor, Platform, CRE Sponsor,
+// the AU-regulatory and personal-relationship categories, etc.) deliberately
+// falls through to OTHER rather than being guessed at. Notably, plain "Family
+// Office" is ALSO left unmapped (falls to OTHER) on purpose — there is no
+// generic Family Office value in our own ContactType anymore, and guessing
+// single- vs. multi-family from the raw Agora value alone isn't possible; a
+// human has to pick SINGLE_FAMILY_OFFICE or MULTI_FAMILY_OFFICE by hand.
 const AGORA_TYPE_TO_CONTACT_TYPE: Record<string, ContactType> = {
-  endowment: ContactType.LP_INSTITUTIONAL,
-  "public pension plan": ContactType.LP_INSTITUTIONAL,
-  "pension fund": ContactType.LP_INSTITUTIONAL,
-  "institutional investor": ContactType.LP_INSTITUTIONAL,
-  "lp fund": ContactType.LP_INSTITUTIONAL,
-  "family office": ContactType.FAMILY_OFFICE,
-  "family office/ria": ContactType.FAMILY_OFFICE,
+  "public pension plan": ContactType.PUBLIC_PENSION_PLAN,
+  "private pension plan": ContactType.PRIVATE_PENSION_PLAN,
+  "institutional investor": ContactType.INSTITUTIONAL_INVESTOR,
+  "pension fund": ContactType.INSTITUTIONAL_INVESTOR, // generic/legacy Agora value, not one of Agora's current Public/Private Pension Plan options
+  endowment: ContactType.ENDOWMENT,
+  foundation: ContactType.FOUNDATION,
+  "insurance company": ContactType.INSURANCE_COMPANY,
+  "sovereign wealth fund": ContactType.SOVEREIGN_WEALTH_FUND,
+  "single family office": ContactType.SINGLE_FAMILY_OFFICE,
+  "multi family office": ContactType.MULTI_FAMILY_OFFICE,
+  "family office/ria": ContactType.WEALTH_MANAGER,
+  "wealth manager": ContactType.WEALTH_MANAGER,
+  hnw: ContactType.HNW,
+  "hnw investor": ContactType.HNW,
+  individual: ContactType.INDIVIDUAL,
+  "family member": ContactType.FAMILY_MEMBER,
+  "trusts/trustee": ContactType.TRUSTS_TRUSTEE,
+  "private equity fund": ContactType.PRIVATE_EQUITY_FUND,
+  "gp fund": ContactType.PRIVATE_EQUITY_FUND,
+  "lp fund": ContactType.PRIVATE_EQUITY_FUND,
+  "fund of funds": ContactType.FUND_OF_FUNDS,
+  "hedge fund": ContactType.HEDGE_FUND,
   "placement agent": ContactType.PLACEMENT_AGENT,
-  advisor: ContactType.BROKER_ADVISOR,
-  "wealth manager": ContactType.BROKER_ADVISOR,
-  "gp fund": ContactType.SPONSOR_COGP,
-  "private equity fund": ContactType.SPONSOR_COGP,
-  platform: ContactType.SPONSOR_COGP,
-  lawyer: ContactType.CONSULTANT,
-  "service provider": ContactType.CONSULTANT,
+  advisor: ContactType.ADVISOR,
+  lawyer: ContactType.LAWYER,
+  "service provider": ContactType.SERVICE_PROVIDER,
 };
 
 export function mapAgoraType(agoraType: string | null): ContactType {

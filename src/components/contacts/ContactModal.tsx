@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { User, ContactType, ContactTier, FundraisingStage } from "@prisma/client";
+import { User, ContactType, ContactTier, FundraisingStage, RecordContext } from "@prisma/client";
 import {
   CONTACT_TYPE_LABELS,
   CONTACT_TIER_LABELS,
   FUNDRAISING_STAGE_LABELS,
 } from "@/lib/contact-constants";
+import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { ContactFormValues, ContactWithRelations } from "@/types/contact";
 import { TaskWithRelations } from "@/types/task";
@@ -41,6 +42,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       tags: "",
       notes: "",
       closeProbability: null,
+      recordContexts: [],
     };
   }
   return {
@@ -60,6 +62,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     tags: (contact.tags ?? []).join(", "),
     notes: contact.notes ?? "",
     closeProbability: contact.closeProbability ?? null,
+    recordContexts: contact.recordContexts ?? [],
   };
 }
 
@@ -176,6 +179,13 @@ export function ContactModal({
     setValues((v) => ({ ...v, [key]: value }));
   }
 
+  function toggleRecordContext(ctx: RecordContext, checked: boolean) {
+    setValues((v) => ({
+      ...v,
+      recordContexts: checked ? [...v.recordContexts, ctx] : v.recordContexts.filter((c) => c !== ctx),
+    }));
+  }
+
   async function handleSave() {
     setError(null);
     if (!values.name.trim()) {
@@ -209,6 +219,7 @@ export function ContactModal({
         .filter(Boolean),
       notes: values.notes,
       closeProbability: values.closeProbability,
+      recordContexts: values.recordContexts,
     };
 
     const res = await fetch(isEdit ? `/api/contacts/${contact!.id}` : "/api/contacts", {
@@ -272,6 +283,20 @@ export function ContactModal({
               {values.org && <ViewField label="Organization" value={values.org} />}
               <ViewField label="General Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
+              {values.recordContexts.length > 0 && (
+                <ViewField
+                  label="Fund / Deal"
+                  value={
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {values.recordContexts.map((ctx) => (
+                        <span key={ctx} className="tag">
+                          {RECORD_CONTEXT_LABELS[ctx]}
+                        </span>
+                      ))}
+                    </div>
+                  }
+                />
+              )}
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
               {PROBABILITY_ELIGIBLE_STAGES.includes(values.status) && (
                 <ViewField
@@ -328,6 +353,26 @@ export function ContactModal({
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+              <div className="field">
+                <label>Fund / Deal</label>
+                <div style={{ display: "flex", gap: 16 }}>
+                  {Object.values(RecordContext).map((ctx) => (
+                    <label key={ctx} style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
+                      <input
+                        type="checkbox"
+                        checked={values.recordContexts.includes(ctx)}
+                        onChange={(e) => toggleRecordContext(ctx, e.target.checked)}
+                        disabled={!canEdit}
+                      />
+                      {RECORD_CONTEXT_LABELS[ctx]}
+                    </label>
+                  ))}
+                </div>
+                <div className="helptext">
+                  Which side(s) of the business this contact belongs to — a contact can be both. Usually inferred
+                  from Agora import; check here to set it by hand.
                 </div>
               </div>
               <div className="field-row">

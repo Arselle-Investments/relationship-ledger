@@ -71,14 +71,41 @@ model VerificationToken {
 
 // --- Domain ---------------------------------------------------------------
 
+// Arselle's curated subset of Agora's own "Type" picklist — every value here
+// is deliberately spelled to match Agora's exact wording (see
+// CONTACT_TYPE_LABELS) so this field round-trips cleanly on import/export
+// instead of going through a lossy paraphrase. Agora's full option set is far
+// larger; the ones we don't use here are documented (not just dropped
+// silently) in AGORA_ARCHIVED_CONTACT_TYPES in contact-constants.ts and in
+// docs/contact-company-types.md, and stay unavailable in this app's own
+// dropdowns. (The old LP_INSTITUTIONAL / BROKER_ADVISOR / SPONSOR_COGP /
+// CONSULTANT values were retired on 2026-09-17, and the generic FAMILY_OFFICE
+// / FAMILY_OFFICE_RIA values were retired the same day in favor of always
+// picking SINGLE_FAMILY_OFFICE, MULTI_FAMILY_OFFICE, or WEALTH_MANAGER —
+// every row was migrated onto one of the values below first.)
 enum ContactType {
-  LP_INSTITUTIONAL
-  FAMILY_OFFICE
   PLACEMENT_AGENT
-  BROKER_ADVISOR
-  SPONSOR_COGP
-  CONSULTANT
   OTHER
+  PUBLIC_PENSION_PLAN
+  PRIVATE_PENSION_PLAN
+  INSTITUTIONAL_INVESTOR
+  ENDOWMENT
+  FOUNDATION
+  INSURANCE_COMPANY
+  SOVEREIGN_WEALTH_FUND
+  SINGLE_FAMILY_OFFICE
+  MULTI_FAMILY_OFFICE
+  WEALTH_MANAGER
+  HNW
+  INDIVIDUAL
+  FAMILY_MEMBER
+  TRUSTS_TRUSTEE
+  PRIVATE_EQUITY_FUND
+  FUND_OF_FUNDS
+  HEDGE_FUND
+  ADVISOR
+  LAWYER
+  SERVICE_PROVIDER
 }
 
 enum ContactTier {

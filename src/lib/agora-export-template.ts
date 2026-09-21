@@ -1,5 +1,5 @@
 import { Company, Contact, FundraisingStage, RecordContext } from "@prisma/client";
-import { CONTACT_TIER_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { safeCell } from "@/lib/excel-safety";
 
@@ -146,7 +146,12 @@ export function buildAgoraContactRow(
     "First Name": safeCell(first),
     "Last Name": safeCell(last),
     Title: "",
-    Type: safeCell(contact.agoraType ?? ""),
+    // Now that ContactType is spelled to match Agora's own picklist exactly
+    // (see contact-constants.ts), the curated type is what gets written back
+    // out — unlike before, a manual reclassification in the app now does
+    // reach Agora. OTHER still falls back to the raw agoraType (if any),
+    // since "Other" itself isn't a value Agora would recognize as meaningful.
+    Type: safeCell(contact.type === "OTHER" ? contact.agoraType ?? "" : CONTACT_TYPE_LABELS[contact.type]),
     "ID/Passport Number": "",
     "Date of Birth": "",
     Residency: "",

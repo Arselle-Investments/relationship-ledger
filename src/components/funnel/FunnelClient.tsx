@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Company, Contact, FundraisingStage, User } from "@prisma/client";
+import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { belongsInFundFunnel } from "@/lib/fund-signal";
@@ -28,10 +28,10 @@ type FundCompany = Company & { contacts: Contact[] };
 type KindFilter = "ALL" | "CONTACT" | "COMPANY" | "ADVISOR";
 
 function isAdvisorContact(c: ContactWithRelations): boolean {
-  return c.agoraType === "Advisor" || c.type === "BROKER_ADVISOR";
+  return c.agoraType === "Advisor" || c.type === ContactType.ADVISOR;
 }
 function isAdvisorCompany(co: FundCompany): boolean {
-  return co.type === "BROKER_ADVISOR";
+  return co.type === ContactType.ADVISOR;
 }
 // A company's own contacts include deal-side people too — only the ones that
 // also read as fund prospects belong nested under the company here.
