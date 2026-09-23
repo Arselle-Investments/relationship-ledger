@@ -1,6 +1,6 @@
 # Contact & Company `type` — definitions guide
 
-Last updated: 2026-09-17
+Last updated: 2026-09-23
 
 `Contact.type` and `Company.type` share one enum (`ContactType` in
 `prisma/schema.prisma`). There's no live Agora path for `Company.type` today
@@ -13,7 +13,7 @@ Every value here is spelled to match Agora's own "Type" picklist **exactly**
 back to Agora — see `CONTACT_TYPE_LABELS` in `src/lib/contact-constants.ts`
 and the export logic in `src/lib/agora-export-template.ts`.
 
-## The 22 allowed values, and what each one actually means
+## The 24 allowed values, and what each one actually means
 
 | Value | Definition |
 |---|---|
@@ -36,8 +36,10 @@ and the export logic in `src/lib/agora-export-template.ts`.
 | **Hedge Fund** | A hedge fund. |
 | **Advisor** | A **third-party institutional** investment consultant or OCIO advising other institutions on manager/fund selection (e.g. Townsend, Cambridge Associates, StepStone Real Estate) — **not** an individual's personal wealth advisor; see Wealth Manager for that. |
 | **Lawyer** | Legal counsel. |
-| **Service Provider** | A vendor/service relationship not otherwise categorized (e.g. accounting). |
+| **Service Provider** | A vendor relationship that is specifically **not** a banker/broker, lawyer, or consultant — e.g. an architect, accountant, appraiser. |
 | **Placement Agent** | A third-party firm raising capital on behalf of a fund/sponsor. |
+| **CRE Sponsor** | A real estate **operator** — a potential platform partner, or a competitive operator in the market. Not a capital source. |
+| **Broker** | A banker or real estate broker (e.g. JLL, Newmark, Evercore, Moelis) — distinct from Advisor (institutional consultant) and Placement Agent (raises capital on someone's behalf). |
 | **Other** | True catch-all — used when nothing else fits, or when Agora's own signal for a record is too generic to classify (see below). |
 
 ### The Advisor / Wealth Manager split
@@ -55,6 +57,20 @@ These two are the easiest to mix up, so to be explicit:
 A firm's name containing the word "Advisor(s)" is **not** a reliable signal
 for which of these two it is — always classify by who the firm's actual
 clients are (institutions vs. individuals).
+
+### Advisor vs. Broker vs. CRE Sponsor vs. Service Provider
+
+Four categories that can all sound like "someone in the real estate
+ecosystem who isn't a capital source" — the distinction is what role they
+actually play:
+
+- **Advisor** — advises institutions on capital allocation (a consultant/OCIO).
+- **Broker** — a banker or real estate broker (JLL, Newmark, Evercore, Moelis).
+- **CRE Sponsor** — an operator: a potential platform partner, or a
+  competitor in the market. Not a capital source at all.
+- **Service Provider** — everyone else in the vendor category: architects,
+  accountants, appraisers — specifically not a banker/broker, lawyer, or
+  consultant.
 
 ### No generic "Family Office"
 
@@ -83,7 +99,7 @@ Partner, Recruiter, Sole trader, Spouse, University, Unaccredited Investor.
 **Too granular, redundant, or a pipeline stage misfiled as a type:**
 - GP Fund, LP Fund — fold into **Private Equity Fund** on import (too fine a
   distinction for how Arselle tracks things)
-- CRE Sponsor, Platform — no longer have a home; fall through to **Other**
+- Platform — no longer has a home; falls through to **Other**
 - Other Institution — folds into **Institutional Investor**
 - Unit Trust, Wealth Fund — not used
 - Prospect, Potential Investor, Investor — these describe **pipeline stage**,
@@ -101,9 +117,15 @@ Partner, Recruiter, Sole trader, Spouse, University, Unaccredited Investor.
   Single or Multi by hand.
 - Family Office/RIA — folds into **Wealth Manager** on import.
 
+**Reinstated 2026-09-23** with narrower definitions than their old
+pre-2026-09-16 meaning (see above for the current definitions):
+- CRE Sponsor — now specifically an *operator* (platform partner or
+  competitor), not a capital source
+- Broker — now specifically a banker or real estate broker
+
 **Never actually reviewed** — present in Agora's real picklist, but Arselle
 has never encountered them in practice and no decision has been made:
-Asset Manager, Broker, GP, Lender, Private Company, Professional Service,
+Asset Manager, GP, Lender, Private Company, Professional Service,
 Sovereign, UNHW. If one of these ever becomes relevant, it needs a real
 decision (add to `ContactType`, fold into an existing value, or archive) —
 don't guess a mapping for it.

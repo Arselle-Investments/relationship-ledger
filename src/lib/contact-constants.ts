@@ -9,7 +9,9 @@ import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 // schema.prisma, AGORA_ARCHIVED_CONTACT_TYPES below, and the full definitions
 // guide at docs/contact-company-types.md (what each value actually means and
 // why, for anyone classifying a contact/company). A handful of values whose
-// meaning isn't self-evident from the Agora wording alone, refined 2026-09-17:
+// meaning isn't self-evident from the Agora wording alone, refined 2026-09-17
+// (CRE_SPONSOR/BROKER added back 2026-09-23 with the narrower definitions
+// below, distinct from their old pre-2026-09-16 meaning):
 //   - ADVISOR: a THIRD-PARTY INSTITUTIONAL investment consultant/OCIO advising
 //     other institutions (e.g. Townsend, Cambridge Associates, StepStone) —
 //     not an individual's personal wealth advisor, see WEALTH_MANAGER.
@@ -23,6 +25,14 @@ import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 //   - SINGLE_FAMILY_OFFICE / MULTI_FAMILY_OFFICE: there is deliberately no
 //     generic "Family Office" fallback — every family office must be
 //     classified as one or the other, even when that takes manual research.
+//   - CRE_SPONSOR: a real estate OPERATOR — a potential platform partner or a
+//     competitive operator in the market — not a capital source at all.
+//   - BROKER: a banker or real estate broker (e.g. JLL, Newmark, Evercore,
+//     Moelis) — distinct from ADVISOR (institutional consultant) and
+//     PLACEMENT_AGENT (raises capital on someone's behalf).
+//   - SERVICE_PROVIDER: a vendor relationship that is specifically NOT a
+//     banker/broker, lawyer, or consultant — e.g. an architect, accountant,
+//     appraiser.
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   PLACEMENT_AGENT: "Placement Agent",
   OTHER: "Other",
@@ -46,6 +56,8 @@ export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   ADVISOR: "Advisor",
   LAWYER: "Lawyer",
   SERVICE_PROVIDER: "Service Provider",
+  CRE_SPONSOR: "CRE Sponsor",
+  BROKER: "Broker",
 };
 
 // The full picklist Agora itself offers for "Type," for reference only — most
@@ -84,7 +96,6 @@ export const AGORA_ARCHIVED_CONTACT_TYPES = {
   tooGranularOrRedundant: [
     "GP Fund", // folds into PRIVATE_EQUITY_FUND on import
     "LP Fund", // folds into PRIVATE_EQUITY_FUND on import
-    "CRE Sponsor",
     "Platform",
     "Other Institution", // folds into INSTITUTIONAL_INVESTOR
     "Unit Trust",

@@ -27,8 +27,8 @@ function parseAgoraNumber(v: string): number | null {
 // whether) it maps here — this table only has a few deliberate synonym-folds
 // (GP Fund/LP Fund -> Private Equity Fund, HNW Investor -> HNW, Family
 // Office/RIA -> Wealth Manager, per Bianca 2026-09-16/17); everything else not
-// listed here (Investor, Prospect, Potential Investor, Platform, CRE Sponsor,
-// the AU-regulatory and personal-relationship categories, etc.) deliberately
+// listed here (Investor, Prospect, Potential Investor, Platform, the
+// AU-regulatory and personal-relationship categories, etc.) deliberately
 // falls through to OTHER rather than being guessed at. Notably, plain "Family
 // Office" is ALSO left unmapped (falls to OTHER) on purpose — there is no
 // generic Family Office value in our own ContactType anymore, and guessing
@@ -61,6 +61,8 @@ const AGORA_TYPE_TO_CONTACT_TYPE: Record<string, ContactType> = {
   advisor: ContactType.ADVISOR,
   lawyer: ContactType.LAWYER,
   "service provider": ContactType.SERVICE_PROVIDER,
+  "cre sponsor": ContactType.CRE_SPONSOR,
+  broker: ContactType.BROKER,
 };
 
 export function mapAgoraType(agoraType: string | null): ContactType {
