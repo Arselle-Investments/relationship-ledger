@@ -1,6 +1,6 @@
 # Contact & Company `type` — definitions guide
 
-Last updated: 2026-09-23
+Last updated: 2026-09-24
 
 `Contact.type` and `Company.type` share one enum (`ContactType` in
 `prisma/schema.prisma`). There's no live Agora path for `Company.type` today
@@ -13,7 +13,7 @@ Every value here is spelled to match Agora's own "Type" picklist **exactly**
 back to Agora — see `CONTACT_TYPE_LABELS` in `src/lib/contact-constants.ts`
 and the export logic in `src/lib/agora-export-template.ts`.
 
-## The 24 allowed values, and what each one actually means
+## The 25 allowed values, and what each one actually means
 
 | Value | Definition |
 |---|---|
@@ -40,6 +40,7 @@ and the export logic in `src/lib/agora-export-template.ts`.
 | **Placement Agent** | A third-party firm raising capital on behalf of a fund/sponsor. |
 | **CRE Sponsor** | A real estate **operator** — a potential platform partner, or a competitive operator in the market. Not a capital source. |
 | **Broker** | A banker or real estate broker (e.g. JLL, Newmark, Evercore, Moelis) — distinct from Advisor (institutional consultant) and Placement Agent (raises capital on someone's behalf). |
+| **Lender** | A lender providing debt financing — not an equity capital source. |
 | **Other** | True catch-all — used when nothing else fits, or when Agora's own signal for a record is too generic to classify (see below). |
 
 ### The Advisor / Wealth Manager split
@@ -123,12 +124,15 @@ pre-2026-09-16 meaning (see above for the current definitions):
   competitor), not a capital source
 - Broker — now specifically a banker or real estate broker
 
+**Reinstated 2026-09-24:**
+- Lender — a lender providing debt financing, not an equity capital source
+
 **Never actually reviewed** — present in Agora's real picklist, but Arselle
 has never encountered them in practice and no decision has been made:
-Asset Manager, GP, Lender, Private Company, Professional Service,
-Sovereign, UNHW. If one of these ever becomes relevant, it needs a real
-decision (add to `ContactType`, fold into an existing value, or archive) —
-don't guess a mapping for it.
+Asset Manager, GP, Private Company, Professional Service, Sovereign, UNHW.
+If one of these ever becomes relevant, it needs a real decision (add to
+`ContactType`, fold into an existing value, or archive) — don't guess a
+mapping for it.
 
 ## Where this shows up in code
 

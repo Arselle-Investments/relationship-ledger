@@ -33,6 +33,8 @@ import { ContactTier, ContactType, FundraisingStage } from "@prisma/client";
 //   - SERVICE_PROVIDER: a vendor relationship that is specifically NOT a
 //     banker/broker, lawyer, or consultant — e.g. an architect, accountant,
 //     appraiser.
+//   - LENDER (added 2026-09-24): a lender providing debt financing — not an
+//     equity capital source.
 export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   PLACEMENT_AGENT: "Placement Agent",
   OTHER: "Other",
@@ -58,6 +60,7 @@ export const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
   SERVICE_PROVIDER: "Service Provider",
   CRE_SPONSOR: "CRE Sponsor",
   BROKER: "Broker",
+  LENDER: "Lender",
 };
 
 // The full picklist Agora itself offers for "Type," for reference only — most

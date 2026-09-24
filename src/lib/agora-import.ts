@@ -63,6 +63,7 @@ const AGORA_TYPE_TO_CONTACT_TYPE: Record<string, ContactType> = {
   "service provider": ContactType.SERVICE_PROVIDER,
   "cre sponsor": ContactType.CRE_SPONSOR,
   broker: ContactType.BROKER,
+  lender: ContactType.LENDER,
 };
 
 export function mapAgoraType(agoraType: string | null): ContactType {
