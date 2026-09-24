@@ -229,9 +229,19 @@ model Contact {
   @@index([companyId])
 }
 
+// Matches Agora's own "Prospect Type" multiselect exactly (confirmed by
+// Bianca 2026-09-24), same reasoning as ContactType — see
+// RECORD_CONTEXT_LABELS in record-context.ts. MGMT_CO / PLATFORM_LEVEL_PROPCO
+// / PLATFORM_LEVEL_OPCO are new alongside the original FUND/DEAL; none of the
+// fund-vs-deal funnel-membership logic (fund-signal.ts,
+// company-fund-signal.ts) changes meaning — those only ever check for FUND
+// or DEAL specifically, so the 3 new values are additional independent tags.
 enum RecordContext {
   FUND
   DEAL
+  MGMT_CO
+  PLATFORM_LEVEL_PROPCO
+  PLATFORM_LEVEL_OPCO
 }
 
 // A real record for a capital partner/company, promoted out of the free-text

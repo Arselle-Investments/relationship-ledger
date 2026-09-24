@@ -1,5 +1,6 @@
 import { Company, Contact, FundraisingStage } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { safeCell } from "@/lib/excel-safety";
 
 /**
@@ -91,10 +92,9 @@ export const AGORA_TEMPLATE_HEADERS = [
   "Arselle Holiday Card (Mailing Lists)",
   "End of Year Investor Letter (Mailing Lists)",
   "HNW Syndication – Hiawatha (Amonte) (Mailing Lists)",
-  // Multiselect (Mgmt Co, Fund, Deal, Platform-Level PropCo, Platform-Level
-  // OpCo) — not yet wired up, pending a decision on whether RecordContext
-  // needs to expand beyond Fund/Deal to cover all 5 values cleanly. See
-  // docs/data-cleanup-tracker.md.
+  // Multiselect — RecordContext now matches this field's 5 values exactly
+  // (Mgmt Co, Fund, Deal, Platform-Level PropCo, Platform-Level OpCo), see
+  // RECORD_CONTEXT_LABELS in record-context.ts.
   "Propsect Type (Type of Prospect / Fundraising Tracking )",
   "AREF I – Stage (Type of Prospect / Fundraising Tracking )",
   // Being deprecated by Agora — folding into an option under Prospect Type
@@ -203,12 +203,17 @@ export function buildAgoraContactRow(
     // MailingList.agoraColumn — since which Ledger list/tag maps to which
     // Agora column is now an admin-editable mapping, not a fixed pairing.
     "AREF I – Stage (Type of Prospect / Fundraising Tracking )": AREF_STAGE_TO_AGORA_VALUE[contact.status],
-    // "Propsect Type (Type of Prospect / Fundraising Tracking )" and
-    // "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )"
-    // are deliberately NOT populated here yet — see the RecordContext
-    // expansion note in docs/data-cleanup-tracker.md. They'll fall through
-    // to the agoraRaw fallback below (blank, same as any unmapped header)
-    // until that's resolved.
+    // Multiselect — RecordContext now matches Agora's 5-value Prospect Type
+    // picklist exactly (confirmed by Bianca 2026-09-24), so this is a direct
+    // pass-through, same "spelled to match Agora exactly" approach as Type.
+    "Propsect Type (Type of Prospect / Fundraising Tracking )": safeCell(
+      contact.recordContexts.map((ctx) => RECORD_CONTEXT_LABELS[ctx]).join("; ")
+    ),
+    // "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )" is
+    // being deprecated by Agora into an option under Prospect Type (per
+    // Bianca 2026-09-24), so deliberately left unpopulated here — it'll fall
+    // through to the agoraRaw fallback below (blank) until Agora actually
+    // removes the column.
   };
 
   for (const mapping of listMappings) {
