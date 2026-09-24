@@ -1,19 +1,39 @@
-import { Company, Contact, FundraisingStage, RecordContext } from "@prisma/client";
+import { Company, Contact, FundraisingStage } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
-import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { safeCell } from "@/lib/excel-safety";
 
 /**
- * Column names for the 3 fields we've asked Agora to add (see the AREF I
- * Stage Audit memo) — not yet part of their real template, so these are
- * deliberately NOT in AGORA_TEMPLATE_HEADERS below (adding them there would
- * put unrecognized columns in every export starting today). The mapping is
- * ready now so that the moment Agora adds the field and someone uploads a
- * revised template through Agora Sync, the column populates with a real
- * value on the very next export instead of coming through blank.
+ * Agora's real, fixed "AREF I – Stage" dropdown values (confirmed by Bianca
+ * 2026-09-24), mapped from our own FundraisingStage. Not a straight reuse of
+ * FUNDRAISING_STAGE_LABELS: Agora only has one "Decline" catch-all covering
+ * both of our PASSED_NOT_INTERESTED and DO_NOT_CONTACT (DO_NOT_CONTACT
+ * separately also sets Email Marketing Preference to Unsubscribed, see
+ * below), and NOT_STARTED has no Agora equivalent — it just leaves the cell
+ * blank until something actually happens.
+ */
+export const AREF_STAGE_TO_AGORA_VALUE: Record<FundraisingStage, string> = {
+  NOT_STARTED: "",
+  OUTREACH_SENT: FUNDRAISING_STAGE_LABELS.OUTREACH_SENT,
+  INITIAL_INTEREST: FUNDRAISING_STAGE_LABELS.INITIAL_INTEREST,
+  MEETING_OCCURRED: FUNDRAISING_STAGE_LABELS.MEETING_OCCURRED,
+  ACTIVE_PROSPECT: FUNDRAISING_STAGE_LABELS.ACTIVE_PROSPECT,
+  FINAL_CLOSE_POTENTIAL: FUNDRAISING_STAGE_LABELS.FINAL_CLOSE_POTENTIAL,
+  DUE_DILIGENCE: FUNDRAISING_STAGE_LABELS.DUE_DILIGENCE,
+  COMMITTED: FUNDRAISING_STAGE_LABELS.COMMITTED,
+  PASSED_OPEN: FUNDRAISING_STAGE_LABELS.PASSED_OPEN,
+  PASSED_NOT_INTERESTED: "Decline",
+  DO_NOT_CONTACT: "Decline",
+};
+
+/**
+ * Column names for fields we've asked Agora to add but that aren't part of
+ * their real template yet — deliberately NOT in AGORA_TEMPLATE_HEADERS below
+ * (adding them there would put unrecognized columns in every export starting
+ * today). Both remaining entries are Organization-level; the Contact-level
+ * funnel-stage field this used to include went live as "AREF I – Stage" on
+ * 2026-09-24 and is now a real column below instead of pending.
  */
 export const PENDING_AGORA_FIELDS = {
-  contactFunnelStage: "AREF I Funnel Stage",
   orgRecordContexts: "Fund/Deal Classification (Organization)",
   orgFunnelStage: "AREF I Funnel Stage (Organization)",
 } as const;
@@ -21,15 +41,17 @@ export const PENDING_AGORA_FIELDS = {
 /**
  * Agora's own "Import/Update Contacts" template — headers and column order
  * copied verbatim from the workbook Agora sent us (Downloads/contacts-
- * template (1).xlsx, "Template" sheet, confirmed against Bianca 2026-09-15),
- * so a file built from this list drops straight into their importer without
- * remapping on their end. Only fields we actually have a confident, direct
- * source for are filled in below (see buildAgoraContactRow); everything else
- * is left blank rather than guessed, since a wrong value in Agora is worse
- * than an empty cell someone fills in by hand. This is also just the
- * fallback for a fresh install or an explicit "reset to default" in Settings
- * — the live template lives in Settings.agoraContactTemplateHeaders and can
- * be revised there (see AgoraTemplateSection.tsx) without a code deploy.
+ * template (2).csv, confirmed against Bianca 2026-09-24 — this is the second
+ * revision; the original 2026-09-15 version had 11 different columns, see
+ * git history), so a file built from this list drops straight into their
+ * importer without remapping on their end. Only fields we actually have a
+ * confident, direct source for are filled in below (see
+ * buildAgoraContactRow); everything else is left blank rather than guessed,
+ * since a wrong value in Agora is worse than an empty cell someone fills in
+ * by hand. This is also just the fallback for a fresh install or an explicit
+ * "reset to default" in Settings — the live template lives in
+ * Settings.agoraContactTemplateHeaders and can be revised there (see
+ * AgoraTemplateSection.tsx) without a code deploy.
  */
 export const AGORA_TEMPLATE_HEADERS = [
   "Email",
@@ -65,21 +87,19 @@ export const AGORA_TEMPLATE_HEADERS = [
   "Main Tax ID Type",
   "Email Marketing Preference",
   "Receive Emails",
-  "Low Commitment (Est.) (Interest Level)",
-  "High Commitment (Est.) (Interest Level)",
-  "Acting on Behalf of Company? (Interest Level)",
-  "Acting on Behalf of Self? (Interest Level)",
   "Primary Location (Primary Location )",
-  "Asset Class (Strategy Segmentation)",
-  "Equity Check Range (Strategy Segmentation)",
-  "Risk Profile (Strategy Segmentation)",
   "Arselle Holiday Card (Mailing Lists)",
   "End of Year Investor Letter (Mailing Lists)",
-  "AREF I Prospect (Type of Prospect / Fundraising Tracking )",
-  "AREF I - Emerging Mgr. Program (Type of Prospect / Fundraising Tracking )",
-  "Deal LP or Opco / Mgmt Co. (Type of Prospect / Fundraising Tracking )",
-  "Received Hiawatha Email 2026 (Interaction Log - Deliverables Sent)",
   "HNW Syndication – Hiawatha (Amonte) (Mailing Lists)",
+  // Multiselect (Mgmt Co, Fund, Deal, Platform-Level PropCo, Platform-Level
+  // OpCo) — not yet wired up, pending a decision on whether RecordContext
+  // needs to expand beyond Fund/Deal to cover all 5 values cleanly. See
+  // docs/data-cleanup-tracker.md.
+  "Propsect Type (Type of Prospect / Fundraising Tracking )",
+  "AREF I – Stage (Type of Prospect / Fundraising Tracking )",
+  // Being deprecated by Agora — folding into an option under Prospect Type
+  // (per Bianca 2026-09-24) — so deliberately left unmapped here too.
+  "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )",
 ] as const;
 
 function hasTag(tags: string[], substrings: string[]): boolean {
@@ -135,12 +155,6 @@ export function buildAgoraContactRow(
   const tags = contact.tags ?? [];
   const yn = (hit: boolean) => (hit ? "Yes" : "");
 
-  const assetClasses = company?.targetAssetClasses ?? [];
-  const sizeMin = company?.investmentSizeMin ?? null;
-  const sizeMax = company?.investmentSizeMax ?? null;
-  const equityCheckRange =
-    sizeMin != null || sizeMax != null ? `${sizeMin ?? "?"}mm - ${sizeMax ?? "?"}mm` : "";
-
   const row: Record<string, string> = {
     Email: safeCell(contact.email ?? ""),
     "First Name": safeCell(first),
@@ -183,28 +197,18 @@ export function buildAgoraContactRow(
     // rather than guessing at a preference we don't actually know.
     "Email Marketing Preference": contact.status === FundraisingStage.DO_NOT_CONTACT ? "Unsubscribed" : "",
     "Receive Emails": "",
-    "Low Commitment (Est.) (Interest Level)": contact.commitmentLow != null ? String(contact.commitmentLow) : "",
-    "High Commitment (Est.) (Interest Level)": contact.commitmentHigh != null ? String(contact.commitmentHigh) : "",
-    "Acting on Behalf of Company? (Interest Level)": "",
-    "Acting on Behalf of Self? (Interest Level)": "",
     "Primary Location (Primary Location )": safeCell(contact.primaryLocation ?? ""),
-    "Asset Class (Strategy Segmentation)": safeCell(assetClasses.join(", ")),
-    "Equity Check Range (Strategy Segmentation)": equityCheckRange,
-    "Risk Profile (Strategy Segmentation)": safeCell((company?.investmentStrategies ?? []).join(", ")),
-    // The two "(Mailing Lists)" columns below are populated dynamically from
-    // listMappings instead of hardcoded here — see MailingList.agoraColumn —
-    // since which Ledger list/tag maps to which Agora column is now an
-    // admin-editable mapping, not a fixed pairing.
-    "AREF I Prospect (Type of Prospect / Fundraising Tracking )": yn(
-      hasTag(tags, ["AREF I Active Prospects Import", "AREF I Status:"])
-    ),
-    "AREF I - Emerging Mgr. Program (Type of Prospect / Fundraising Tracking )": "",
-    "Deal LP or Opco / Mgmt Co. (Type of Prospect / Fundraising Tracking )": yn(
-      contact.recordContexts.includes(RecordContext.DEAL) || hasTag(tags, ["Capital Partner Outreach Import"])
-    ),
-    "Received Hiawatha Email 2026 (Interaction Log - Deliverables Sent)": yn(
-      hasTag(tags, ["Received Hiawatha Email", "Hiawatha Recipient"])
-    ),
+    // The three "(Mailing Lists)" columns below are populated dynamically
+    // from listMappings instead of hardcoded here — see
+    // MailingList.agoraColumn — since which Ledger list/tag maps to which
+    // Agora column is now an admin-editable mapping, not a fixed pairing.
+    "AREF I – Stage (Type of Prospect / Fundraising Tracking )": AREF_STAGE_TO_AGORA_VALUE[contact.status],
+    // "Propsect Type (Type of Prospect / Fundraising Tracking )" and
+    // "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )"
+    // are deliberately NOT populated here yet — see the RecordContext
+    // expansion note in docs/data-cleanup-tracker.md. They'll fall through
+    // to the agoraRaw fallback below (blank, same as any unmapped header)
+    // until that's resolved.
   };
 
   for (const mapping of listMappings) {

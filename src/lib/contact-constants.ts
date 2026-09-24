@@ -128,13 +128,19 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 // Fund Raise (Contact-level) wording specifically — Deal Capital and
 // Emerging Managers each override the one label that differs by context
 // (PASSED_OPEN) via FEEDBACK_STATUS_LABELS and EM_STAGE_LABELS respectively.
+// Capitalization here matches Agora's own "AREF I – Stage" dropdown exactly
+// (confirmed by Bianca 2026-09-24), same reasoning as CONTACT_TYPE_LABELS —
+// see AREF_STAGE_TO_AGORA_VALUE in agora-export-template.ts for the actual
+// export mapping, since Agora only has one "Decline" catch-all covering both
+// PASSED_NOT_INTERESTED and DO_NOT_CONTACT (DO_NOT_CONTACT separately also
+// sets Email Marketing Preference to Unsubscribed).
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   NOT_STARTED: "Not started",
-  OUTREACH_SENT: "1. Outreach sent",
-  INITIAL_INTEREST: "2. Initial interest",
-  MEETING_OCCURRED: "3. Meeting occurred",
-  ACTIVE_PROSPECT: "4a. Active prospect",
-  FINAL_CLOSE_POTENTIAL: "4b. Final close potential",
+  OUTREACH_SENT: "1. Outreach Sent",
+  INITIAL_INTEREST: "2. Initial Interest",
+  MEETING_OCCURRED: "3. Meeting Occurred",
+  ACTIVE_PROSPECT: "4a. Active Prospect",
+  FINAL_CLOSE_POTENTIAL: "4b. Final Close Potential",
   DUE_DILIGENCE: "5. Due Diligence / Dataroom",
   COMMITTED: "6. Committed",
   PASSED_OPEN: "Fund II Prospect",
