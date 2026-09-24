@@ -18,10 +18,9 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
       added in `agora-export-template.ts` (both PASSED_NOT_INTERESTED and
       DO_NOT_CONTACT collapse to Agora's one "Decline"), and the column is
       now live in `AGORA_TEMPLATE_HEADERS` + `Settings.agoraContactTemplateHeaders`.
-      **Open question**: assumed "Active Prospect" (standard spelling) —
-      Bianca's message read "Active Propsect," which may just be a typo, or
-      may be a real Agora misspelling (like the confirmed "Propsect Type"
-      column name) — needs a quick confirm.
+      Spelling confirmed 2026-09-24: "Active Prospect" (standard spelling,
+      not a repeat of the "Propsect Type" typo) — no code change needed,
+      already implemented correctly.
 - [ ] **Waiting on Bianca**: architecture decision on **Prospect Type**.
       Agora's real dropdown (multiselect, confirmed 2026-09-24) is **Mgmt
       Co, Fund, Deal, Platform-Level PropCo, Platform-Level OpCo** — a
