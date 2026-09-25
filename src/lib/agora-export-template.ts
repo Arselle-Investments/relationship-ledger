@@ -1,6 +1,11 @@
 import { Company, Contact, FundraisingStage } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
+import {
+  COMPANY_ASSET_CLASS_LABELS,
+  COMPANY_INVESTMENT_STRATEGY_LABELS,
+  COMPANY_INVESTMENT_STRUCTURE_LABELS,
+} from "@/lib/deal-constants";
 import { safeCell } from "@/lib/excel-safety";
 
 /**
@@ -42,9 +47,10 @@ export const PENDING_AGORA_FIELDS = {
 /**
  * Agora's own "Import/Update Contacts" template — headers and column order
  * copied verbatim from the workbook Agora sent us (Downloads/contacts-
- * template (2).csv, confirmed against Bianca 2026-09-24 — this is the second
- * revision; the original 2026-09-15 version had 11 different columns, see
- * git history), so a file built from this list drops straight into their
+ * template (3).csv, confirmed against Bianca 2026-09-25 — this is the third
+ * revision; it renamed one group label and added 5 Company-level investment-
+ * profile columns on top of the second revision's 40, see git history for
+ * both prior revisions), so a file built from this list drops straight into their
  * importer without remapping on their end. Only fields we actually have a
  * confident, direct source for are filled in below (see
  * buildAgoraContactRow); everything else is left blank rather than guessed,
@@ -92,14 +98,25 @@ export const AGORA_TEMPLATE_HEADERS = [
   "Arselle Holiday Card (Mailing Lists)",
   "End of Year Investor Letter (Mailing Lists)",
   "HNW Syndication – Hiawatha (Amonte) (Mailing Lists)",
-  // Multiselect — RecordContext now matches this field's 5 values exactly
+  // Group renamed from "Type of Prospect / Fundraising Tracking" to
+  // "Propsect Type / Stage" on 2026-09-25 (third confirmed sighting of
+  // Agora's own "Propsect" typo — it's real, not a transcription error).
+  // Multiselect — RecordContext matches this field's 5 values exactly
   // (Mgmt Co, Fund, Deal, Platform-Level PropCo, Platform-Level OpCo), see
   // RECORD_CONTEXT_LABELS in record-context.ts.
-  "Propsect Type (Type of Prospect / Fundraising Tracking )",
-  "AREF I – Stage (Type of Prospect / Fundraising Tracking )",
+  "Propsect Type (Propsect Type / Stage)",
+  "AREF I – Stage (Propsect Type / Stage)",
   // Being deprecated by Agora — folding into an option under Prospect Type
   // (per Bianca 2026-09-24) — so deliberately left unmapped here too.
-  "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )",
+  "Platform OpCo Prospect (Propsect Type / Stage)",
+  // Added 2026-09-25 — Company-level fields (Contact has no equivalent of
+  // its own), sourced from the contact's linked company and written the same
+  // across every contact there. Blank for contacts with no linked company.
+  "Target Asset Class (Propsect Type / Stage)",
+  "Investment Structures (Propsect Type / Stage)",
+  "Investment Strategies (Propsect Type / Stage)",
+  "Check Size (Min) (Propsect Type / Stage)",
+  "Check Size (Max) (Propsect Type / Stage)",
 ] as const;
 
 function hasTag(tags: string[], substrings: string[]): boolean {
@@ -202,18 +219,30 @@ export function buildAgoraContactRow(
     // from listMappings instead of hardcoded here — see
     // MailingList.agoraColumn — since which Ledger list/tag maps to which
     // Agora column is now an admin-editable mapping, not a fixed pairing.
-    "AREF I – Stage (Type of Prospect / Fundraising Tracking )": AREF_STAGE_TO_AGORA_VALUE[contact.status],
+    "AREF I – Stage (Propsect Type / Stage)": AREF_STAGE_TO_AGORA_VALUE[contact.status],
     // Multiselect — RecordContext now matches Agora's 5-value Prospect Type
     // picklist exactly (confirmed by Bianca 2026-09-24), so this is a direct
     // pass-through, same "spelled to match Agora exactly" approach as Type.
-    "Propsect Type (Type of Prospect / Fundraising Tracking )": safeCell(
+    "Propsect Type (Propsect Type / Stage)": safeCell(
       contact.recordContexts.map((ctx) => RECORD_CONTEXT_LABELS[ctx]).join("; ")
     ),
-    // "Platform OpCo Prospect (Type of Prospect / Fundraising Tracking )" is
-    // being deprecated by Agora into an option under Prospect Type (per
-    // Bianca 2026-09-24), so deliberately left unpopulated here — it'll fall
-    // through to the agoraRaw fallback below (blank) until Agora actually
-    // removes the column.
+    // "Platform OpCo Prospect (Propsect Type / Stage)" is being deprecated by
+    // Agora into an option under Prospect Type (per Bianca 2026-09-24), so
+    // deliberately left unpopulated here — it'll fall through to the
+    // agoraRaw fallback below (blank) until Agora actually removes the column.
+    // Company-level investment profile, denormalized onto every contact row
+    // linked to that company (added 2026-09-25, per the new template revision).
+    "Target Asset Class (Propsect Type / Stage)": safeCell(
+      (company?.targetAssetClasses ?? []).map((c) => COMPANY_ASSET_CLASS_LABELS[c]).join("; ")
+    ),
+    "Investment Structures (Propsect Type / Stage)": safeCell(
+      (company?.investmentStructures ?? []).map((s) => COMPANY_INVESTMENT_STRUCTURE_LABELS[s]).join("; ")
+    ),
+    "Investment Strategies (Propsect Type / Stage)": safeCell(
+      (company?.investmentStrategies ?? []).map((s) => COMPANY_INVESTMENT_STRATEGY_LABELS[s]).join("; ")
+    ),
+    "Check Size (Min) (Propsect Type / Stage)": company?.investmentSizeMin != null ? String(company.investmentSizeMin) : "",
+    "Check Size (Max) (Propsect Type / Stage)": company?.investmentSizeMax != null ? String(company.investmentSizeMax) : "",
   };
 
   for (const mapping of listMappings) {

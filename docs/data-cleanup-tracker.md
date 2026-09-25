@@ -44,8 +44,8 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
       (Low/High Commitment, Acting on Behalf x2, Asset Class/Equity Check
       Range/Risk Profile, the 3 old Type-of-Prospect Yes/No flags, Received
       Hiawatha Email 2026) — see the "no Agora destination" note below.
-- [x] **Company's investment profile has no Agora destination — resolved
-      2026-09-25: locked down to fixed enums, staying Ledger-only.**
+- [x] **Company's investment profile — locked to fixed enums 2026-09-25,
+      then wired to real Agora columns the same day.**
       `targetAssetClasses`/`investmentStructures`/`investmentStrategies`
       converted from free-text write-in arrays to real enums
       (`AssetClass`, `InvestmentStructure`, `InvestmentStrategy`) — see
@@ -55,11 +55,17 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
       real classes kept); the 45 companies on the combined "Value-Add /
       Opp" strategy were split company-by-company into `Value-Add`
       and/or `Opportunistic` (zero came back as genuinely both); `NNN`
-      kept as a permanent strategy (Bianca added it in Agora too, though
-      it has no Ledger→Agora path since this data doesn't export);
-      `Office`/`Hospitality`/`Land` kept as asset-class options despite
-      zero current usage. `commitmentLow`/`commitmentHigh` still have no
-      Agora destination and remain unresolved — no action taken.
+      kept as a permanent strategy (Bianca added it in Agora too). Then
+      Agora's contacts-template revision 3 (2026-09-25) added 5 real
+      columns for exactly this data — Target Asset Class, Investment
+      Structures, Investment Strategies, Check Size (Min), Check Size
+      (Max) — under a renamed group ("Propsect Type / Stage", was "Type
+      of Prospect / Fundraising Tracking"). Wired up in
+      `agora-export-template.ts`: since the template is per-contact, each
+      contact's row is denormalized from its linked Company (blank if no
+      linked company). `Settings.agoraContactTemplateHeaders` synced to
+      the new 45-header list. `commitmentLow`/`commitmentHigh` still have
+      no Agora destination and remain unresolved — no action taken.
 - [ ] Once the above lands: refresh the full field-by-field mapping table
       (Contact + Company) against the new template for an accurate
       "what's in Agora / what isn't" picture.
