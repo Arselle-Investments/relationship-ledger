@@ -2,9 +2,18 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
+import { AssetClass, Company, ContactTier, ContactType, Contact, Deal, DealFeedback, DealOutreach, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
-import { FEEDBACK_STATUS_LABELS, FEEDBACK_STATUS_TAG_CLASS } from "@/lib/deal-constants";
+import {
+  FEEDBACK_STATUS_LABELS,
+  FEEDBACK_STATUS_TAG_CLASS,
+  COMPANY_ASSET_CLASS_LABELS,
+  COMPANY_ASSET_CLASS_OPTIONS,
+  COMPANY_INVESTMENT_STRUCTURE_LABELS,
+  COMPANY_INVESTMENT_STRUCTURE_OPTIONS,
+  COMPANY_INVESTMENT_STRATEGY_LABELS,
+  COMPANY_INVESTMENT_STRATEGY_OPTIONS,
+} from "@/lib/deal-constants";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import {
@@ -44,7 +53,7 @@ export function TargetLPsClient({
 }) {
   const [contacts, setContacts] = useState(initialContacts);
   const [search, setSearch] = useState("");
-  const [assetClassFilter, setAssetClassFilter] = useState("");
+  const [assetClassFilter, setAssetClassFilter] = useState<AssetClass | "">("");
   const [tierFilter, setTierFilter] = useState<ContactTier | "UNTIERED" | "">("");
   const [typeFilter, setTypeFilter] = useState<ContactType | "">("");
   const [exporting, setExporting] = useState(false);
@@ -54,18 +63,6 @@ export function TargetLPsClient({
   const [editingContact, setEditingContact] = useState<ContactWithRelations | null>(null);
   const { sortKey, toggleSort } = useSort<SortField>("name");
 
-  const assetClasses = useMemo(
-    () => Array.from(new Set(companies.flatMap((c) => c.targetAssetClasses))).sort(),
-    [companies]
-  );
-  const investmentStructures = useMemo(
-    () => Array.from(new Set(companies.flatMap((c) => c.investmentStructures))).sort(),
-    [companies]
-  );
-  const investmentStrategies = useMemo(
-    () => Array.from(new Set(companies.flatMap((c) => c.investmentStrategies))).sort(),
-    [companies]
-  );
   const allTags = useMemo(() => Array.from(new Set(companies.flatMap((c) => c.tags))).sort(), [companies]);
   const priorityQuarters = useMemo(
     () => Array.from(new Set(companies.map((c) => c.priorityQuarter).filter((v): v is string => !!v))).sort(),
@@ -213,16 +210,14 @@ export function TargetLPsClient({
             </option>
           ))}
         </select>
-        {assetClasses.length > 0 && (
-          <select value={assetClassFilter} onChange={(e) => setAssetClassFilter(e.target.value)}>
-            <option value="">All asset classes</option>
-            {assetClasses.map((a) => (
-              <option key={a} value={a}>
-                {a}
-              </option>
-            ))}
-          </select>
-        )}
+        <select value={assetClassFilter} onChange={(e) => setAssetClassFilter(e.target.value as AssetClass | "")}>
+          <option value="">All asset classes</option>
+          {COMPANY_ASSET_CLASS_OPTIONS.map((a) => (
+            <option key={a} value={a}>
+              {COMPANY_ASSET_CLASS_LABELS[a]}
+            </option>
+          ))}
+        </select>
         <button className="btn" onClick={() => setShowAllFilters(true)}>
           All filters{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ""}
         </button>
@@ -234,7 +229,7 @@ export function TargetLPsClient({
 
       <div className="helptext" style={{ marginBottom: 12 }}>
         {filtered.length} of {groups.length} target LPs
-        {assetClassFilter ? ` · filtered to ${assetClassFilter} investors` : ""}
+        {assetClassFilter ? ` · filtered to ${COMPANY_ASSET_CLASS_LABELS[assetClassFilter]} investors` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
         {advancedFilters.sources.length > 0 ? ` · sourced from ${advancedFilters.sources.join(" + ")}` : ""}
@@ -266,7 +261,7 @@ export function TargetLPsClient({
                 <td className="name-cell">{g.name}</td>
                 <td className="muted">{g.company.city || "—"}</td>
                 <td>{g.contacts.length}</td>
-                <td className="muted">{g.company.targetAssetClasses.join(", ") || "—"}</td>
+                <td className="muted">{g.company.targetAssetClasses.map((a) => COMPANY_ASSET_CLASS_LABELS[a]).join(", ") || "—"}</td>
                 <td className="muted">{g.company.outreach.length}</td>
                 <td className="muted">{g.company.feedback.length || 0}</td>
                 <td>
@@ -334,17 +329,17 @@ export function TargetLPsClient({
                   </div>
                   {activeCompany.targetAssetClasses.length > 0 && (
                     <div style={{ fontSize: 13, marginBottom: 3 }}>
-                      <b>Asset classes:</b> {activeCompany.targetAssetClasses.join(", ")}
+                      <b>Asset classes:</b> {activeCompany.targetAssetClasses.map((a) => COMPANY_ASSET_CLASS_LABELS[a]).join(", ")}
                     </div>
                   )}
                   {activeCompany.investmentStructures.length > 0 && (
                     <div style={{ fontSize: 13, marginBottom: 3 }}>
-                      <b>Structures:</b> {activeCompany.investmentStructures.join(", ")}
+                      <b>Structures:</b> {activeCompany.investmentStructures.map((s) => COMPANY_INVESTMENT_STRUCTURE_LABELS[s]).join(", ")}
                     </div>
                   )}
                   {activeCompany.investmentStrategies.length > 0 && (
                     <div style={{ fontSize: 13, marginBottom: 3 }}>
-                      <b>Strategy:</b> {activeCompany.investmentStrategies.join(", ")}
+                      <b>Strategy:</b> {activeCompany.investmentStrategies.map((s) => COMPANY_INVESTMENT_STRATEGY_LABELS[s]).join(", ")}
                     </div>
                   )}
                   {(activeCompany.investmentSizeMin || activeCompany.investmentSizeMax) && (
@@ -435,8 +430,8 @@ export function TargetLPsClient({
           filters={advancedFilters}
           onChange={setAdvancedFilters}
           onClose={() => setShowAllFilters(false)}
-          investmentStructures={investmentStructures}
-          investmentStrategies={investmentStrategies}
+          investmentStructures={COMPANY_INVESTMENT_STRUCTURE_OPTIONS}
+          investmentStrategies={COMPANY_INVESTMENT_STRATEGY_OPTIONS}
           tags={allTags}
           priorityQuarters={priorityQuarters}
           sources={allSources}

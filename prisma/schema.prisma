@@ -244,6 +244,41 @@ enum RecordContext {
   PLATFORM_LEVEL_OPCO
 }
 
+// Company.targetAssetClasses — locked down 2026-09-24 from a free-text
+// write-in array (Office/Hospitality/Land kept despite zero current usage,
+// per Bianca; "Other (Write-In)" retired — every prior use of it was cleaned
+// up to a real class first, see docs/data-cleanup-tracker.md).
+enum AssetClass {
+  INDUSTRIAL
+  MULTIFAMILY
+  RETAIL
+  SELF_STORAGE
+  OFFICE
+  HOSPITALITY
+  LAND
+}
+
+// Company.investmentStructures — locked down 2026-09-24, same reasoning.
+enum InvestmentStructure {
+  LP_EQUITY
+  CO_GP
+  STRUCTURED_EQUITY
+  DEBT_CAPITAL
+  OTHER_STRATEGIC
+}
+
+// Company.investmentStrategies — locked down 2026-09-24. The old combined
+// "Value-Add / Opp" write-in was split company-by-company into VALUE_ADD
+// and/or OPPORTUNISTIC first (see docs/data-cleanup-tracker.md); NNN is a
+// genuine write-in Bianca confirmed as a permanent option.
+enum InvestmentStrategy {
+  CORE
+  CORE_PLUS
+  VALUE_ADD
+  OPPORTUNISTIC
+  NNN
+}
+
 // A real record for a capital partner/company, promoted out of the free-text
 // Contact.org string so deal feedback (and investment-criteria data) can live
 // at the company level, not just on whichever one contact happens to hold it.
@@ -276,10 +311,12 @@ model Company {
   // Durable "what do they generally invest in" profile — separate from any
   // one deal's feedback, so a new raise can quickly filter to matching
   // capital partners (e.g. "who's interested in self storage") rather than
-  // digging back through past deal notes.
-  targetAssetClasses   String[] @default([]) // e.g. Industrial, Multifamily, Retail, Self-Storage, NNN
-  investmentStructures String[] @default([]) // e.g. Co-GP, LP Equity, Structured Equity, Debt Capital, Other Strategic
-  investmentStrategies String[] @default([]) // e.g. Core, Core+, Value-Add / Opp
+  // digging back through past deal notes. Locked down to fixed enums
+  // 2026-09-24 (were free-text write-in arrays before) — see
+  // docs/data-cleanup-tracker.md for the cleanup that preceded this.
+  targetAssetClasses   AssetClass[] @default([])
+  investmentStructures InvestmentStructure[] @default([])
+  investmentStrategies InvestmentStrategy[] @default([])
   investmentSizeMin   Float?
   investmentSizeMax   Float?
 

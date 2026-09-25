@@ -44,12 +44,22 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
       (Low/High Commitment, Acting on Behalf x2, Asset Class/Equity Check
       Range/Risk Profile, the 3 old Type-of-Prospect Yes/No flags, Received
       Hiawatha Email 2026) — see the "no Agora destination" note below.
-- [ ] **Bianca is separately reviewing**: the fields that now have *zero*
-      Agora destination since the template shrank — `commitmentLow/High`,
-      and Company's whole investment profile (`targetAssetClasses`,
-      `investmentSizeMin/Max`, `investmentStrategies`). Decide whether any
-      of these need a new custom field requested from Agora, or if they
-      just stay Ledger-only.
+- [x] **Company's investment profile has no Agora destination — resolved
+      2026-09-25: locked down to fixed enums, staying Ledger-only.**
+      `targetAssetClasses`/`investmentStructures`/`investmentStrategies`
+      converted from free-text write-in arrays to real enums
+      (`AssetClass`, `InvestmentStructure`, `InvestmentStrategy`) — see
+      migration `20260925000000_lock_company_investment_profile_enums`.
+      Cleanup that preceded it: the 4 companies on the "Other (Write-In)"
+      asset-class placeholder were resolved (placeholder just dropped,
+      real classes kept); the 45 companies on the combined "Value-Add /
+      Opp" strategy were split company-by-company into `Value-Add`
+      and/or `Opportunistic` (zero came back as genuinely both); `NNN`
+      kept as a permanent strategy (Bianca added it in Agora too, though
+      it has no Ledger→Agora path since this data doesn't export);
+      `Office`/`Hospitality`/`Land` kept as asset-class options despite
+      zero current usage. `commitmentLow`/`commitmentHigh` still have no
+      Agora destination and remain unresolved — no action taken.
 - [ ] Once the above lands: refresh the full field-by-field mapping table
       (Contact + Company) against the new template for an accurate
       "what's in Agora / what isn't" picture.

@@ -16,7 +16,7 @@ const schema = z.object({
   dryRun: z.boolean().optional(),
 });
 
-function mergeArrays(a: string[], b: string[]): string[] {
+function mergeArrays<T>(a: T[], b: T[]): T[] {
   return Array.from(new Set([...a, ...b]));
 }
 

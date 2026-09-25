@@ -1,11 +1,14 @@
 "use client";
 
+import { InvestmentStrategy, InvestmentStructure } from "@prisma/client";
+import { COMPANY_INVESTMENT_STRATEGY_LABELS, COMPANY_INVESTMENT_STRUCTURE_LABELS } from "@/lib/deal-constants";
+
 export type AgoraStatusFilter = "" | "PENDING" | "EXPORTED";
 
 export type CompanyAdvancedFilters = {
   priorityQuarter: string;
-  investmentStructure: string;
-  investmentStrategy: string;
+  investmentStructure: InvestmentStructure | "";
+  investmentStrategy: InvestmentStrategy | "";
   tag: string;
   sizeMin: string;
   sizeMax: string;
@@ -55,8 +58,8 @@ export function CompaniesFilterModal({
   filters: CompanyAdvancedFilters;
   onChange: (next: CompanyAdvancedFilters) => void;
   onClose: () => void;
-  investmentStructures: string[];
-  investmentStrategies: string[];
+  investmentStructures: InvestmentStructure[];
+  investmentStrategies: InvestmentStrategy[];
   tags: string[];
   priorityQuarters: string[];
   sources: string[];
@@ -85,22 +88,22 @@ export function CompaniesFilterModal({
           <div className="field-row">
             <div className="field">
               <label>Investment structure</label>
-              <select value={filters.investmentStructure} onChange={(e) => set("investmentStructure", e.target.value)}>
+              <select value={filters.investmentStructure} onChange={(e) => set("investmentStructure", e.target.value as InvestmentStructure | "")}>
                 <option value="">Any structure</option>
                 {investmentStructures.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {COMPANY_INVESTMENT_STRUCTURE_LABELS[s]}
                   </option>
                 ))}
               </select>
             </div>
             <div className="field">
               <label>Investment strategy</label>
-              <select value={filters.investmentStrategy} onChange={(e) => set("investmentStrategy", e.target.value)}>
+              <select value={filters.investmentStrategy} onChange={(e) => set("investmentStrategy", e.target.value as InvestmentStrategy | "")}>
                 <option value="">Any strategy</option>
                 {investmentStrategies.map((s) => (
                   <option key={s} value={s}>
-                    {s}
+                    {COMPANY_INVESTMENT_STRATEGY_LABELS[s]}
                   </option>
                 ))}
               </select>
