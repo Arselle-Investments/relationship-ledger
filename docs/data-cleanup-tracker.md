@@ -71,6 +71,15 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
 - [ ] Once the above lands: refresh the full field-by-field mapping table
       (Contact + Company) against the new template for an accurate
       "what's in Agora / what isn't" picture.
+- [x] **Contact.primaryLocation retired 2026-09-28** — only 29 of 1,129
+      contacts (2.6%) had it set, all 29 already had `city` too, and where
+      the two disagreed `city` was the more accurate value. Replaced with a
+      new `Contact.state` field (editable, filterable, same treatment as
+      `city`) wired into Agora's "State / Province" export column, which
+      had existed in the template since revision 1 but was always blank.
+      Agora's own "PRIMARY LOCATION" import column is kept only as an
+      inline city fallback (`agora-import.ts`), not promoted to its own
+      field anymore.
 
 ## Contact/Company type taxonomy (mostly done)
 
