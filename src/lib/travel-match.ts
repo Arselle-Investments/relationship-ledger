@@ -59,17 +59,13 @@ function inSameAliasGroup(a: string, b: string): boolean {
  * York, NY, United States" (trip is the substring of the contact) — Agora's
  * location data and what a team member types into the trip form are rarely
  * the same granularity. */
-export function contactMatchesCity(contact: { city: string | null; primaryLocation?: string | null }, city: string): boolean {
+export function contactMatchesCity(contact: { city: string | null }, city: string): boolean {
   const needle = city.trim().toLowerCase();
-  if (!needle) return false;
-  // Check both the specific city and Agora's coarser primaryLocation (e.g.
-  // "SF Bay Area") — a contact can have one, the other, or both on file.
-  const candidates = [contact.city, contact.primaryLocation].filter((v): v is string => Boolean(v));
-  if (candidates.length === 0) return false;
+  if (!needle || !contact.city) return false;
   // Agora sometimes lists more than one location for a contact, e.g.
   // "New York; Miami" — check each one on its own rather than the joined string.
-  return candidates
-    .flatMap((v) => v.split(";"))
+  return contact.city
+    .split(";")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean)
     .some((contactCity) => contactCity.includes(needle) || needle.includes(contactCity) || inSameAliasGroup(needle, contactCity));

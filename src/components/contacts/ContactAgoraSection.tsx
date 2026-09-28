@@ -7,7 +7,7 @@ import { ViewField } from "./ViewField";
 // modal — repeating them in the raw dump below would just be noise.
 const ALREADY_SHOWN = new Set([
   "TITLE", "JOB TITLE", "FIRST NAME", "LAST NAME", "EMAIL", "PHONE NO.", "COMPANY", "TAGS",
-  "STAFF MEMBERS", "TYPE", "NOTES", "PRIMARY LOCATION", "CITY",
+  "STAFF MEMBERS", "TYPE", "NOTES", "CITY", "STATE / PROVINCE",
   "LOW COMMITMENT (EST.)", "HIGH COMMITMENT (EST.)", "TIER FOR EMAIL TRACKING",
 ]);
 
@@ -30,7 +30,6 @@ export function ContactAgoraSection({ contact }: { contact: ContactWithRelations
 
   const hasCore =
     contact.agoraType ||
-    contact.primaryLocation ||
     contact.staffNames.length > 0 ||
     contact.commitmentLow != null ||
     contact.commitmentHigh != null ||
@@ -53,7 +52,6 @@ export function ContactAgoraSection({ contact }: { contact: ContactWithRelations
         Agora profile
       </label>
       {contact.agoraType && <ViewField label="Contact Type" value={contact.agoraType} />}
-      {contact.primaryLocation && <ViewField label="Primary location" value={contact.primaryLocation} />}
       {contact.staffNames.length > 0 && <ViewField label="Staff members" value={contact.staffNames.join(", ")} />}
       {(contact.commitmentLow != null || contact.commitmentHigh != null) && (
         <ViewField

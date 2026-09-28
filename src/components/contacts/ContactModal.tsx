@@ -36,6 +36,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       email: "",
       phone: "",
       city: "",
+      state: "",
       lastContact: new Date().toISOString().slice(0, 10),
       cadenceOverrideDays: "",
       priorityQuarter: "",
@@ -56,6 +57,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     email: contact.email ?? "",
     phone: contact.phone ?? "",
     city: contact.city ?? "",
+    state: contact.state ?? "",
     lastContact: contact.lastContact ? new Date(contact.lastContact).toISOString().slice(0, 10) : "",
     cadenceOverrideDays: contact.cadenceOverrideDays?.toString() ?? "",
     priorityQuarter: contact.priorityQuarter ?? "",
@@ -210,6 +212,7 @@ export function ContactModal({
       email: values.email.trim() || null,
       phone: values.phone.trim() || null,
       city: values.city.trim() || null,
+      state: values.state.trim() || null,
       lastContact: values.lastContact || null,
       cadenceOverrideDays: values.cadenceOverrideDays ? parseInt(values.cadenceOverrideDays, 10) : null,
       priorityQuarter: values.priorityQuarter.trim() || null,
@@ -306,7 +309,9 @@ export function ContactModal({
               )}
               {values.email && <ViewField label="Email" value={<EmailValue email={values.email} />} />}
               {values.phone && <ViewField label="Phone" value={values.phone} />}
-              {values.city && <ViewField label="City / region" value={values.city} />}
+              {values.city && (
+                <ViewField label="City / region" value={values.state ? `${values.city}, ${values.state}` : values.city} />
+              )}
               {owner && <ViewField label="Owner" value={owner.name || owner.email} />}
               {warmPath && <ViewField label="Warm path" value={warmPath.name || warmPath.email} />}
               {values.lastContact && <ViewField label="Last contact" value={values.lastContact} />}
@@ -427,6 +432,12 @@ export function ContactModal({
                 <div className="field">
                   <label>City / region</label>
                   <input value={values.city} onChange={(e) => set("city", e.target.value)} disabled={!canEdit} />
+                </div>
+              </div>
+              <div className="field-row">
+                <div className="field">
+                  <label>State</label>
+                  <input value={values.state} onChange={(e) => set("state", e.target.value)} disabled={!canEdit} />
                 </div>
               </div>
               <div className="field-row">

@@ -33,10 +33,12 @@ Agora's outgoing "Import/Update Contacts" template changed materially —
       so it's unaffected by the 3 new values. Export wired up in
       `agora-export-template.ts` — a direct pass-through multiselect (values
       joined with `"; "`), same "spelled to match Agora exactly" approach as
-      Type. Note: the simple "Fund / Deal" quick-filter toggle buttons on
-      the main Companies/Contacts list pages were **not** expanded to all 5
-      — those stay as a deliberate two-option quick filter unless asked
-      otherwise.
+      Type. Update 2026-09-28: the "Fund / Deal" quick-filter toggle on the
+      Companies/Contacts list pages (previously left as a 2-option filter on
+      purpose) has now been expanded to all 5 RecordContext values per
+      Bianca's request — relabeled "Prospect type:" in both
+      `ContactsClient.tsx` and `CompaniesClient.tsx`, generated from
+      `Object.values(RecordContext)` so it stays in sync automatically.
 - [x] **Platform OpCo Prospect** — deprecated as its own column, folding
       into an option under Prospect Type. No separate mapping needed; left
       unmapped in the header list until Agora actually removes the column.

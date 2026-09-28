@@ -198,8 +198,8 @@ export function buildAgoraContactRow(
     "Phone Type 3": "",
     "Phone Type 4": "",
     Country: "",
-    "State / Province": "",
-    City: safeCell(contact.city ?? contact.primaryLocation ?? ""),
+    "State / Province": safeCell(contact.state ?? ""),
+    City: safeCell(contact.city ?? ""),
     "Street (Line 1)": "",
     "Zip / Postal Code": "",
     "Street (Line 2)": "",
@@ -214,7 +214,12 @@ export function buildAgoraContactRow(
     // rather than guessing at a preference we don't actually know.
     "Email Marketing Preference": contact.status === FundraisingStage.DO_NOT_CONTACT ? "Unsubscribed" : "",
     "Receive Emails": "",
-    "Primary Location (Primary Location )": safeCell(contact.primaryLocation ?? ""),
+    // "Primary Location (Primary Location )" — Agora's own coarser region
+    // label — is no longer a tracked field (retired 2026-09-28, near-zero
+    // coverage and never more precise than city, see
+    // docs/data-cleanup-tracker.md), so deliberately left unpopulated here;
+    // falls through to the agoraRaw fallback below like any other column
+    // this app doesn't independently source.
     // The three "(Mailing Lists)" columns below are populated dynamically
     // from listMappings instead of hardcoded here — see
     // MailingList.agoraColumn — since which Ledger list/tag maps to which

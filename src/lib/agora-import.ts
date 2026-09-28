@@ -78,11 +78,11 @@ export type AgoraContactRow = {
   email: string | null;
   phone: string | null;
   city: string | null;
+  state: string | null;
   tags: string[];
   notes: string;
   ownerId: string | null;
   agoraType: string | null;
-  primaryLocation: string | null;
   staffNames: string[];
   commitmentLow: number | null;
   commitmentHigh: number | null;
@@ -103,8 +103,13 @@ export function buildAgoraContact(row: Record<string, string>, userByName: Map<s
   if (!name) return null;
 
   const agoraTypeRaw = cleanAgora(getField(row, ["TYPE"]));
-  const primaryLocation = cleanAgora(getField(row, ["PRIMARY LOCATION"]));
-  const city = cleanAgora(getField(row, ["CITY"])) ?? primaryLocation;
+  // Agora's own "Primary Location" is a coarser region label (e.g. "SF Bay
+  // Area") we don't track as its own field anymore (retired 2026-09-28, see
+  // docs/data-cleanup-tracker.md — near-zero coverage and never more precise
+  // than city); still a reasonable fallback for city when Agora's own "CITY"
+  // is blank, so kept inline here rather than dropped outright.
+  const city = cleanAgora(getField(row, ["CITY"])) ?? cleanAgora(getField(row, ["PRIMARY LOCATION"]));
+  const state = cleanAgora(getField(row, ["STATE / PROVINCE"]));
 
   const tags = getField(row, ["TAGS"])
     .split(";")
@@ -134,11 +139,11 @@ export function buildAgoraContact(row: Record<string, string>, userByName: Map<s
     email: cleanAgora(getField(row, ["EMAIL"])),
     phone: phoneRaw,
     city,
+    state,
     tags,
     notes: cleanAgora(getField(row, ["NOTES"])) ?? "",
     ownerId,
     agoraType: agoraTypeRaw,
-    primaryLocation,
     staffNames,
     commitmentLow: parseAgoraNumber(getField(row, ["LOW COMMITMENT (EST.)"])),
     commitmentHigh: parseAgoraNumber(getField(row, ["HIGH COMMITMENT (EST.)"])),

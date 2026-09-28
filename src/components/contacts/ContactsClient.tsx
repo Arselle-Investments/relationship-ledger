@@ -37,8 +37,8 @@ export function ContactsClient({
     () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
     [contacts]
   );
-  const locations = useMemo(
-    () => Array.from(new Set(contacts.map((c) => c.primaryLocation).filter((v): v is string => !!v))).sort(),
+  const states = useMemo(
+    () => Array.from(new Set(contacts.map((c) => c.state).filter((v): v is string => !!v))).sort(),
     [contacts]
   );
   const allTags = useMemo(() => Array.from(new Set(contacts.flatMap((c) => c.tags ?? []))).sort(), [contacts]);
@@ -55,7 +55,7 @@ export function ContactsClient({
       if (agoraTypeFilter && c.agoraType !== agoraTypeFilter) return false;
       if (advancedFilters.status && c.status !== advancedFilters.status) return false;
       if (advancedFilters.warmPathId && c.warmPathId !== advancedFilters.warmPathId) return false;
-      if (advancedFilters.primaryLocation && c.primaryLocation !== advancedFilters.primaryLocation) return false;
+      if (advancedFilters.state && c.state !== advancedFilters.state) return false;
       if (advancedFilters.tag && !(c.tags ?? []).includes(advancedFilters.tag)) return false;
       if (advancedFilters.emailTier && c.emailTier !== Number(advancedFilters.emailTier)) return false;
       if (advancedFilters.hasEmail && !c.email) return false;
@@ -63,7 +63,7 @@ export function ContactsClient({
       if (commitmentMin !== null && (c.commitmentLow == null || c.commitmentLow < commitmentMin)) return false;
       if (commitmentMax !== null && (c.commitmentHigh == null || c.commitmentHigh > commitmentMax)) return false;
       if (q) {
-        const haystack = [c.name, c.org ?? "", c.company?.name ?? "", c.primaryLocation ?? "", c.agoraType ?? "", ...(c.tags ?? [])]
+        const haystack = [c.name, c.org ?? "", c.company?.name ?? "", c.city ?? "", c.state ?? "", c.agoraType ?? "", ...(c.tags ?? [])]
           .join(" ")
           .toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -118,17 +118,16 @@ export function ContactsClient({
   return (
     <div>
       <div className="toolbar" style={{ marginBottom: 10 }}>
-        <span className="helptext" style={{ margin: 0 }}>Fund vs. Deal:</span>
+        <span className="helptext" style={{ margin: 0 }}>Prospect type:</span>
         <div className="view-toggle">
           <button className={contextFilter === "" ? "active" : ""} onClick={() => setContextFilter("")}>
             All
           </button>
-          <button className={contextFilter === "FUND" ? "active" : ""} onClick={() => setContextFilter("FUND")}>
-            Fund
-          </button>
-          <button className={contextFilter === "DEAL" ? "active" : ""} onClick={() => setContextFilter("DEAL")}>
-            Deal
-          </button>
+          {Object.values(RecordContext).map((ctx) => (
+            <button key={ctx} className={contextFilter === ctx ? "active" : ""} onClick={() => setContextFilter(ctx)}>
+              {RECORD_CONTEXT_LABELS[ctx]}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -189,7 +188,7 @@ export function ContactsClient({
 
       <div className="helptext" style={{ marginBottom: 12 }}>
         Showing {filtered.length} of {contacts.length} contacts.
-        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]}-side only` : ""}
+        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]} only` : ""}
       </div>
 
       {listMsg && (
@@ -233,7 +232,7 @@ export function ContactsClient({
                     <span className="muted">—</span>
                   )}
                 </td>
-                <td>{c.primaryLocation || c.city || <span className="muted">—</span>}</td>
+                <td>{[c.city, c.state].filter(Boolean).join(", ") || <span className="muted">—</span>}</td>
                 <td>{c.owner?.name || <span className="muted">—</span>}</td>
                 <td>
                   {(c.tags ?? []).slice(0, 2).map((t) => (
@@ -254,7 +253,7 @@ export function ContactsClient({
           filters={advancedFilters}
           onChange={setAdvancedFilters}
           onClose={() => setShowAllFilters(false)}
-          locations={locations}
+          states={states}
           tags={allTags}
           team={team}
         />

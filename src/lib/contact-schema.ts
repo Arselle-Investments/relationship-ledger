@@ -13,6 +13,7 @@ export const contactInputSchema = z.object({
   email: z.string().trim().optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   city: z.string().trim().optional().nullable(),
+  state: z.string().trim().optional().nullable(),
   lastContact: z.string().trim().optional().nullable(), // ISO date string
   cadenceOverrideDays: z.number().int().positive().optional().nullable(),
   priorityQuarter: z.string().trim().optional().nullable(),

@@ -227,17 +227,16 @@ export function CompaniesClient({
   return (
     <div>
       <div className="toolbar" style={{ marginBottom: 10 }}>
-        <span className="helptext" style={{ margin: 0 }}>Fund vs. Deal:</span>
+        <span className="helptext" style={{ margin: 0 }}>Prospect type:</span>
         <div className="view-toggle">
           <button className={contextFilter === "" ? "active" : ""} onClick={() => setContextFilter("")}>
             All
           </button>
-          <button className={contextFilter === "FUND" ? "active" : ""} onClick={() => setContextFilter("FUND")}>
-            Fund
-          </button>
-          <button className={contextFilter === "DEAL" ? "active" : ""} onClick={() => setContextFilter("DEAL")}>
-            Deal
-          </button>
+          {Object.values(RecordContext).map((ctx) => (
+            <button key={ctx} className={contextFilter === ctx ? "active" : ""} onClick={() => setContextFilter(ctx)}>
+              {RECORD_CONTEXT_LABELS[ctx]}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -293,7 +292,7 @@ export function CompaniesClient({
         {assetClassFilter ? ` · filtered to ${COMPANY_ASSET_CLASS_LABELS[assetClassFilter]} investors` : ""}
         {tierFilter === "UNTIERED" ? " · no tier set" : tierFilter ? ` · ${CONTACT_TIER_LABELS[tierFilter]}` : ""}
         {typeFilter ? ` · ${CONTACT_TYPE_LABELS[typeFilter]}` : ""}
-        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]}-side only` : ""}
+        {contextFilter ? ` · ${RECORD_CONTEXT_LABELS[contextFilter]} only` : ""}
         {advancedFilters.sources.length > 0 ? ` · sourced from ${advancedFilters.sources.join(" + ")}` : ""}
         {advancedFilters.agoraStatus === "PENDING" ? " · not yet in Agora" : advancedFilters.agoraStatus === "EXPORTED" ? " · already in Agora" : ""}
         {activeAdvancedCount > 0 ? ` · ${activeAdvancedCount} more filter${activeAdvancedCount === 1 ? "" : "s"}` : ""}
@@ -603,7 +602,7 @@ export function CompaniesClient({
                     <tr key={c.id} onClick={() => setEditingContact(c)}>
                       <td className="name-cell">{c.name}</td>
                       <td>{c.agoraType || CONTACT_TYPE_LABELS[c.type]}</td>
-                      <td>{c.primaryLocation || c.city || <span className="muted">—</span>}</td>
+                      <td>{c.city || <span className="muted">—</span>}</td>
                       <td>{c.owner?.name || <span className="muted">—</span>}</td>
                     </tr>
                   ))}

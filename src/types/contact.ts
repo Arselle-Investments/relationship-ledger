@@ -20,6 +20,7 @@ export type ContactFormValues = {
   email: string;
   phone: string;
   city: string;
+  state: string;
   lastContact: string; // yyyy-mm-dd for <input type=date>
   cadenceOverrideDays: string; // kept as string for the form input, parsed on submit
   priorityQuarter: string;

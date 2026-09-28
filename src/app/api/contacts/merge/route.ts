@@ -38,7 +38,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   let email = primary.email;
   let phone = primary.phone;
   let city = primary.city;
-  let primaryLocation = primary.primaryLocation;
+  let state = primary.state;
   let org = primary.org;
   let companyId = primary.companyId;
   let ownerId = primary.ownerId;
@@ -70,7 +70,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
     }
     if (!phone && s.phone) phone = s.phone;
     if (!city && s.city) city = s.city;
-    if (!primaryLocation && s.primaryLocation) primaryLocation = s.primaryLocation;
+    if (!state && s.state) state = s.state;
     if (!org && s.org) org = s.org;
     else if (org && s.org && s.org.trim().toLowerCase() !== org.trim().toLowerCase()) {
       preservedNotes.push(`Alternate organization on a merged duplicate: ${s.org}`);
@@ -106,7 +106,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   if (resolutions?.notes) notes = resolutions.notes;
 
   return {
-    tags, notes, staffNames, email, phone, city, primaryLocation, org, companyId, ownerId, warmPathId,
+    tags, notes, staffNames, email, phone, city, state, org, companyId, ownerId, warmPathId,
     lastContact, cadenceOverrideDays, priorityQuarter, agoraType, commitmentLow, commitmentHigh, emailTier,
     researchBio, researchBioSource, researchNews, researchUpdatedAt, agoraRaw,
   };

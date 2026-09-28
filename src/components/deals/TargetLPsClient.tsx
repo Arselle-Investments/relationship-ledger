@@ -367,7 +367,7 @@ export function TargetLPsClient({
                     <tr key={c.id} onClick={() => setEditingContact(c)}>
                       <td className="name-cell">{c.name}</td>
                       <td>{c.agoraType || CONTACT_TYPE_LABELS[c.type]}</td>
-                      <td>{c.primaryLocation || c.city || <span className="muted">—</span>}</td>
+                      <td>{c.city || <span className="muted">—</span>}</td>
                       <td>{c.owner?.name || <span className="muted">—</span>}</td>
                     </tr>
                   ))}

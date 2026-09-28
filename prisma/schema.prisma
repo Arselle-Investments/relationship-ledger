@@ -155,6 +155,7 @@ model Contact {
   email              String?
   phone              String?
   city               String?
+  state              String? // free text (e.g. "CA") — separate field so it can be filtered on its own, not embedded in city
   lastContact        DateTime?     @db.Date
   cadenceOverrideDays Int?
   priorityQuarter    String? // e.g. "2026-Q3"
@@ -183,7 +184,6 @@ model Contact {
   // --- Agora reference data (read-only in the app; refreshed on the next
   // "Import from Agora" sync, never hand-edited) ---
   agoraType          String? // Agora's own "Type" categorization, e.g. "Family Office", "Investor"
-  primaryLocation    String? // Agora's coarse "Primary Location", e.g. "SF Bay Area"
   staffNames         String[] @default([]) // raw "Staff Members" names, however many Agora lists
   commitmentLow      Float?
   commitmentHigh     Float?
@@ -225,7 +225,7 @@ model Contact {
   @@index([tier])
   @@index([ownerId])
   @@index([agoraType])
-  @@index([primaryLocation])
+  @@index([state])
   @@index([companyId])
 }
 

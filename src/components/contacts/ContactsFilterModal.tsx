@@ -7,7 +7,7 @@ export type AdvancedFilters = {
   type: string;
   status: string;
   warmPathId: string;
-  primaryLocation: string;
+  state: string;
   tag: string;
   emailTier: string;
   hasEmail: boolean;
@@ -20,7 +20,7 @@ export const EMPTY_ADVANCED_FILTERS: AdvancedFilters = {
   type: "",
   status: "",
   warmPathId: "",
-  primaryLocation: "",
+  state: "",
   tag: "",
   emailTier: "",
   hasEmail: false,
@@ -37,14 +37,14 @@ export function ContactsFilterModal({
   filters,
   onChange,
   onClose,
-  locations,
+  states,
   tags,
   team,
 }: {
   filters: AdvancedFilters;
   onChange: (next: AdvancedFilters) => void;
   onClose: () => void;
-  locations: string[];
+  states: string[];
   tags: string[];
   team: User[];
 }) {
@@ -100,12 +100,12 @@ export function ContactsFilterModal({
               </select>
             </div>
             <div className="field">
-              <label>Primary location (Agora)</label>
-              <select value={filters.primaryLocation} onChange={(e) => set("primaryLocation", e.target.value)}>
-                <option value="">Any location</option>
-                {locations.map((loc) => (
-                  <option key={loc} value={loc}>
-                    {loc}
+              <label>State</label>
+              <select value={filters.state} onChange={(e) => set("state", e.target.value)}>
+                <option value="">Any state</option>
+                {states.map((st) => (
+                  <option key={st} value={st}>
+                    {st}
                   </option>
                 ))}
               </select>

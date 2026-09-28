@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         where: { id: existing.id },
         data: {
           agoraType: built.agoraType,
-          primaryLocation: built.primaryLocation,
+          state: existing.state ?? built.state,
           staffNames: built.staffNames,
           commitmentLow: built.commitmentLow,
           commitmentHigh: built.commitmentHigh,
