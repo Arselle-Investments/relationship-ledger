@@ -41,7 +41,7 @@ and the export logic in `src/lib/agora-export-template.ts`.
 | **CRE Sponsor** | A real estate **operator** — a potential platform partner, or a competitive operator in the market. Not a capital source. |
 | **Broker** | A banker or real estate broker (e.g. JLL, Newmark, Evercore, Moelis) — distinct from Advisor (institutional consultant) and Placement Agent (raises capital on someone's behalf). |
 | **Lender** | A lender providing debt financing — not an equity capital source. |
-| **Other** | True catch-all — used when nothing else fits, or when Agora's own signal for a record is too generic to classify (see below). |
+| **Other** | True catch-all — used when nothing else fits, or when Agora's own signal for a record is too generic to classify (see below). Confirmed 2026-09-29: this **is** a real Agora dropdown value, not just an internal bucket — low data quality, but usable until the backlog gets properly reclassified (a later priority, not urgent). |
 
 ### The Advisor / Wealth Manager split
 

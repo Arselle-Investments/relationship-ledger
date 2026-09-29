@@ -180,8 +180,12 @@ export function buildAgoraContactRow(
     // Now that ContactType is spelled to match Agora's own picklist exactly
     // (see contact-constants.ts), the curated type is what gets written back
     // out — unlike before, a manual reclassification in the app now does
-    // reach Agora. OTHER still falls back to the raw agoraType (if any),
-    // since "Other" itself isn't a value Agora would recognize as meaningful.
+    // reach Agora. "Other" IS a real Agora dropdown value (confirmed by
+    // Bianca 2026-09-29, directly in Agora — low data quality, but usable
+    // until the OTHER backlog gets fully reclassified, a later priority).
+    // Even so, OTHER still prefers the contact's more-specific raw agoraType
+    // when one exists, and stays blank (not "Other") when there's no raw
+    // value at all — per Bianca 2026-09-29, don't write literal "Other" yet.
     Type: safeCell(contact.type === "OTHER" ? contact.agoraType ?? "" : CONTACT_TYPE_LABELS[contact.type]),
     "ID/Passport Number": "",
     "Date of Birth": "",
