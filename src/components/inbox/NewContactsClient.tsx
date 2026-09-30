@@ -17,6 +17,7 @@ export type ContactDraft = {
   email: string;
   phone: string;
   city: string;
+  state: string;
   title: string;
   type: ContactType;
   tier: ContactTier;
@@ -47,6 +48,7 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     email,
     phone: signature.phone ?? "",
     city: signature.city ?? "",
+    state: signature.state ?? "",
     title: signature.title ?? "",
     type: ContactType.OTHER,
     tier: ContactTier.TIER_2,
@@ -123,6 +125,7 @@ function CorrespondenceCard({
     if (found.phone) patch.phone = found.phone;
     if (found.title) patch.title = found.title;
     if (found.city) patch.city = found.city;
+    if (found.state) patch.state = found.state;
     if (found.email && !draft.email) patch.email = found.email;
     if (Object.keys(patch).length > 0) onDraftChange(patch);
   }
@@ -157,6 +160,7 @@ function CorrespondenceCard({
         email: draft.email.trim() || null,
         phone: draft.phone.trim() || null,
         city: draft.city.trim() || null,
+        state: draft.state.trim() || null,
         title: draft.title.trim() || null,
         type: draft.type,
         tier: draft.tier,
@@ -321,9 +325,15 @@ function CorrespondenceCard({
               <input value={draft.title} onChange={(e) => onDraftChange({ title: e.target.value })} />
             </div>
           </div>
-          <div className="field">
-            <label>Location</label>
-            <input value={draft.city} onChange={(e) => onDraftChange({ city: e.target.value })} />
+          <div className="field-row">
+            <div className="field">
+              <label>City</label>
+              <input value={draft.city} onChange={(e) => onDraftChange({ city: e.target.value })} />
+            </div>
+            <div className="field">
+              <label>State</label>
+              <input value={draft.state} onChange={(e) => onDraftChange({ state: e.target.value })} />
+            </div>
           </div>
           <div className="field-row">
             <div className="field">
@@ -570,6 +580,7 @@ export function NewContactsClient({
           email: draft.email.trim() || null,
           phone: draft.phone.trim() || null,
           city: draft.city.trim() || null,
+          state: draft.state.trim() || null,
           title: draft.title.trim() || null,
           type: draft.type,
           tier: draft.tier,

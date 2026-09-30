@@ -14,6 +14,7 @@ const schema = z.discriminatedUnion("mode", [
     email: z.string().trim().optional().nullable(),
     phone: z.string().trim().optional().nullable(),
     city: z.string().trim().optional().nullable(),
+    state: z.string().trim().optional().nullable(),
     title: z.string().trim().optional().nullable(),
     // Richer fields the quick-create form can optionally set up front, so a
     // contact confirmed straight from a Teams message doesn't need a second
@@ -61,6 +62,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         email: parsed.data.email || null,
         phone: parsed.data.phone || null,
         city: parsed.data.city || null,
+        state: parsed.data.state || null,
         ownerId: actingUser.id,
         notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
         ...(parsed.data.type ? { type: parsed.data.type } : {}),

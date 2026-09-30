@@ -84,10 +84,22 @@ function splitIntoBlocks(bodyText: string): string[][] {
   return blocks.filter((b) => b.length > 0);
 }
 
-function scanLines(lines: string[]): { phone: string | null; title: string | null; city: string | null; email: string | null } {
+// Splits a matched "City, ST" / "City, State" line into its two parts, so the
+// signature block's location never lands in Contact.city as one compound
+// string — see docs/data-cleanup-tracker.md on retiring embedded-state city
+// values for why that's worth avoiding at the source, not just cleaning up later.
+function splitCityState(line: string): { city: string; state: string } {
+  const commaIndex = line.lastIndexOf(",");
+  return { city: line.slice(0, commaIndex).trim(), state: line.slice(commaIndex + 1).trim() };
+}
+
+function scanLines(
+  lines: string[]
+): { phone: string | null; title: string | null; city: string | null; state: string | null; email: string | null } {
   let phone: string | null = null;
   let title: string | null = null;
   let city: string | null = null;
+  let state: string | null = null;
   let email: string | null = null;
 
   for (const line of lines.slice(-30)) {
@@ -103,14 +115,16 @@ function scanLines(lines: string[]): { phone: string | null; title: string | nul
       }
     }
     if (!city && line.length < 40 && CITY_RE.test(line)) {
-      city = line;
+      const split = splitCityState(line);
+      city = split.city;
+      state = split.state;
     }
     if (!email) {
       email = extractEmailFromText(line);
     }
   }
 
-  return { phone, title, city, email };
+  return { phone, title, city, state, email };
 }
 
 /**
@@ -123,7 +137,7 @@ function scanLines(lines: string[]): { phone: string | null; title: string | nul
 export function parseSignature(
   bodyText: string,
   contact?: { name?: string | null; email?: string | null }
-): { phone: string | null; title: string | null; city: string | null; email: string | null } {
+): { phone: string | null; title: string | null; city: string | null; state: string | null; email: string | null } {
   const blocks = splitIntoBlocks(bodyText);
   const nonStaffBlocks = blocks.filter((block) => !block.some(lineMentionsStaff));
 
