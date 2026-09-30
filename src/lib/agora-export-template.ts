@@ -167,8 +167,7 @@ export function buildAgoraContactRow(
   company: Company | null,
   headers: readonly string[] = AGORA_TEMPLATE_HEADERS,
   listMappings: AgoraListColumnMapping[] = [],
-  owner: User | null = null,
-  warmPath: User | null = null
+  owner: User | null = null
 ): string[] {
   const { first, last } = splitName(contact.name);
   const tags = contact.tags ?? [];
@@ -194,7 +193,10 @@ export function buildAgoraContactRow(
     Residency: "",
     "Preferred Name": "",
     "Job Title": "",
-    "Lead Source": "",
+    // The intermediary/broker/mutual connection who can (or already has)
+    // made the introduction — free text, not a team-member link. Per Bianca
+    // 2026-09-30.
+    "Lead Source": safeCell(contact.warmPath ?? ""),
     Notes: safeCell(contact.notes ?? ""),
     "Main Phone": safeCell(contact.phone ?? ""),
     "Phone 2": "",
@@ -211,12 +213,11 @@ export function buildAgoraContactRow(
     "Street (Line 2)": "",
     Tags: safeCell(tags.join(", ")),
     Priority: contact.tier ? CONTACT_TIER_LABELS[contact.tier] : "",
-    // Our own Owner/Warm Path assignments — not Agora's own raw "Staff
-    // Members" reference data (see agoraRaw for that) — since those are the
-    // two team-member associations we actually track per contact, and Agora's
-    // own Staff Members field is itself multi-valued. Per Bianca 2026-09-30:
-    // both names, semicolon-separated, when both are set.
-    "Staff Members": safeCell([owner?.name, warmPath?.name].filter(Boolean).join("; ")),
+    // Our own Owner assignment — not Agora's own raw "Staff Members"
+    // reference data (see agoraRaw for that). Per Bianca 2026-09-30: Warm
+    // Path moved to Lead Source above instead (it's no longer a team-member
+    // concept), so Staff Members is Owner alone again.
+    "Staff Members": safeCell(owner?.name ?? ""),
     Company: safeCell(company?.name ?? contact.org ?? ""),
     "Main Tax ID": "",
     "Main Tax ID Type": "",

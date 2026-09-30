@@ -27,7 +27,6 @@ model User {
   accounts       Account[]
   sessions       Session[]
   ownedContacts  Contact[] @relation("ContactOwner")
-  warmPathFor    Contact[] @relation("ContactWarmPath")
   travelPlans    Travel[]
   editLogEntries EditLogEntry[]
   agoraExportLogs AgoraExportLog[]
@@ -150,8 +149,13 @@ model Contact {
   status             FundraisingStage @default(NOT_STARTED)
   ownerId            String?
   owner              User?         @relation("ContactOwner", fields: [ownerId], references: [id])
-  warmPathId         String?
-  warmPath           User?         @relation("ContactWarmPath", fields: [warmPathId], references: [id])
+  // Free text, not a team-member link — the intermediary, broker, or mutual
+  // connection who can (or already has) made the introduction, e.g. "Adam
+  // Mengden" or "via Tom Kim at Wasatch". Maps to Agora's "Lead Source" on
+  // export (see agora-export-template.ts); was a User relation before
+  // 2026-09-30, retired since an outside intermediary usually isn't one of
+  // our own staff.
+  warmPath           String?
   email              String?
   phone              String?
   city               String?

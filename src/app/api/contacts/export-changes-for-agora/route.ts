@@ -9,11 +9,11 @@ import { getSettings } from "@/lib/settings";
 // The same fields "Import from Agora" deliberately leaves alone (see
 // verify-against-agora), plus tags — the only channel a CRM mailing list has
 // into Agora (see src/lib/list-tagging.ts), so a tag change is exactly the
-// kind of thing this export needs to carry over too. ownerId/warmPathId are
-// included since 2026-09-30 — Staff Members now maps to Owner/Warm Path (see
-// buildAgoraContactRow) rather than Agora's own raw staffNames, so a
-// reassignment needs to trigger a re-sync same as any other tracked field.
-const FIELDS = ["org", "phone", "city", "notes", "tags", "ownerId", "warmPathId"] as const;
+// kind of thing this export needs to carry over too. ownerId/warmPath are
+// included since 2026-09-30 — Staff Members maps to Owner and Lead Source
+// maps to Warm Path (see buildAgoraContactRow), so a change to either needs
+// to trigger a re-sync same as any other tracked field.
+const FIELDS = ["org", "phone", "city", "notes", "tags", "ownerId", "warmPath"] as const;
 type FieldKey = (typeof FIELDS)[number];
 
 /**
@@ -44,7 +44,7 @@ export async function POST() {
 
   const candidates = await prisma.contact.findMany({
     where: { agoraExportedAt: { not: null } },
-    include: { company: true, owner: true, warmPath: true },
+    include: { company: true, owner: true },
   });
   if (candidates.length === 0) {
     return NextResponse.json({ error: "No contacts have been sent to Agora yet." }, { status: 400 });
@@ -83,7 +83,7 @@ export async function POST() {
   sheet.addRow([...headers]);
   sheet.getRow(1).font = { bold: true };
   for (const c of toExport) {
-    sheet.addRow(buildAgoraContactRow(c, c.company, headers, listMappings, c.owner, c.warmPath));
+    sheet.addRow(buildAgoraContactRow(c, c.company, headers, listMappings, c.owner));
   }
   sheet.columns.forEach((col) => (col.width = 20));
 

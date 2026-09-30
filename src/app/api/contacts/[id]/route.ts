@@ -14,7 +14,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const contact = await prisma.contact.findUnique({
     where: { id },
-    include: { owner: true, warmPath: true, company: true },
+    include: { owner: true, company: true },
   });
   if (!contact) return NextResponse.json({ error: "Contact not found." }, { status: 404 });
   return NextResponse.json({ contact });
@@ -59,10 +59,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.tier !== undefined ? { tier: data.tier } : {}),
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.ownerId !== undefined ? { ownerId: data.ownerId || null } : {}),
-      ...(data.warmPathId !== undefined ? { warmPathId: data.warmPathId || null } : {}),
+      ...(data.warmPath !== undefined ? { warmPath: data.warmPath || null } : {}),
       ...(data.email !== undefined ? { email: data.email || null } : {}),
       ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
       ...(data.city !== undefined ? { city: data.city || null } : {}),
+      ...(data.state !== undefined ? { state: data.state || null } : {}),
       ...(data.lastContact !== undefined
         ? { lastContact: data.lastContact ? new Date(data.lastContact) : null }
         : {}),
@@ -75,7 +76,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.closeProbability !== undefined ? { closeProbability: data.closeProbability } : {}),
       ...(data.recordContexts !== undefined ? { recordContexts: data.recordContexts } : {}),
     },
-    include: { owner: true, warmPath: true, company: true },
+    include: { owner: true, company: true },
   });
 
   if (data.status !== undefined && data.status !== existing.status) {

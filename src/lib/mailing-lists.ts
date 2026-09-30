@@ -27,7 +27,7 @@ export async function computeListContacts(list: MailingList): Promise<ContactWit
     if (list.contactIds.length === 0) return [];
     return prisma.contact.findMany({
       where: { id: { in: list.contactIds } },
-      include: { owner: true, warmPath: true },
+      include: { owner: true },
       orderBy: { name: "asc" },
     });
   }
@@ -40,7 +40,7 @@ export async function computeListContacts(list: MailingList): Promise<ContactWit
   };
   const candidates = await prisma.contact.findMany({
     where,
-    include: { owner: true, warmPath: true },
+    include: { owner: true },
     orderBy: { name: "asc" },
   });
   if (!list.filterTag) return candidates;

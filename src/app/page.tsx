@@ -38,7 +38,7 @@ export default async function HomePage() {
     }),
     prisma.conference.findMany(), // ConferenceModal needs the full history to detect a recurring series
     prisma.user.findMany({ orderBy: { name: "asc" } }),
-    prisma.contact.findMany({ include: { owner: true, warmPath: true }, orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ include: { owner: true }, orderBy: { name: "asc" } }),
     getSettings(),
   ]);
 

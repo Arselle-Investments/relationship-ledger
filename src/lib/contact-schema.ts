@@ -9,7 +9,7 @@ export const contactInputSchema = z.object({
   tier: z.nativeEnum(ContactTier).default(ContactTier.TIER_2),
   status: z.nativeEnum(FundraisingStage).default(FundraisingStage.NOT_STARTED),
   ownerId: z.string().trim().optional().nullable(),
-  warmPathId: z.string().trim().optional().nullable(),
+  warmPath: z.string().trim().optional().nullable(),
   email: z.string().trim().optional().nullable(),
   phone: z.string().trim().optional().nullable(),
   city: z.string().trim().optional().nullable(),

@@ -17,7 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
   const deliverable = await prisma.deliverable.findUnique({ where: { id } });
   if (!deliverable) return NextResponse.json({ error: "Deliverable not found." }, { status: 404 });
-  const allContacts = await prisma.contact.findMany({ include: { owner: true, warmPath: true } });
+  const allContacts = await prisma.contact.findMany({ include: { owner: true } });
   const contacts = computeDeliverableContacts(deliverable, allContacts);
 
   const workbook = new ExcelJS.Workbook();

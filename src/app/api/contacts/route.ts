@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({
     where,
-    include: { owner: true, warmPath: true, company: true },
+    include: { owner: true, company: true },
     orderBy: { name: "asc" },
   });
 
@@ -57,10 +57,11 @@ export async function POST(req: NextRequest) {
       tier: data.tier,
       status: data.status,
       ownerId: data.ownerId || actingUser.id,
-      warmPathId: data.warmPathId || null,
+      warmPath: data.warmPath || null,
       email: data.email || null,
       phone: data.phone || null,
       city: data.city || null,
+      state: data.state || null,
       lastContact: data.lastContact ? new Date(data.lastContact) : new Date(),
       cadenceOverrideDays: data.cadenceOverrideDays ?? null,
       priorityQuarter: data.priorityQuarter || null,
@@ -69,7 +70,7 @@ export async function POST(req: NextRequest) {
       closeProbability: data.closeProbability ?? null,
       recordContexts: data.recordContexts ?? [],
     },
-    include: { owner: true, warmPath: true, company: true },
+    include: { owner: true, company: true },
   });
 
   if (data.status !== FundraisingStage.NOT_STARTED) {

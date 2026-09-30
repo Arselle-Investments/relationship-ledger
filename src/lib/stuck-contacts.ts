@@ -27,7 +27,7 @@ export type StuckContact = ContactWithRelations & { daysInStage: number; entered
 export async function getStuckContacts(thresholdDays: number, today: Date = new Date()): Promise<StuckContact[]> {
   const contacts = await prisma.contact.findMany({
     where: { status: { notIn: TERMINAL_STATUSES } },
-    include: { owner: true, warmPath: true },
+    include: { owner: true },
   });
   if (contacts.length === 0) return [];
 

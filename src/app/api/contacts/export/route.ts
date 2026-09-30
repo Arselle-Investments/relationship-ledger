@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({
     where,
-    include: { owner: true, warmPath: true },
+    include: { owner: true },
     orderBy: { name: "asc" },
   });
 
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       tier: CONTACT_TIER_LABELS[c.tier],
       status: FUNDRAISING_STAGE_LABELS[c.status],
       owner: safeCell(c.owner?.name ?? ""),
-      warmPath: safeCell(c.warmPath?.name ?? ""),
+      warmPath: safeCell(c.warmPath ?? ""),
       email: safeCell(c.email ?? ""),
       phone: safeCell(c.phone ?? ""),
       city: safeCell(c.city ?? ""),

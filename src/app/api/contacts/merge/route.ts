@@ -42,7 +42,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   let org = primary.org;
   let companyId = primary.companyId;
   let ownerId = primary.ownerId;
-  let warmPathId = primary.warmPathId;
+  let warmPath = primary.warmPath;
   let lastContact = primary.lastContact;
   let cadenceOverrideDays = primary.cadenceOverrideDays;
   let priorityQuarter = primary.priorityQuarter;
@@ -77,7 +77,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
     }
     if (!companyId && s.companyId) companyId = s.companyId;
     if (!ownerId && s.ownerId) ownerId = s.ownerId;
-    if (!warmPathId && s.warmPathId) warmPathId = s.warmPathId;
+    if (!warmPath && s.warmPath) warmPath = s.warmPath;
     if (!lastContact || (s.lastContact && s.lastContact > lastContact)) lastContact = s.lastContact ?? lastContact;
     if (!cadenceOverrideDays && s.cadenceOverrideDays) cadenceOverrideDays = s.cadenceOverrideDays;
     if (!priorityQuarter && s.priorityQuarter) priorityQuarter = s.priorityQuarter;
@@ -106,7 +106,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   if (resolutions?.notes) notes = resolutions.notes;
 
   return {
-    tags, notes, staffNames, email, phone, city, state, org, companyId, ownerId, warmPathId,
+    tags, notes, staffNames, email, phone, city, state, org, companyId, ownerId, warmPath,
     lastContact, cadenceOverrideDays, priorityQuarter, agoraType, commitmentLow, commitmentHigh, emailTier,
     researchBio, researchBioSource, researchNews, researchUpdatedAt, agoraRaw,
   };
@@ -170,6 +170,6 @@ export async function POST(req: NextRequest) {
     await tx.contact.deleteMany({ where: { id: { in: secondaryIds } } });
   });
 
-  const merged = await prisma.contact.findUnique({ where: { id: primaryId }, include: { owner: true, warmPath: true, company: true } });
+  const merged = await prisma.contact.findUnique({ where: { id: primaryId }, include: { owner: true, company: true } });
   return NextResponse.json({ contact: merged });
 }

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const [contacts, tasks, team, conferences, travel, settings, activeDeals, stalledConsultants, stalledCapitalSources, tier1Companies] =
     await Promise.all([
-      prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+      prisma.contact.findMany({ include: { owner: true } }),
       prisma.task.findMany({ include: { contact: true } }),
       prisma.user.findMany(),
       prisma.conference.findMany(),

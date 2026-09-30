@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   }
 
   const [contacts, settings, openTasks] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.contact.findMany({ include: { owner: true } }),
     getSettings(),
     prisma.task.findMany({ where: { status: { in: [TaskStatus.OPEN, TaskStatus.IN_PROGRESS] } } }),
   ]);

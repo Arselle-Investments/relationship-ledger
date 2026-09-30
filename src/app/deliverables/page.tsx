@@ -13,7 +13,7 @@ export default async function DeliverablesPage() {
 
   const [deliverables, allContacts, team] = await Promise.all([
     prisma.deliverable.findMany({ orderBy: { name: "asc" } }),
-    prisma.contact.findMany({ include: { owner: true, warmPath: true }, orderBy: { name: "asc" } }),
+    prisma.contact.findMany({ include: { owner: true }, orderBy: { name: "asc" } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);
 

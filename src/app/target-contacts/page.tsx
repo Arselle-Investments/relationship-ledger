@@ -18,7 +18,7 @@ export default async function TargetContactsPage() {
     // LP) still shows here too. Only a DEAL-only classification opts out.
     prisma.contact.findMany({
       where: { OR: [{ recordContexts: { isEmpty: true } }, { recordContexts: { has: "FUND" } }] },
-      include: { owner: true, warmPath: true },
+      include: { owner: true },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);

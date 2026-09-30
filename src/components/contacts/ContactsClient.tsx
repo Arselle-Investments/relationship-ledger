@@ -54,7 +54,11 @@ export function ContactsClient({
       if (ownerFilter && c.ownerId !== ownerFilter) return false;
       if (agoraTypeFilter && c.agoraType !== agoraTypeFilter) return false;
       if (advancedFilters.status && c.status !== advancedFilters.status) return false;
-      if (advancedFilters.warmPathId && c.warmPathId !== advancedFilters.warmPathId) return false;
+      if (
+        advancedFilters.warmPath &&
+        !(c.warmPath ?? "").toLowerCase().includes(advancedFilters.warmPath.toLowerCase())
+      )
+        return false;
       if (advancedFilters.state && c.state !== advancedFilters.state) return false;
       if (advancedFilters.tag && !(c.tags ?? []).includes(advancedFilters.tag)) return false;
       if (advancedFilters.emailTier && c.emailTier !== Number(advancedFilters.emailTier)) return false;
@@ -255,7 +259,6 @@ export function ContactsClient({
           onClose={() => setShowAllFilters(false)}
           states={states}
           tags={allTags}
-          team={team}
         />
       )}
 

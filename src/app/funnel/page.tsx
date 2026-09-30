@@ -12,7 +12,7 @@ export default async function FunnelPage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const [contacts, companies, team, settings] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.contact.findMany({ include: { owner: true } }),
     prisma.company.findMany({ where: { recordContexts: { has: "FUND" } }, include: { contacts: true } }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     getSettings(),

@@ -1,12 +1,12 @@
 "use client";
 
-import { ContactType, FundraisingStage, User } from "@prisma/client";
+import { ContactType, FundraisingStage } from "@prisma/client";
 import { CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
 export type AdvancedFilters = {
   type: string;
   status: string;
-  warmPathId: string;
+  warmPath: string;
   state: string;
   tag: string;
   emailTier: string;
@@ -19,7 +19,7 @@ export type AdvancedFilters = {
 export const EMPTY_ADVANCED_FILTERS: AdvancedFilters = {
   type: "",
   status: "",
-  warmPathId: "",
+  warmPath: "",
   state: "",
   tag: "",
   emailTier: "",
@@ -39,14 +39,12 @@ export function ContactsFilterModal({
   onClose,
   states,
   tags,
-  team,
 }: {
   filters: AdvancedFilters;
   onChange: (next: AdvancedFilters) => void;
   onClose: () => void;
   states: string[];
   tags: string[];
-  team: User[];
 }) {
   function set<K extends keyof AdvancedFilters>(key: K, value: AdvancedFilters[K]) {
     onChange({ ...filters, [key]: value });
@@ -89,15 +87,12 @@ export function ContactsFilterModal({
 
           <div className="field-row">
             <div className="field">
-              <label>Warm path</label>
-              <select value={filters.warmPathId} onChange={(e) => set("warmPathId", e.target.value)}>
-                <option value="">Anyone</option>
-                {team.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name || u.email}
-                  </option>
-                ))}
-              </select>
+              <label>Warm path contains</label>
+              <input
+                value={filters.warmPath}
+                onChange={(e) => set("warmPath", e.target.value)}
+                placeholder="e.g. a name"
+              />
             </div>
             <div className="field">
               <label>State</label>

@@ -32,7 +32,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       tier: ContactTier.TIER_2,
       status: FundraisingStage.NOT_STARTED,
       ownerId: "",
-      warmPathId: "",
+      warmPath: "",
       email: "",
       phone: "",
       city: "",
@@ -53,7 +53,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     tier: contact.tier,
     status: contact.status,
     ownerId: contact.ownerId ?? "",
-    warmPathId: contact.warmPathId ?? "",
+    warmPath: contact.warmPath ?? "",
     email: contact.email ?? "",
     phone: contact.phone ?? "",
     city: contact.city ?? "",
@@ -208,7 +208,7 @@ export function ContactModal({
       tier: values.tier,
       status: values.status,
       ownerId: values.ownerId || null,
-      warmPathId: values.warmPathId || null,
+      warmPath: values.warmPath.trim() || null,
       email: values.email.trim() || null,
       phone: values.phone.trim() || null,
       city: values.city.trim() || null,
@@ -248,7 +248,6 @@ export function ContactModal({
   }
 
   const owner = team.find((u) => u.id === values.ownerId);
-  const warmPath = team.find((u) => u.id === values.warmPathId);
   const agoraRaw = (liveContact?.agoraRaw ?? contact?.agoraRaw) as unknown as Record<string, string> | null;
   const jobTitle = agoraRaw?.["JOB TITLE"];
   const hasJobTitle = jobTitle != null && !isBlank(jobTitle);
@@ -313,7 +312,7 @@ export function ContactModal({
                 <ViewField label="City / region" value={values.state ? `${values.city}, ${values.state}` : values.city} />
               )}
               {owner && <ViewField label="Owner" value={owner.name || owner.email} />}
-              {warmPath && <ViewField label="Warm path" value={warmPath.name || warmPath.email} />}
+              {values.warmPath && <ViewField label="Warm path" value={values.warmPath} />}
               {values.lastContact && <ViewField label="Last contact" value={values.lastContact} />}
               {values.cadenceOverrideDays && (
                 <ViewField label="Cadence override" value={`${values.cadenceOverrideDays} days`} />
@@ -420,14 +419,12 @@ export function ContactModal({
               <div className="field-row">
                 <div className="field">
                   <label>Warm path</label>
-                  <select value={values.warmPathId} onChange={(e) => set("warmPathId", e.target.value)} disabled={!canEdit}>
-                    <option value="">— none —</option>
-                    {team.map((u) => (
-                      <option key={u.id} value={u.id}>
-                        {u.name || u.email}
-                      </option>
-                    ))}
-                  </select>
+                  <input
+                    value={values.warmPath}
+                    onChange={(e) => set("warmPath", e.target.value)}
+                    disabled={!canEdit}
+                    placeholder="Intermediary, broker, or mutual connection"
+                  />
                 </div>
                 <div className="field">
                   <label>City / region</label>

@@ -13,7 +13,7 @@ export default async function DataHygienePage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const [contacts, settings, team] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.contact.findMany({ include: { owner: true } }),
     getSettings(),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
   ]);

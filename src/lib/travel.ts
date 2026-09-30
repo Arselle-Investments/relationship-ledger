@@ -6,7 +6,7 @@ import { contactMatchesCity } from "@/lib/travel-match";
 export type TravelWithUser = Travel & { user: User };
 
 export async function getMatchingContacts(city: string): Promise<ContactWithRelations[]> {
-  const contacts = await prisma.contact.findMany({ include: { owner: true, warmPath: true } });
+  const contacts = await prisma.contact.findMany({ include: { owner: true } });
   return contacts.filter((c) => contactMatchesCity(c, city));
 }
 
@@ -26,7 +26,7 @@ export async function getMatchingCompanies(city: string): Promise<CompanyTravelM
   if (matched.length === 0) return [];
   const contacts = await prisma.contact.findMany({
     where: { companyId: { in: matched.map((c) => c.id) } },
-    include: { owner: true, warmPath: true },
+    include: { owner: true },
   });
   return matched
     .map((company) => ({ company, contacts: contacts.filter((c) => c.companyId === company.id) }))

@@ -15,7 +15,7 @@ export async function GET() {
   }
 
   const [contacts, settings] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.contact.findMany({ include: { owner: true } }),
     getSettings(),
   ]);
   const stale = getStaleContacts(contacts, settings.staleDays);

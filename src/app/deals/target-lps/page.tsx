@@ -12,7 +12,7 @@ export default async function TargetLPsPage() {
 
   const [contacts, team, companies] = await Promise.all([
     prisma.contact.findMany({
-      include: { owner: true, warmPath: true },
+      include: { owner: true },
       orderBy: { name: "asc" },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),

@@ -14,7 +14,7 @@ export default async function FollowupsPage() {
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
   const [contacts, settings] = await Promise.all([
-    prisma.contact.findMany({ include: { owner: true, warmPath: true } }),
+    prisma.contact.findMany({ include: { owner: true } }),
     getSettings(),
   ]);
 
