@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Contact, Correspondence, ContactType, ContactTier, MailingList, RecordContext } from "@prisma/client";
+import { Contact, Correspondence, ContactType, ContactTier, MailingList, RecordContext, User } from "@prisma/client";
 import { parseSignature } from "@/lib/signature-parse";
 import { extractHighlight } from "@/lib/correspondence-highlight";
 import { extractEmailFromText, guessNameFromEmail } from "@/lib/email-extract";
@@ -21,6 +21,7 @@ export type ContactDraft = {
   title: string;
   type: ContactType;
   tier: ContactTier;
+  ownerId: string;
   tags: string;
   priorityQuarter: string;
   recordContexts: RecordContext[];
@@ -52,6 +53,7 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     title: signature.title ?? "",
     type: ContactType.OTHER,
     tier: ContactTier.TIER_2,
+    ownerId: "",
     tags: "",
     priorityQuarter: "",
     recordContexts: [],
@@ -62,6 +64,7 @@ function CorrespondenceCard({
   item,
   contacts,
   lists,
+  team,
   canEdit,
   draft,
   onDraftChange,
@@ -73,6 +76,7 @@ function CorrespondenceCard({
   item: Correspondence;
   contacts: Contact[];
   lists: MailingList[];
+  team: User[];
   canEdit: boolean;
   draft: ContactDraft;
   onDraftChange: (patch: Partial<ContactDraft>) => void;
@@ -164,6 +168,7 @@ function CorrespondenceCard({
         title: draft.title.trim() || null,
         type: draft.type,
         tier: draft.tier,
+        ownerId: draft.ownerId || null,
         tags,
         priorityQuarter: draft.priorityQuarter.trim() || null,
         recordContexts: draft.recordContexts,
@@ -358,6 +363,17 @@ function CorrespondenceCard({
             </div>
           </div>
           <div className="field">
+            <label>Owner</label>
+            <select value={draft.ownerId} onChange={(e) => onDraftChange({ ownerId: e.target.value })}>
+              <option value="">— none —</option>
+              {team.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name || u.email}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
             <label>Fund / Deal</label>
             <div style={{ display: "flex", gap: 16 }}>
               {Object.values(RecordContext).map((ctx) => (
@@ -493,12 +509,14 @@ export function NewContactsClient({
   initialIgnored,
   contacts,
   lists,
+  team,
   canEdit,
 }: {
   initialSuggested: Correspondence[];
   initialIgnored: Correspondence[];
   contacts: Contact[];
   lists: MailingList[];
+  team: User[];
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialSuggested);
@@ -613,6 +631,7 @@ export function NewContactsClient({
           title: draft.title.trim() || null,
           type: draft.type,
           tier: draft.tier,
+          ownerId: draft.ownerId || null,
           tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
           priorityQuarter: draft.priorityQuarter.trim() || null,
           recordContexts: draft.recordContexts,
@@ -762,6 +781,7 @@ export function NewContactsClient({
               item={item}
               contacts={contacts}
               lists={lists}
+              team={team}
               canEdit={canEdit}
               draft={draftFor(item)}
               onDraftChange={(patch) => updateDraft(item.id, patch)}
