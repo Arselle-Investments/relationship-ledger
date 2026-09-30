@@ -1,4 +1,23 @@
 import ExcelJS from "exceljs";
+import { Readable } from "node:stream";
+
+/**
+ * Loads a workbook from either a real .xlsx file or a raw CSV — Agora's own
+ * exports are always CSV, so every upload endpoint needs to accept both.
+ * Detected by content (the ZIP magic bytes "PK"), not by filename, since a
+ * filename isn't always available or trustworthy at every call site.
+ */
+export async function loadWorkbook(buffer: ArrayBuffer): Promise<ExcelJS.Workbook> {
+  const workbook = new ExcelJS.Workbook();
+  const bytes = new Uint8Array(buffer);
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b; // "PK"
+  if (isZip) {
+    await workbook.xlsx.load(buffer);
+  } else {
+    await workbook.csv.read(Readable.from(Buffer.from(buffer)));
+  }
+  return workbook;
+}
 
 /** Reads header aliases case-insensitively, mirroring the reference prototype's getField(). */
 export function getField(row: Record<string, string>, aliases: string[]): string {
@@ -43,18 +62,16 @@ function parseSheet(sheet: ExcelJS.Worksheet): Record<string, string>[] {
   return rows;
 }
 
-/** Parses the first worksheet of an uploaded workbook into header-keyed row objects (headers upper-cased). */
+/** Parses the first worksheet of an uploaded workbook (.xlsx or .csv) into header-keyed row objects (headers upper-cased). */
 export async function parseFirstSheet(buffer: ArrayBuffer): Promise<Record<string, string>[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const workbook = await loadWorkbook(buffer);
   const sheet = workbook.worksheets[0];
   return sheet ? parseSheet(sheet) : [];
 }
 
 /** Parses every worksheet in the workbook (e.g. a conference tracker split across tabs) into one row list. */
 export async function parseAllSheets(buffer: ArrayBuffer): Promise<Record<string, string>[]> {
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const workbook = await loadWorkbook(buffer);
   return workbook.worksheets.flatMap(parseSheet);
 }
 

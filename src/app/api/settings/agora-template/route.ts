@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import ExcelJS from "exceljs";
 import { AuthError, requireEditor } from "@/lib/permissions";
+import { loadWorkbook } from "@/lib/excel-import";
 import { getSettings, updateSettings } from "@/lib/settings";
 import { AGORA_TEMPLATE_HEADERS, isKnownAgoraTemplateHeader } from "@/lib/agora-export-template";
 
@@ -27,9 +27,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No file uploaded." }, { status: 400 });
   }
 
+  // Agora's own template downloads are CSV, not Excel — loadWorkbook detects
+  // and handles both so a file straight from Agora doesn't need converting first.
   const buffer = await file.arrayBuffer();
-  const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.load(buffer);
+  const workbook = await loadWorkbook(buffer);
   const sheet = workbook.worksheets[0];
   if (!sheet) {
     return NextResponse.json({ error: "No sheet found in that file." }, { status: 400 });

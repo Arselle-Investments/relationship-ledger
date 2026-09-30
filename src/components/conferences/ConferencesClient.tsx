@@ -173,7 +173,7 @@ export function ConferencesClient({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv"
               style={{ display: "none" }}
               onChange={(e) => {
                 const file = e.target.files?.[0];
