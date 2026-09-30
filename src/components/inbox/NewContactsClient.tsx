@@ -511,6 +511,35 @@ export function NewContactsClient({
   const [contactBulkMsg, setContactBulkMsg] = useState<string | null>(null);
   const [emailOnly, setEmailOnly] = useState(false);
   const [sortKey, setSortKey] = useState<"newest" | "name" | "completeness">("newest");
+  const [rematching, setRematching] = useState(false);
+  const [rematchMsg, setRematchMsg] = useState<string | null>(null);
+
+  async function rematchAgainstCurrentContacts() {
+    setRematching(true);
+    setRematchMsg(null);
+    try {
+      const res = await fetch("/api/correspondence/rematch", { method: "POST" });
+      if (!res.ok) {
+        setRematchMsg("Something went wrong — try again.");
+        return;
+      }
+      const data = (await res.json()) as { checked: number; newlyMatched: number; matchedIds: string[] };
+      const matchedSet = new Set(data.matchedIds);
+      setItems((prev) => prev.filter((i) => !matchedSet.has(i.id)));
+      setSelectedContactIds((prev) => {
+        const next = new Set(prev);
+        for (const id of matchedSet) next.delete(id);
+        return next;
+      });
+      setRematchMsg(
+        data.newlyMatched > 0
+          ? `Matched ${data.newlyMatched} of ${data.checked} against current contacts — they're off this list now.`
+          : `Checked ${data.checked} — none matched anyone currently in the database.`
+      );
+    } finally {
+      setRematching(false);
+    }
+  }
 
   function resolve(id: string) {
     setItems((prev) => prev.filter((i) => i.id !== id));
@@ -653,6 +682,18 @@ export function NewContactsClient({
       <div className="eyebrow" style={{ marginBottom: 14 }}>
         Messages fed from the Fundraising Teams channel that didn&rsquo;t match an existing contact
       </div>
+      {canEdit && items.length > 0 && (
+        <div style={{ marginBottom: 14 }}>
+          <button className="btn small" onClick={rematchAgainstCurrentContacts} disabled={rematching}>
+            {rematching ? "Re-checking…" : "Re-check against current contacts"}
+          </button>
+          <span className="helptext" style={{ marginLeft: 8 }}>
+            Catches suggestions that only missed a match because the contact was added, merged, or corrected since
+            this message first came in.
+          </span>
+          {rematchMsg && <div className="helptext" style={{ marginTop: 6 }}>{rematchMsg}</div>}
+        </div>
+      )}
       {items.length === 0 ? (
         <div className="empty">
           <h3>Nothing to review</h3>
