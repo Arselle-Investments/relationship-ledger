@@ -1,4 +1,4 @@
-import { Company, Contact, FundraisingStage } from "@prisma/client";
+import { Company, Contact, FundraisingStage, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import {
@@ -166,7 +166,9 @@ export function buildAgoraContactRow(
   contact: Contact,
   company: Company | null,
   headers: readonly string[] = AGORA_TEMPLATE_HEADERS,
-  listMappings: AgoraListColumnMapping[] = []
+  listMappings: AgoraListColumnMapping[] = [],
+  owner: User | null = null,
+  warmPath: User | null = null
 ): string[] {
   const { first, last } = splitName(contact.name);
   const tags = contact.tags ?? [];
@@ -209,7 +211,12 @@ export function buildAgoraContactRow(
     "Street (Line 2)": "",
     Tags: safeCell(tags.join(", ")),
     Priority: contact.tier ? CONTACT_TIER_LABELS[contact.tier] : "",
-    "Staff Members": safeCell(contact.staffNames.join(", ")),
+    // Our own Owner/Warm Path assignments — not Agora's own raw "Staff
+    // Members" reference data (see agoraRaw for that) — since those are the
+    // two team-member associations we actually track per contact, and Agora's
+    // own Staff Members field is itself multi-valued. Per Bianca 2026-09-30:
+    // both names, semicolon-separated, when both are set.
+    "Staff Members": safeCell([owner?.name, warmPath?.name].filter(Boolean).join("; ")),
     Company: safeCell(company?.name ?? contact.org ?? ""),
     "Main Tax ID": "",
     "Main Tax ID Type": "",

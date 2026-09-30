@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   const contacts = await prisma.contact.findMany({
     where: { agoraExportedAt: null, ...(since ? { createdAt: { gte: since } } : {}) },
-    include: { company: true },
+    include: { company: true, owner: true, warmPath: true },
     orderBy: { createdAt: "asc" },
   });
 
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   sheet.addRow([...headers]);
   sheet.getRow(1).font = { bold: true };
   for (const c of exportable) {
-    sheet.addRow(buildAgoraContactRow(c, c.company, headers, listMappings));
+    sheet.addRow(buildAgoraContactRow(c, c.company, headers, listMappings, c.owner, c.warmPath));
   }
   sheet.columns.forEach((col) => (col.width = 20));
 
