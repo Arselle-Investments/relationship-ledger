@@ -56,24 +56,57 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     contactId = contact.id;
     shouldClassify = true; // an established contact has a real "current stage" to signal a move from
   } else {
-    const contact = await prisma.contact.create({
-      data: {
-        name: parsed.data.name,
-        org: parsed.data.org || null,
-        email: parsed.data.email || null,
-        phone: parsed.data.phone || null,
-        city: parsed.data.city || null,
-        state: parsed.data.state || null,
-        ownerId: parsed.data.ownerId || actingUser.id,
-        notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
-        ...(parsed.data.type ? { type: parsed.data.type } : {}),
-        ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
-        ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
-        priorityQuarter: parsed.data.priorityQuarter || null,
-        recordContexts: parsed.data.recordContexts ?? [],
-      },
-    });
-    contactId = contact.id;
+    // Guard against creating an exact duplicate of a contact that's already
+    // on file — e.g. two people confirming the same untangled message, or a
+    // contact added since this suggestion first appeared (see
+    // scripts-oneoff-apply-comprehensive.js and the Gallucci merge for how
+    // this actually happened once already). If the email already matches an
+    // existing contact, link to that one instead — filling in any fields it
+    // was missing from what was typed here, never overwriting what's already
+    // there.
+    const existingByEmail = parsed.data.email
+      ? await prisma.contact.findFirst({ where: { email: { equals: parsed.data.email, mode: "insensitive" } } })
+      : null;
+
+    if (existingByEmail) {
+      const newNotes =
+        parsed.data.title && !(existingByEmail.notes ?? "").includes(parsed.data.title)
+          ? [existingByEmail.notes, `Title: ${parsed.data.title}`].filter(Boolean).join("\n")
+          : existingByEmail.notes;
+      await prisma.contact.update({
+        where: { id: existingByEmail.id },
+        data: {
+          org: existingByEmail.org ?? parsed.data.org ?? null,
+          phone: existingByEmail.phone ?? parsed.data.phone ?? null,
+          city: existingByEmail.city ?? parsed.data.city ?? null,
+          state: existingByEmail.state ?? parsed.data.state ?? null,
+          notes: newNotes,
+          tags: Array.from(new Set([...existingByEmail.tags, ...(parsed.data.tags ?? [])])),
+          recordContexts: Array.from(new Set([...existingByEmail.recordContexts, ...(parsed.data.recordContexts ?? [])])),
+        },
+      });
+      contactId = existingByEmail.id;
+      shouldClassify = true; // an established contact has a real "current stage" to signal a move from
+    } else {
+      const contact = await prisma.contact.create({
+        data: {
+          name: parsed.data.name,
+          org: parsed.data.org || null,
+          email: parsed.data.email || null,
+          phone: parsed.data.phone || null,
+          city: parsed.data.city || null,
+          state: parsed.data.state || null,
+          ownerId: parsed.data.ownerId || actingUser.id,
+          notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
+          ...(parsed.data.type ? { type: parsed.data.type } : {}),
+          ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
+          ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
+          priorityQuarter: parsed.data.priorityQuarter || null,
+          recordContexts: parsed.data.recordContexts ?? [],
+        },
+      });
+      contactId = contact.id;
+    }
   }
 
   const updated = await prisma.correspondence.update({
