@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
-import { contactInputSchema, validateStatusNoteRule } from "@/lib/contact-schema";
+import { contactInputSchema, isPlaceholderEmail, validateStatusNoteRule } from "@/lib/contact-schema";
 import { recordStageChange } from "@/lib/stage-history";
 import { logEdit } from "@/lib/edit-log";
 
@@ -40,6 +40,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const data = parsed.data;
   const nextStatus = data.status ?? existing.status;
   const nextNotes = data.notes ?? existing.notes;
+  const nextEmail = data.email !== undefined ? data.email : existing.email;
 
   const noteError = validateStatusNoteRule({
     previousStatus: existing.status,
@@ -75,7 +76,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.notes !== undefined ? { notes: data.notes } : {}),
       ...(data.closeProbability !== undefined ? { closeProbability: data.closeProbability } : {}),
       ...(data.recordContexts !== undefined ? { recordContexts: data.recordContexts } : {}),
-      ...(data.doNotContact !== undefined ? { doNotContact: data.doNotContact } : {}),
+      ...(isPlaceholderEmail(nextEmail)
+        ? { doNotContact: true }
+        : data.doNotContact !== undefined
+          ? { doNotContact: data.doNotContact }
+          : {}),
     },
     include: { owner: true, company: true },
   });

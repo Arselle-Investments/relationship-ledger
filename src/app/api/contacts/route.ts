@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
-import { contactInputSchema, validateStatusNoteRule } from "@/lib/contact-schema";
+import { contactInputSchema, isPlaceholderEmail, validateStatusNoteRule } from "@/lib/contact-schema";
 import { buildContactWhere } from "@/lib/contact-query";
 import { recordStageChange } from "@/lib/stage-history";
 import { FundraisingStage } from "@prisma/client";
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       notes: data.notes ?? "",
       closeProbability: data.closeProbability ?? null,
       recordContexts: data.recordContexts ?? [],
-      doNotContact: data.doNotContact ?? false,
+      doNotContact: isPlaceholderEmail(data.email) || (data.doNotContact ?? false),
     },
     include: { owner: true, company: true },
   });

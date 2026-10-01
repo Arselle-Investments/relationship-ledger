@@ -68,6 +68,7 @@ const NICKNAME_GROUPS: string[][] = [
   ["isabella", "bella", "izzy"],
   ["sophia", "sophie"],
   ["olivia", "liv", "livvy"],
+  ["anne", "annie", "ani", "ann"],
 ];
 
 const NAME_SUFFIXES = new Set(["jr", "jr.", "sr", "sr.", "ii", "iii", "iv"]);

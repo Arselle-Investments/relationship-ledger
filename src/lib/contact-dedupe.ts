@@ -72,16 +72,28 @@ export function groupKeyFor(ids: string[]): string {
   return [...ids].sort().join(",");
 }
 
+// "Mac"/"Mc" is the same Scottish/Irish surname prefix spelled two ways
+// (MacKenzie/McKenzie, MacDonald/McDonald, MacArthur/McArthur) — a
+// well-established convention, not a coincidental near-miss, so it's
+// normalized away before the edit-distance check rather than left to that
+// budget (which deliberately stays tight to avoid false positives like
+// Meyers/Peters).
+function normalizeMacMc(last: string): string {
+  return last.replace(/^(mac|mc)/, "mc");
+}
+
 function namesLookLikeSamePerson(nameA: string, nameB: string): boolean {
   const a = splitName(nameA);
   const b = splitName(nameB);
   if (!a || !b) return false;
+  const aLast = normalizeMacMc(a.last);
+  const bLast = normalizeMacMc(b.last);
   // A single-character edit budget catches real typos (Carr/Corr,
   // Esrailian/Esralian) without opening the door to distinct short surnames
   // that just happen to be two edits apart (Meyers/Peters, Lord/Long) — at
   // distance 2, common surnames collide far too often to trust.
-  const lastMaxDist = Math.min(a.last.length, b.last.length) <= 3 ? 0 : 1;
-  const lastClose = a.last === b.last || (lastMaxDist > 0 && isCloseMatch(a.last, b.last, lastMaxDist));
+  const lastMaxDist = Math.min(aLast.length, bLast.length) <= 3 ? 0 : 1;
+  const lastClose = aLast === bLast || (lastMaxDist > 0 && isCloseMatch(aLast, bLast, lastMaxDist));
   if (!lastClose) return false;
   const firstMaxDist = Math.min(a.first.length, b.first.length) <= 4 ? 0 : 1;
   const firstMatch =

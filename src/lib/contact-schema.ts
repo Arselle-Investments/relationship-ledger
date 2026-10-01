@@ -27,6 +27,16 @@ export const contactInputSchema = z.object({
 export type ContactInput = z.infer<typeof contactInputSchema>;
 
 /**
+ * Our own historical placeholder for "we don't have this person's real
+ * email yet" (Agora requires an email to import a contact at all). Forces
+ * doNotContact so nothing ever goes out to it while the real address is
+ * still being tracked down — see Contact.doNotContact in schema.prisma.
+ */
+export function isPlaceholderEmail(email: string | null | undefined): boolean {
+  return !!email && email.trim().toLowerCase().endsWith("@needemail.com");
+}
+
+/**
  * Mirrors the reference prototype's required-field prompt (PRD 5.1): changing
  * status to anything other than "Not started" requires a non-empty note.
  */
