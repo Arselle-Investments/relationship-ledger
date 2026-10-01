@@ -27,4 +27,5 @@ export type ContactFormValues = {
   notes: string;
   closeProbability: number | null;
   recordContexts: RecordContext[];
+  doNotContact: boolean;
 };

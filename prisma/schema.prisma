@@ -136,8 +136,16 @@ enum FundraisingStage {
   DUE_DILIGENCE
   COMMITTED
   PASSED_OPEN // passed on this deal, open to future ones
-  PASSED_NOT_INTERESTED // a genuine no
-  DO_NOT_CONTACT // a firm stop — compliance/preference, not just a soft pass
+  // Replaces the old PASSED_NOT_INTERESTED and DO_NOT_CONTACT (retired
+  // 2026-09-30, every row migrated first) — Agora's own "AREF I – Stage"
+  // dropdown only has one "Decline" value, and the two stages were never
+  // actually acted on differently in practice. The "compliance/preference
+  // hard stop" half of DO_NOT_CONTACT's old meaning moves to
+  // Contact.doNotContact, a field independent of pipeline stage — whether to
+  // ever email someone again isn't really "which stage are they at," and
+  // conflating the two meant a re-approached DECLINE couldn't be
+  // distinguished from an actual do-not-contact compliance flag.
+  DECLINE
 }
 
 model Contact {
@@ -165,6 +173,13 @@ model Contact {
   priorityQuarter    String? // e.g. "2026-Q3"
   tags               String[]      @default([])
   notes              String?       @default("")
+  // A hard compliance/preference stop — never contact this person again —
+  // independent of where they sit in the fundraising pipeline (status).
+  // Added 2026-09-30 when DO_NOT_CONTACT was retired as a pipeline stage:
+  // whether someone can be emailed again isn't really "a stage," and the two
+  // were previously conflated. Maps to Agora's "Email Marketing Preference"
+  // export column ("Unsubscribed" when true) — see agora-export-template.ts.
+  doNotContact       Boolean       @default(false)
   // { templateId, templateName, startDate, completed, steps: [{type,title,dueDate,done,doneDate}] } | null
   activeSequence     Json?
   // Null until this contact has been included in an "export new contacts for

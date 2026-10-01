@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       notes: data.notes ?? "",
       closeProbability: data.closeProbability ?? null,
       recordContexts: data.recordContexts ?? [],
+      doNotContact: data.doNotContact ?? false,
     },
     include: { owner: true, company: true },
   });

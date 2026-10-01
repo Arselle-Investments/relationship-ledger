@@ -5,10 +5,11 @@ import { FundraisingStage } from "@prisma/client";
 // is deliberately last, since it's the actual finish line for this raise, not
 // just "the stage before the drop-off stages." DROPPED_STAGES are the
 // terminal drop-offs/parking stages (a soft pass worth re-approaching for
-// Fund II, a genuine no, or a firm stop) — still worth showing so the team can
-// see how much falls out and where, but rendered in their own box below the
-// live pipeline so Committed reads as the finish line, not just one more bar
-// before the drop-offs.
+// Fund II, or a decline) — still worth showing so the team can see how much
+// falls out and where, but rendered in their own box below the live pipeline
+// so Committed reads as the finish line, not just one more bar before the
+// drop-offs. A hard compliance "never contact again" stop is a separate
+// concern from pipeline stage — see Contact.doNotContact.
 export const PIPELINE_STAGES: FundraisingStage[] = [
   FundraisingStage.NOT_STARTED,
   FundraisingStage.OUTREACH_SENT,
@@ -22,8 +23,7 @@ export const PIPELINE_STAGES: FundraisingStage[] = [
 
 export const DROPPED_STAGES: FundraisingStage[] = [
   FundraisingStage.PASSED_OPEN,
-  FundraisingStage.PASSED_NOT_INTERESTED,
-  FundraisingStage.DO_NOT_CONTACT,
+  FundraisingStage.DECLINE,
 ];
 
 export const FUNDRAISING_STAGES: FundraisingStage[] = [...PIPELINE_STAGES, ...DROPPED_STAGES];
@@ -38,10 +38,8 @@ export const PROBABILITY_ELIGIBLE_STAGES: FundraisingStage[] = [
 // Heatmap colors for the funnel bars: an even light-to-dark forest-green
 // ombre across the whole live pipeline (reusing --forest's existing
 // "good/success" meaning elsewhere in the app), lightest at Not started and
-// deepest at Committed — the actual finish line — then progressively
-// harder-stop colors for the drop-off outcomes — a neutral tan for "still
-// worth another deal", rust for a genuine no, and a deeper maroon for "never
-// reach out again."
+// deepest at Committed — the actual finish line — then a neutral tan for
+// "still worth another deal" (Fund II Prospect) and rust for a decline.
 export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   NOT_STARTED: "#F0F5F4",
   OUTREACH_SENT: "#D4DEDC",
@@ -52,8 +50,7 @@ export const FUNDRAISING_STAGE_COLORS: Record<FundraisingStage, string> = {
   DUE_DILIGENCE: "#476C67",
   COMMITTED: "#2B554F",
   PASSED_OPEN: "#C7BFAE",
-  PASSED_NOT_INTERESTED: "#A85A40",
-  DO_NOT_CONTACT: "#6B2E2E",
+  DECLINE: "#A85A40",
 };
 
 // Stages dark enough to need white text instead of ink.
@@ -61,8 +58,7 @@ const DARK_STAGES = new Set<FundraisingStage>([
   FundraisingStage.FINAL_CLOSE_POTENTIAL,
   FundraisingStage.DUE_DILIGENCE,
   FundraisingStage.COMMITTED,
-  FundraisingStage.PASSED_NOT_INTERESTED,
-  FundraisingStage.DO_NOT_CONTACT,
+  FundraisingStage.DECLINE,
 ]);
 
 export function fundraisingStageTextColor(status: FundraisingStage): string {

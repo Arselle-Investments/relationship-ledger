@@ -42,6 +42,7 @@ const FIELD_LABELS: Record<string, string> = {
   linkedinUrl: "LinkedIn",
   aum: "AUM",
   founded: "Founded",
+  doNotContact: "Do not contact",
 };
 
 export function fieldLabel(field: string): string {

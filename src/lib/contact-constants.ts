@@ -128,14 +128,17 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 // Fund Raise (Contact-level) wording specifically — Deal Capital and
 // Emerging Managers each override the one label that differs by context
 // (PASSED_OPEN) via FEEDBACK_STATUS_LABELS and EM_STAGE_LABELS respectively.
-// Capitalization here matches Agora's own "AREF I – Stage" dropdown exactly
-// (confirmed by Bianca 2026-09-24), same reasoning as CONTACT_TYPE_LABELS —
-// see AREF_STAGE_TO_AGORA_VALUE in agora-export-template.ts for the actual
-// export mapping, since Agora only has one "Decline" catch-all covering both
-// PASSED_NOT_INTERESTED and DO_NOT_CONTACT (DO_NOT_CONTACT separately also
-// sets Email Marketing Preference to Unsubscribed).
+// Capitalization/wording here matches Agora's own "AREF I – Stage" dropdown
+// exactly (confirmed by Bianca 2026-09-24, NOT_STARTED and DECLINE's exact
+// text confirmed 2026-09-30 once Bianca added matching options in Agora) —
+// buildAgoraContactRow in agora-export-template.ts writes these labels
+// straight through, no separate mapping table. DECLINE (added 2026-09-30,
+// replacing the old PASSED_NOT_INTERESTED/DO_NOT_CONTACT split) maps 1:1 onto
+// Agora's own "Declined" dropdown value — see Contact.doNotContact for the
+// compliance/preference "never contact again" flag that used to live on
+// DO_NOT_CONTACT, now independent of pipeline stage.
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
-  NOT_STARTED: "Not started",
+  NOT_STARTED: "0. Not Started",
   OUTREACH_SENT: "1. Outreach Sent",
   INITIAL_INTEREST: "2. Initial Interest",
   MEETING_OCCURRED: "3. Meeting Occurred",
@@ -144,8 +147,7 @@ export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
   DUE_DILIGENCE: "5. Due Diligence / Dataroom",
   COMMITTED: "6. Committed",
   PASSED_OPEN: "Fund II Prospect",
-  PASSED_NOT_INTERESTED: "Passed (not interested)",
-  DO_NOT_CONTACT: "Do not contact",
+  DECLINE: "Declined",
 };
 
 // Emerging Managers (Consultant/CapitalSource.outreachStatus) — same pipeline,
@@ -160,7 +162,7 @@ export const EM_STAGE_LABELS: Record<FundraisingStage, string> = {
 // everywhere else (dropdowns, detail views).
 export const FUNDRAISING_STAGE_SHORT_LABELS: Partial<Record<FundraisingStage, string>> = {
   PASSED_OPEN: "Fund II Prospect",
-  PASSED_NOT_INTERESTED: "Passed (no interest)",
+  DECLINE: "Decline",
 };
 
 export const ACTIVE_OUTREACH_STAGES: FundraisingStage[] = [FundraisingStage.OUTREACH_SENT];

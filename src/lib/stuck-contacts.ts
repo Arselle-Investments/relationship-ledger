@@ -5,8 +5,7 @@ import { ContactWithRelations } from "@/types/contact";
 const TERMINAL_STATUSES: FundraisingStage[] = [
   FundraisingStage.COMMITTED,
   FundraisingStage.PASSED_OPEN,
-  FundraisingStage.PASSED_NOT_INTERESTED,
-  FundraisingStage.DO_NOT_CONTACT,
+  FundraisingStage.DECLINE,
 ];
 
 function utcMidnight(d: Date): number {

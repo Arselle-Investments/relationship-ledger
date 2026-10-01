@@ -76,6 +76,5 @@ export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
   DUE_DILIGENCE: "brass",
   COMMITTED: "forest",
   PASSED_OPEN: "",
-  PASSED_NOT_INTERESTED: "rust",
-  DO_NOT_CONTACT: "rust",
+  DECLINE: "rust",
 };

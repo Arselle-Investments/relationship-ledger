@@ -1,4 +1,4 @@
-import { Company, Contact, FundraisingStage, User } from "@prisma/client";
+import { Company, Contact, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import {
@@ -8,28 +8,9 @@ import {
 } from "@/lib/deal-constants";
 import { safeCell } from "@/lib/excel-safety";
 
-/**
- * Agora's real, fixed "AREF I – Stage" dropdown values (confirmed by Bianca
- * 2026-09-24), mapped from our own FundraisingStage. Not a straight reuse of
- * FUNDRAISING_STAGE_LABELS: Agora only has one "Decline" catch-all covering
- * both of our PASSED_NOT_INTERESTED and DO_NOT_CONTACT (DO_NOT_CONTACT
- * separately also sets Email Marketing Preference to Unsubscribed, see
- * below), and NOT_STARTED has no Agora equivalent — it just leaves the cell
- * blank until something actually happens.
- */
-export const AREF_STAGE_TO_AGORA_VALUE: Record<FundraisingStage, string> = {
-  NOT_STARTED: "",
-  OUTREACH_SENT: FUNDRAISING_STAGE_LABELS.OUTREACH_SENT,
-  INITIAL_INTEREST: FUNDRAISING_STAGE_LABELS.INITIAL_INTEREST,
-  MEETING_OCCURRED: FUNDRAISING_STAGE_LABELS.MEETING_OCCURRED,
-  ACTIVE_PROSPECT: FUNDRAISING_STAGE_LABELS.ACTIVE_PROSPECT,
-  FINAL_CLOSE_POTENTIAL: FUNDRAISING_STAGE_LABELS.FINAL_CLOSE_POTENTIAL,
-  DUE_DILIGENCE: FUNDRAISING_STAGE_LABELS.DUE_DILIGENCE,
-  COMMITTED: FUNDRAISING_STAGE_LABELS.COMMITTED,
-  PASSED_OPEN: FUNDRAISING_STAGE_LABELS.PASSED_OPEN,
-  PASSED_NOT_INTERESTED: "Decline",
-  DO_NOT_CONTACT: "Decline",
-};
+// Agora's "AREF I – Stage" dropdown maps 1:1 onto FUNDRAISING_STAGE_LABELS as
+// of 2026-09-30 (Bianca added matching "0. Not Started" and "Declined"
+// options there) — no special-casing needed; see buildAgoraContactRow below.
 
 /**
  * Column names for fields we've asked Agora to add but that aren't part of
@@ -221,10 +202,11 @@ export function buildAgoraContactRow(
     Company: safeCell(company?.name ?? contact.org ?? ""),
     "Main Tax ID": "",
     "Main Tax ID Type": "",
-    // Our own hard stop maps onto Agora's real unsubscribe field — a person
-    // is either DO_NOT_CONTACT (write "Unsubscribed") or this stays blank
-    // rather than guessing at a preference we don't actually know.
-    "Email Marketing Preference": contact.status === FundraisingStage.DO_NOT_CONTACT ? "Unsubscribed" : "",
+    // Our own hard compliance/preference stop (independent of pipeline
+    // stage, see Contact.doNotContact) maps onto Agora's real unsubscribe
+    // field — otherwise this stays blank rather than guessing at a
+    // preference we don't actually know.
+    "Email Marketing Preference": contact.doNotContact ? "Unsubscribed" : "",
     "Receive Emails": "",
     // "Primary Location (Primary Location )" — Agora's own coarser region
     // label — is no longer a tracked field (retired 2026-09-28, near-zero
@@ -236,7 +218,7 @@ export function buildAgoraContactRow(
     // from listMappings instead of hardcoded here — see
     // MailingList.agoraColumn — since which Ledger list/tag maps to which
     // Agora column is now an admin-editable mapping, not a fixed pairing.
-    "AREF I – Stage (Propsect Type / Stage)": AREF_STAGE_TO_AGORA_VALUE[contact.status],
+    "AREF I – Stage (Propsect Type / Stage)": FUNDRAISING_STAGE_LABELS[contact.status],
     // Multiselect — RecordContext now matches Agora's 5-value Prospect Type
     // picklist exactly (confirmed by Bianca 2026-09-24), so this is a direct
     // pass-through, same "spelled to match Agora exactly" approach as Type.

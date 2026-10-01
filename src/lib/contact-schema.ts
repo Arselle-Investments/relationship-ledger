@@ -21,6 +21,7 @@ export const contactInputSchema = z.object({
   notes: z.string().optional().default(""),
   closeProbability: z.number().int().min(1).max(5).optional().nullable(),
   recordContexts: z.array(z.nativeEnum(RecordContext)).optional(),
+  doNotContact: z.boolean().optional(),
 });
 
 export type ContactInput = z.infer<typeof contactInputSchema>;

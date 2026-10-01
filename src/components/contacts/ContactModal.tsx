@@ -44,6 +44,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       notes: "",
       closeProbability: null,
       recordContexts: [],
+      doNotContact: false,
     };
   }
   return {
@@ -65,6 +66,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     notes: contact.notes ?? "",
     closeProbability: contact.closeProbability ?? null,
     recordContexts: contact.recordContexts ?? [],
+    doNotContact: contact.doNotContact ?? false,
   };
 }
 
@@ -223,6 +225,7 @@ export function ContactModal({
       notes: values.notes,
       closeProbability: values.closeProbability,
       recordContexts: values.recordContexts,
+      doNotContact: values.doNotContact,
     };
 
     const res = await fetch(isEdit ? `/api/contacts/${contact!.id}` : "/api/contacts", {
@@ -300,6 +303,9 @@ export function ContactModal({
                 />
               )}
               <ViewField label="Status" value={FUNDRAISING_STAGE_LABELS[values.status]} />
+              {values.doNotContact && (
+                <ViewField label="Do not contact" value={<span className="tag rust">Do not contact</span>} />
+              )}
               {PROBABILITY_ELIGIBLE_STAGES.includes(values.status) && (
                 <ViewField
                   label="Probability"
@@ -414,6 +420,21 @@ export function ContactModal({
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+              <div className="field">
+                <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input
+                    type="checkbox"
+                    checked={values.doNotContact}
+                    onChange={(e) => set("doNotContact", e.target.checked)}
+                    disabled={!canEdit}
+                  />
+                  Do not contact
+                </label>
+                <div className="helptext">
+                  A hard compliance/preference stop — never email this person again — independent of their pipeline
+                  stage. Exports to Agora as &ldquo;Unsubscribed.&rdquo;
                 </div>
               </div>
               <div className="field-row">
