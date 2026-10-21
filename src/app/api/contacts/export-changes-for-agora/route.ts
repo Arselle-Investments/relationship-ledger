@@ -1,29 +1,24 @@
 import { NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { AGORA_TEMPLATE_HEADERS, buildAgoraContactRow } from "@/lib/agora-export-template";
 import { getAgoraListColumnMappings } from "@/lib/mailing-lists";
 import { getSettings } from "@/lib/settings";
 
-// The same fields "Import from Agora" deliberately leaves alone (see
-// verify-against-agora), plus tags — the only channel a CRM mailing list has
-// into Agora (see src/lib/list-tagging.ts), so a tag change is exactly the
-// kind of thing this export needs to carry over too. ownerId/warmPath are
-// included since 2026-09-30 — Staff Members maps to Owner and Lead Source
-// maps to Warm Path (see buildAgoraContactRow), so a change to either needs
-// to trigger a re-sync same as any other tracked field.
-const FIELDS = ["org", "phone", "city", "notes", "tags", "ownerId", "warmPath"] as const;
-type FieldKey = (typeof FIELDS)[number];
-
 /**
  * Companion to export-new-for-agora, for contacts Agora *already* knows
- * about (agoraExportedAt set) whose org/phone/city/notes/tags/owner/warm
- * path have since changed here — using the Edit Log rather than re-diffing
- * against a file,
- * so this needs no fresh Agora export to run against. Marks each included
- * contact's agoraChangesSyncedAt so re-running only picks up what's changed
- * since this run.
+ * about (agoraExportedAt set) that have been touched at all since they were
+ * last sent — i.e. updatedAt is newer than agoraChangesSyncedAt (or, if
+ * they've never been change-synced, agoraExportedAt). Deliberately not a
+ * whitelist of "tracked" fields or an Edit Log lookup: every field that
+ * feeds the Agora template (stage, Fund/Deal, Do Not Contact, type, tier,
+ * state, tags, ...) has to be able to trigger a re-send, and plenty of paths
+ * (funnel stage drags, bulk updates, one-off scripts) change those without
+ * ever writing an Edit Log row. Marks each included contact's
+ * agoraChangesSyncedAt so re-running only picks up what's changed since this
+ * run.
  *
  * Uses Agora's own contact template (same as export-new-for-agora), matched
  * on Email, and fills every column with the contact's full current data
@@ -42,6 +37,11 @@ export async function POST() {
     throw e;
   }
 
+  // Captured before reading anything, so an edit that lands while this export
+  // is being built still has an updatedAt newer than the marker we stamp below
+  // and gets picked up next time instead of silently falling through.
+  const exportedAt = new Date();
+
   const candidates = await prisma.contact.findMany({
     where: { agoraExportedAt: { not: null } },
     include: { company: true, owner: true },
@@ -50,26 +50,10 @@ export async function POST() {
     return NextResponse.json({ error: "No contacts have been sent to Agora yet." }, { status: 400 });
   }
 
-  const entries = await prisma.editLogEntry.findMany({
-    where: {
-      entityType: "Contact",
-      entityId: { in: candidates.map((c) => c.id) },
-      field: { in: FIELDS as unknown as string[] },
-      undone: false,
-    },
-    orderBy: { createdAt: "asc" },
+  const toExport = candidates.filter((c) => {
+    const lastSent = c.agoraChangesSyncedAt ?? c.agoraExportedAt;
+    return !lastSent || c.updatedAt > lastSent;
   });
-
-  const changedSinceSync = new Set<string>();
-  for (const entry of entries) {
-    const contact = candidates.find((c) => c.id === entry.entityId);
-    if (!contact) continue;
-    const since = contact.agoraChangesSyncedAt;
-    if (since && entry.createdAt <= since) continue;
-    changedSinceSync.add(contact.id);
-  }
-
-  const toExport = candidates.filter((c) => changedSinceSync.has(c.id));
   if (toExport.length === 0) {
     return NextResponse.json({ error: "No contact changes since the last export." }, { status: 400 });
   }
@@ -91,10 +75,9 @@ export async function POST() {
   const fileName = `arselle-contact-changes-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
   await prisma.$transaction([
-    prisma.contact.updateMany({
-      where: { id: { in: toExport.map((c) => c.id) } },
-      data: { agoraChangesSyncedAt: new Date() },
-    }),
+    // Raw on purpose: updateMany would bump @updatedAt past the marker and
+    // flag every contact in this batch as "changed" again on the next run.
+    prisma.$executeRaw`UPDATE "Contact" SET "agoraChangesSyncedAt" = ${exportedAt} WHERE "id" IN (${Prisma.join(toExport.map((c) => c.id))})`,
     prisma.agoraExportLog.create({
       data: {
         kind: "contacts-changes",

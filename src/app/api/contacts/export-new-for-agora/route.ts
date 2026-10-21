@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { hasRealEmailForAgora } from "@/lib/followups";
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
   const days = daysParam ? Number(daysParam) : null;
   const since = days && Number.isFinite(days) && days > 0 ? new Date(Date.now() - days * 86_400_000) : null;
 
+  const exportedAt = new Date();
   const contacts = await prisma.contact.findMany({
     where: { agoraExportedAt: null, ...(since ? { createdAt: { gte: since } } : {}) },
     include: { company: true, owner: true },
@@ -79,10 +81,9 @@ export async function POST(req: NextRequest) {
   const fileName = `arselle-new-contacts-for-agora-${new Date().toISOString().slice(0, 10)}.xlsx`;
 
   await prisma.$transaction([
-    prisma.contact.updateMany({
-      where: { id: { in: exportable.map((c) => c.id) } },
-      data: { agoraExportedAt: new Date() },
-    }),
+    // Raw on purpose: updateMany would bump @updatedAt past agoraExportedAt and
+    // make every contact in this batch look "changed" to the changes export.
+    prisma.$executeRaw`UPDATE "Contact" SET "agoraExportedAt" = ${exportedAt} WHERE "id" IN (${Prisma.join(exportable.map((c) => c.id))})`,
     prisma.agoraExportLog.create({
       data: {
         kind: "contacts-new",
