@@ -7,6 +7,7 @@ import { isStaffEmail, isStaffName } from "@/lib/staff-emails";
 import { extractEmailFromText, guessNameFromEmail, guessOrgFromEmail, isRealContactEmail } from "@/lib/email-extract";
 import { findContactByNameFallback, findContactBySubjectFallback } from "@/lib/contact-match";
 import { findEmergingManagerMatch } from "@/lib/em-match";
+import { htmlToText } from "@/lib/html-to-text";
 import { CorrespondenceStatus } from "@prisma/client";
 
 /**
@@ -31,6 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid input." }, { status: 400 });
   }
   const data = parsed.data;
+  // Forwarded emails arrive as HTML; store and classify the readable text.
+  const bodyText = htmlToText(data.bodyText) || data.bodyText;
 
   if (data.messageId) {
     const existing = await prisma.correspondence.findUnique({ where: { externalId: data.messageId } });
@@ -43,7 +46,7 @@ export async function POST(req: NextRequest) {
     org: null,
   };
   try {
-    extracted = await extractContactFromMessage(data.subject ?? "", data.bodyText);
+    extracted = await extractContactFromMessage(data.subject ?? "", bodyText);
   } catch (e) {
     // An AI outage (rate limit, exhausted credits) shouldn't drop the message —
     // fall back to whatever the subject-line matcher below can find on its own.
@@ -67,7 +70,7 @@ export async function POST(req: NextRequest) {
   // sitting right in the message (a signature block, a quoted reply) — a
   // plain regex scan catches those cases the AI extraction didn't.
   if (!extracted.email) {
-    extracted.email = extractEmailFromText(data.bodyText);
+    extracted.email = extractEmailFromText(bodyText);
   }
   // Best-effort fill-ins from the email itself when nothing else supplied a
   // name/org — better than leaving a new-contact suggestion with a blank
@@ -111,7 +114,7 @@ export async function POST(req: NextRequest) {
       source: "teams_channel",
       externalId: data.messageId || null,
       subject: data.subject || null,
-      bodyText: data.bodyText,
+      bodyText,
       receivedAt: data.receivedAt ? new Date(data.receivedAt) : new Date(),
       contactId,
       consultantId,
@@ -131,7 +134,7 @@ export async function POST(req: NextRequest) {
       consultantId,
       capitalSourceId,
       subject: data.subject ?? "",
-      bodyText: data.bodyText,
+      bodyText,
     });
     if (updated) finalCorrespondence = updated;
   }
