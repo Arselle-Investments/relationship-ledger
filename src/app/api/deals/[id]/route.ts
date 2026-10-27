@@ -33,6 +33,7 @@ const schema = z.object({
   name: z.string().trim().min(1).optional(),
   status: z.nativeEnum(DealStatus).optional(),
   assetClass: z.string().trim().optional().nullable(),
+  platform: z.string().trim().optional().nullable(),
   notes: z.string().optional(),
 });
 
@@ -58,6 +59,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       name: parsed.data.name,
       status: parsed.data.status,
       assetClass: parsed.data.assetClass === undefined ? undefined : parsed.data.assetClass || null,
+      platform: parsed.data.platform === undefined ? undefined : parsed.data.platform || null,
       notes: parsed.data.notes,
     },
   });

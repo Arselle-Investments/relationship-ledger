@@ -11,17 +11,63 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
   const [deals, setDeals] = useState(initialDeals);
   const [statusFilter, setStatusFilter] = useState("");
   const [assetClassFilter, setAssetClassFilter] = useState("");
+  const [platformFilter, setPlatformFilter] = useState("");
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState("");
   const [assetClass, setAssetClass] = useState("");
+  const [platform, setPlatform] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const platforms = Array.from(new Set(deals.map((d) => d.platform).filter((p): p is string => !!p))).sort((a, b) =>
+    a.localeCompare(b)
+  );
 
   const filtered = deals.filter((d) => {
     if (statusFilter && d.status !== statusFilter) return false;
     if (assetClassFilter && d.assetClass !== assetClassFilter) return false;
+    if (platformFilter && d.platform !== platformFilter) return false;
     return true;
   });
+
+  // Active = still being worked (including under contract); dormant/dead drop to a second section below.
+  const activeDeals = filtered.filter((d) => d.status === DealStatus.ACTIVE || d.status === DealStatus.UNDER_CONTRACT);
+  const inactiveDeals = filtered.filter((d) => d.status === DealStatus.DORMANT || d.status === DealStatus.DEAD);
+
+  function dealsTable(rows: DealWithCount[]) {
+    return (
+      <table>
+        <thead>
+          <tr>
+            <th>Deal</th>
+            <th>Platform</th>
+            <th>Status</th>
+            <th>Asset class</th>
+            <th>Sent to</th>
+            <th>Feedback</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((d) => (
+            <tr key={d.id} style={{ cursor: "pointer" }}>
+              <td className="name-cell">
+                <Link href={`/deals/${d.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                  {d.name}
+                </Link>
+              </td>
+              <td className="muted">{d.platform || "—"}</td>
+              <td>
+                <span className={`tag ${DEAL_STATUS_TAG_CLASS[d.status]}`}>{DEAL_STATUS_LABELS[d.status]}</span>
+              </td>
+              <td className="muted">{d.assetClass || "—"}</td>
+              <td className="muted">{d._count.outreach}</td>
+              <td className="muted">{d._count.feedback}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
 
   async function createDeal() {
     setError(null);
@@ -33,7 +79,7 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
     const res = await fetch("/api/deals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name.trim(), assetClass: assetClass.trim() || null }),
+      body: JSON.stringify({ name: name.trim(), assetClass: assetClass.trim() || null, platform: platform.trim() || null }),
     });
     const json = await res.json();
     setBusy(false);
@@ -46,6 +92,7 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
     );
     setName("");
     setAssetClass("");
+    setPlatform("");
     setAdding(false);
   }
 
@@ -57,6 +104,14 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
           {Object.values(DealStatus).map((s) => (
             <option key={s} value={s}>
               {DEAL_STATUS_LABELS[s]}
+            </option>
+          ))}
+        </select>
+        <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}>
+          <option value="">All platforms</option>
+          {platforms.map((p) => (
+            <option key={p} value={p}>
+              {p}
             </option>
           ))}
         </select>
@@ -82,6 +137,20 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
             <div className="field">
               <label>Deal name</label>
               <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 999 Hiawatha" />
+            </div>
+            <div className="field">
+              <label>Platform (optional)</label>
+              <input
+                value={platform}
+                onChange={(e) => setPlatform(e.target.value)}
+                list="deal-platforms"
+                placeholder="e.g. Kearny"
+              />
+              <datalist id="deal-platforms">
+                {platforms.map((p) => (
+                  <option key={p} value={p} />
+                ))}
+              </datalist>
             </div>
             <div className="field">
               <label>Asset class (optional)</label>
@@ -112,36 +181,18 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
           <div>Add a deal to start compiling feedback on it.</div>
         </div>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>Deal</th>
-              <th>Status</th>
-              <th>Asset class</th>
-              <th>Sent to</th>
-              <th>Feedback</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((d) => (
-              <tr key={d.id} style={{ cursor: "pointer" }}>
-                <td className="name-cell">
-                  <Link href={`/deals/${d.id}`} style={{ color: "inherit", textDecoration: "none" }}>
-                    {d.name}
-                  </Link>
-                </td>
-                <td>
-                  <span className={`tag ${DEAL_STATUS_TAG_CLASS[d.status]}`}>
-                    {DEAL_STATUS_LABELS[d.status]}
-                  </span>
-                </td>
-                <td className="muted">{d.assetClass || "—"}</td>
-                <td className="muted">{d._count.outreach}</td>
-                <td className="muted">{d._count.feedback}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <>
+          {activeDeals.length > 0 && dealsTable(activeDeals)}
+          {inactiveDeals.length > 0 && (
+            <>
+              <h3 style={{ margin: "28px 0 4px" }}>Inactive deals</h3>
+              <div className="helptext" style={{ marginBottom: 12 }}>
+                {inactiveDeals.length} dormant or dead
+              </div>
+              {dealsTable(inactiveDeals)}
+            </>
+          )}
+        </>
       )}
     </div>
   );

@@ -82,7 +82,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         ? { doNotContact: true }
         : data.doNotContact !== undefined
           ? { doNotContact: data.doNotContact }
-          : {}),
+          : // A real email replacing the placeholder lifts the flag the placeholder set.
+            isPlaceholderEmail(existing.email) && nextEmail
+            ? { doNotContact: false }
+            : {}),
     },
     include: { owner: true, company: true },
   });

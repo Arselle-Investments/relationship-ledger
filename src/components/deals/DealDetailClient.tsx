@@ -39,6 +39,7 @@ export function DealDetailClient({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [editingNotes, setEditingNotes] = useState(deal.notes ?? "");
+  const [editingPlatform, setEditingPlatform] = useState(deal.platform ?? "");
   const [sentSearch, setSentSearch] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -77,6 +78,20 @@ export function DealDetailClient({
     if (res.ok) {
       const json = await res.json();
       setDeal((prev) => ({ ...prev, assetClass: json.deal.assetClass }));
+    }
+  }
+
+  async function savePlatform() {
+    const next = editingPlatform.trim();
+    if (!canEdit || next === (deal.platform ?? "")) return;
+    const res = await fetch(`/api/deals/${deal.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ platform: next || null }),
+    });
+    if (res.ok) {
+      const json = await res.json();
+      setDeal((prev) => ({ ...prev, platform: json.deal.platform }));
     }
   }
 
@@ -169,6 +184,14 @@ export function DealDetailClient({
         <h2 style={{ marginBottom: 0 }}>{deal.name}</h2>
         {canEdit && (
           <div style={{ display: "flex", gap: 8 }}>
+            <input
+              value={editingPlatform}
+              onChange={(e) => setEditingPlatform(e.target.value)}
+              onBlur={savePlatform}
+              placeholder="Platform"
+              aria-label="Platform"
+              style={{ width: 130 }}
+            />
             <select value={deal.assetClass ?? ""} onChange={(e) => updateAssetClass(e.target.value)}>
               <option value="">Asset class: none yet</option>
               {DEAL_ASSET_CLASS_OPTIONS.map((a) => (
@@ -187,8 +210,10 @@ export function DealDetailClient({
           </div>
         )}
       </div>
-      {!canEdit && deal.assetClass && (
-        <div className="muted" style={{ fontSize: 12.5, marginTop: -12, marginBottom: 16 }}>{deal.assetClass}</div>
+      {!canEdit && (deal.platform || deal.assetClass) && (
+        <div className="muted" style={{ fontSize: 12.5, marginTop: -12, marginBottom: 16 }}>
+          {[deal.platform, deal.assetClass].filter(Boolean).join(" · ")}
+        </div>
       )}
 
       <div className="card" style={{ padding: 16, marginBottom: 20 }}>

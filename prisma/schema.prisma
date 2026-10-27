@@ -398,6 +398,7 @@ model Deal {
   name       String
   status     DealStatus @default(ACTIVE)
   assetClass String? // optional, e.g. "Self-Storage" — lets a new deal be matched against Company.targetAssetClasses
+  platform   String? // the operating/sponsor platform the deal belongs to, e.g. "Kearny" — free text, from the "Capital Partner Outreach" deal-level sheet's row above each deal
   notes      String?    @default("")
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt

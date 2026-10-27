@@ -21,6 +21,7 @@ export async function GET() {
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required."),
   assetClass: z.string().trim().optional().nullable(),
+  platform: z.string().trim().optional().nullable(),
   notes: z.string().optional(),
 });
 
@@ -40,6 +41,7 @@ export async function POST(req: NextRequest) {
     data: {
       name: parsed.data.name,
       assetClass: parsed.data.assetClass || null,
+      platform: parsed.data.platform || null,
       notes: parsed.data.notes ?? "",
       status: DealStatus.ACTIVE,
     },
