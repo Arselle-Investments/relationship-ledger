@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { DEV_TEAM } from "@/lib/dev-team";
 import { formatDateRange } from "@/lib/travel-templates";
 import { FundraisingStage } from "@prisma/client";
 
@@ -147,7 +148,10 @@ export async function classifyStageSignal(params: {
         role: "user",
         content: `You're tracking an LP/investor's position in a fundraising pipeline. The possible stages are: ${statusList}.
 
+Our team (Arselle) is: ${DEV_TEAM.map((m) => m.name).join(", ")}. A message may be one of ours going out to the contact, or the contact writing back to us.
+
 Important stage definitions:
+- OUTREACH_SENT means our team has emailed or otherwise reached out to them about the fund (an intro, a pitch, a deck, a follow-up) and they have not yet responded. If the contact is still at NOT_STARTED and the thread shows an email sent by our team to them, suggest OUTREACH_SENT. If they have already replied with interest, that's INITIAL_INTEREST or later, not OUTREACH_SENT.
 - DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's still ACTIVE_PROSPECT (or FINAL_CLOSE_POTENTIAL, see below) unless the message explicitly mentions an NDA or data room access.
 - FINAL_CLOSE_POTENTIAL is a step beyond ACTIVE_PROSPECT: use it when the message gives a real signal they intend to close soon (e.g. discussing check size, timing, or wire instructions) but nothing yet about an NDA or data room — that stronger signal is still DUE_DILIGENCE.
 - PASSED_OPEN means they declined this specific deal but remain open to future ones (a soft no).
@@ -156,7 +160,7 @@ Important stage definitions:
 This contact's current stage: ${params.currentStatus} (${FUNDRAISING_STAGE_LABELS[params.currentStatus]}).
 ${params.recentHistory ? `Recent history: ${params.recentHistory}` : "No prior stage history."}
 
-A new message just came in from them. Does it clearly signal a move to a different stage? Only suggest a change if the message content itself makes it evident (e.g. explicitly scheduling a meeting, confirming a commitment, mentioning an NDA or data room, passing) — don't guess from a vague or routine message.
+A new message on a thread with them just came in (sent by our team to them, or by them to us). Does it clearly signal a move to a different stage? Only suggest a change if the message content itself makes it evident (e.g. explicitly scheduling a meeting, confirming a commitment, mentioning an NDA or data room, passing) — don't guess from a vague or routine message.
 
 Subject: ${params.subject}
 

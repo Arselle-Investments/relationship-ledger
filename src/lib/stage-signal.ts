@@ -3,7 +3,7 @@ import { classifyStageSignal } from "@/lib/ai";
 import { getRecentStageHistorySummary } from "@/lib/stage-history";
 import { getSettings } from "@/lib/settings";
 import { applyStageSuggestion } from "@/lib/apply-stage-suggestion";
-import { Correspondence, StageChangeSource, SuggestionState } from "@prisma/client";
+import { Correspondence, RecordContext, StageChangeSource, SuggestionState } from "@prisma/client";
 
 /**
  * Runs stage classification for one piece of correspondence already linked to
@@ -31,6 +31,13 @@ export async function maybeCreateStageSuggestion(params: {
   if (params.contactId) {
     const contact = await prisma.contact.findUnique({ where: { id: params.contactId } });
     if (!contact) return null;
+    // These stages are the AREF I fund pipeline (Contact.status exports to
+    // Agora's "AREF I – Stage"), so only contacts marked as Fund prospects
+    // get a suggestion — not Deal-only or unclassified ones, even when a
+    // message about their deal matches them. When someone is marked Fund
+    // later, backfillStageSuggestion below looks back over what's already
+    // been logged for them.
+    if (!contact.recordContexts.includes(RecordContext.FUND)) return null;
     currentStatus = contact.status;
     recentHistory = await getRecentStageHistorySummary(params.contactId);
   } else if (params.consultantId) {
@@ -96,4 +103,40 @@ export async function maybeCreateStageSuggestion(params: {
     where: { id: params.correspondenceId },
     data: { suggestionState: SuggestionState.CONFIRMED },
   });
+}
+
+/**
+ * For a contact who has just been marked as a Fund prospect: stage suggestions
+ * are skipped for anyone who isn't one, so anything already logged for them
+ * (say, the outbound email that showed up in the Teams channel a day before
+ * they were marked) never got looked at. This reads their most recent
+ * not-yet-reviewed messages, newest first, and stops at the first one that
+ * signals a stage — e.g. an email from our team to a NOT_STARTED contact
+ * becomes an Outreach Sent suggestion. Does nothing if they already have a
+ * suggestion waiting on review.
+ */
+export async function backfillStageSuggestion(contactId: string): Promise<Correspondence | null> {
+  const contact = await prisma.contact.findUnique({ where: { id: contactId } });
+  if (!contact || !contact.recordContexts.includes(RecordContext.FUND)) return null;
+
+  const alreadyPending = await prisma.correspondence.count({
+    where: { contactId, suggestionState: SuggestionState.PENDING },
+  });
+  if (alreadyPending > 0) return null;
+
+  const messages = await prisma.correspondence.findMany({
+    where: { contactId, suggestionState: SuggestionState.NONE },
+    orderBy: { receivedAt: "desc" },
+    take: 5,
+  });
+  for (const m of messages) {
+    const suggested = await maybeCreateStageSuggestion({
+      correspondenceId: m.id,
+      contactId,
+      subject: m.subject ?? "",
+      bodyText: m.bodyText,
+    });
+    if (suggested) return suggested;
+  }
+  return null;
 }

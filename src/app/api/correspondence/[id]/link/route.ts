@@ -106,6 +106,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         },
       });
       contactId = contact.id;
+      // A brand-new contact has no stage to move from, but if they were created
+      // as a Fund prospect, the message that surfaced them can still say where
+      // they belong (e.g. an email we sent them = Outreach Sent). Anyone not
+      // marked Fund is skipped inside maybeCreateStageSuggestion.
+      shouldClassify = contact.recordContexts.includes("FUND");
     }
   }
 

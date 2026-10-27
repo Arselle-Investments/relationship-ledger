@@ -1,5 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
+import { RecordContext } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { backfillStageSuggestion } from "@/lib/stage-signal";
 import { AuthError, requireEditor, requireUser } from "@/lib/permissions";
 import { contactInputSchema, isPlaceholderEmail, validateStatusNoteRule } from "@/lib/contact-schema";
 import { recordStageChange } from "@/lib/stage-history";
@@ -84,6 +86,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     },
     include: { owner: true, company: true },
   });
+
+  // Newly marked as a Fund prospect: look back over what's already been logged
+  // for them for a stage signal (see backfillStageSuggestion). After the
+  // response so saving isn't held up by the AI calls, and so a failure there
+  // can't fail the save.
+  if (data.recordContexts?.includes(RecordContext.FUND) && !existing.recordContexts.includes(RecordContext.FUND)) {
+    after(() => backfillStageSuggestion(id).catch((e) => console.error("Stage backfill failed", e)));
+  }
 
   if (data.status !== undefined && data.status !== existing.status) {
     await recordStageChange({
