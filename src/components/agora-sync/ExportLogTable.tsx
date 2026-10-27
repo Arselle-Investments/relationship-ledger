@@ -13,6 +13,7 @@ export type ExportLogEntry = {
 const KIND_LABELS: Record<string, string> = {
   "contacts-new": "New contacts",
   "contacts-changes": "Contact changes",
+  "contacts-full": "Full database",
   "companies-new": "New companies",
 };
 

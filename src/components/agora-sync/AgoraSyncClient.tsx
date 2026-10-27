@@ -5,9 +5,14 @@ import { useRouter } from "next/navigation";
 import { VerifyAgoraModal } from "./VerifyAgoraModal";
 import { ExportLogEntry, ExportLogTable } from "./ExportLogTable";
 import { AgoraTemplateSection } from "./AgoraTemplateSection";
+import { PreviewKind, SyncPreviewTable } from "./SyncPreviewTable";
 
 export function AgoraSyncClient({
   pendingCount,
+  pendingHeldBackCount,
+  changedCount,
+  changedHeldBackCount,
+  fullCount,
   companyPendingCount,
   initialExportLogs,
   canEdit,
@@ -16,6 +21,10 @@ export function AgoraSyncClient({
   initialTemplateNewHeaders,
 }: {
   pendingCount: number;
+  pendingHeldBackCount: number;
+  changedCount: number;
+  changedHeldBackCount: number;
+  fullCount: number;
   companyPendingCount: number;
   initialExportLogs: ExportLogEntry[];
   canEdit: boolean;
@@ -33,6 +42,9 @@ export function AgoraSyncClient({
   const [companyExportMsg, setCompanyExportMsg] = useState<string | null>(null);
   const [changesExporting, setChangesExporting] = useState(false);
   const [changesExportMsg, setChangesExportMsg] = useState<string | null>(null);
+  const [fullExporting, setFullExporting] = useState(false);
+  const [fullExportMsg, setFullExportMsg] = useState<string | null>(null);
+  const [previewKind, setPreviewKind] = useState<PreviewKind | null>(null);
   const [verifyFile, setVerifyFile] = useState<File | null>(null);
   const verifyFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,11 +114,43 @@ export function AgoraSyncClient({
     setChangesExportMsg(null);
     const result = await downloadExport("/api/contacts/export-changes-for-agora", "arselle-contact-changes-for-agora");
     setChangesExporting(false);
-    setChangesExportMsg(result.ok ? "Exported. Re-run any time to pick up what's changed since." : result.error);
+    setChangesExportMsg(
+      result.ok
+        ? `Exported. Re-run any time to pick up what's changed since.${
+            result.skippedNoEmail ? ` ${result.skippedNoEmail} held back for missing/placeholder email — see Data Hygiene.` : ""
+          }`
+        : result.error
+    );
     if (result.ok) {
       router.refresh();
       refreshLogs();
     }
+  }
+
+  async function handleFullExport() {
+    const ok = window.confirm(
+      `This downloads all ${fullCount} contacts with a real email in Agora's template and marks every one of them as synced. Continue?`
+    );
+    if (!ok) return;
+    setFullExporting(true);
+    setFullExportMsg(null);
+    const result = await downloadExport("/api/contacts/export-all-for-agora", "arselle-all-contacts-for-agora");
+    setFullExporting(false);
+    setFullExportMsg(
+      result.ok
+        ? `Exported and marked as synced.${
+            result.skippedNoEmail ? ` ${result.skippedNoEmail} held back for missing/placeholder email — see Data Hygiene.` : ""
+          }`
+        : result.error
+    );
+    if (result.ok) {
+      router.refresh();
+      refreshLogs();
+    }
+  }
+
+  function togglePreview(kind: PreviewKind) {
+    setPreviewKind((current) => (current === kind ? null : kind));
   }
 
   if (!canEdit) {
@@ -120,40 +164,82 @@ export function AgoraSyncClient({
 
   return (
     <div>
+      <div className="card" style={{ padding: 20, marginBottom: 20 }}>
+        <h3 style={{ marginBottom: 6 }}>Ready to sync</h3>
+        <div className="helptext" style={{ marginBottom: 16 }}>
+          Every export below is a full row in Agora&rsquo;s own contact template (matched by email) &mdash; all
+          columns, not just the ones that changed. Open a preview to see exactly who&rsquo;s in each file before you
+          download it.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+          <div className="stat-card">
+            <div className="num">{pendingCount}</div>
+            <div className="label">New contacts &mdash; never sent to Agora</div>
+            {pendingHeldBackCount > 0 && (
+              <div className="helptext" style={{ marginTop: 4 }}>
+                {pendingHeldBackCount} of these have no real email and will be held back.
+              </div>
+            )}
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+              <select value={exportDays} onChange={(e) => setExportDays(e.target.value)}>
+                <option value="">All pending</option>
+                <option value="15">Added in last 15 days</option>
+                <option value="30">Added in last 30 days</option>
+              </select>
+              <button className="btn primary" onClick={handleExport} disabled={exporting || pendingCount === 0}>
+                {exporting ? "Exporting…" : "Export new"}
+              </button>
+              <button className="btn small ghost" onClick={() => togglePreview("new")}>
+                {previewKind === "new" ? "Hide list" : "Preview list"}
+              </button>
+            </div>
+            {exportMsg && <div className="helptext" style={{ marginTop: 8 }}>{exportMsg}</div>}
+          </div>
+
+          <div className="stat-card">
+            <div className="num">{changedCount}</div>
+            <div className="label">Changed contacts &mdash; edited since last sent</div>
+            <div className="helptext" style={{ marginTop: 4 }}>
+              Any edit counts: stage, Fund/Deal, Do Not Contact, type, tier, tags, notes, and the rest.
+              {changedHeldBackCount > 0 && ` ${changedHeldBackCount} more have no real email and will be held back.`}
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+              <button className="btn primary" onClick={handleChangesExport} disabled={changesExporting || changedCount === 0}>
+                {changesExporting ? "Exporting…" : "Export changes"}
+              </button>
+              <button className="btn small ghost" onClick={() => togglePreview("changed")}>
+                {previewKind === "changed" ? "Hide list" : "Preview list"}
+              </button>
+            </div>
+            {changesExportMsg && <div className="helptext" style={{ marginTop: 8 }}>{changesExportMsg}</div>}
+          </div>
+
+          <div className="stat-card">
+            <div className="num">{fullCount}</div>
+            <div className="label">Full database &mdash; every contact with a real email</div>
+            <div className="helptext" style={{ marginTop: 4 }}>
+              Re-sends everyone, new, changed and untouched, and marks them all as synced.
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 12, flexWrap: "wrap" }}>
+              <button className="btn primary" onClick={handleFullExport} disabled={fullExporting || fullCount === 0}>
+                {fullExporting ? "Exporting…" : "Export full database"}
+              </button>
+              <button className="btn small ghost" onClick={() => togglePreview("all")}>
+                {previewKind === "all" ? "Hide list" : "Preview list"}
+              </button>
+            </div>
+            {fullExportMsg && <div className="helptext" style={{ marginTop: 8 }}>{fullExportMsg}</div>}
+          </div>
+        </div>
+
+        {previewKind && <SyncPreviewTable kind={previewKind} onClose={() => setPreviewKind(null)} />}
+      </div>
+
       <AgoraTemplateSection
         initialHeaders={initialTemplateHeaders}
         initialIsCustom={initialTemplateIsCustom}
         initialNewHeaders={initialTemplateNewHeaders}
       />
-
-      <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 6 }}>Export new contacts for Agora</h3>
-        <div className="helptext" style={{ marginBottom: 14 }}>
-          Contacts added here (manually, or confirmed from Data Quality &rarr; New Contacts) that haven&rsquo;t been
-          sent to Agora yet. Downloads a spreadsheet formatted for Agora import and marks everything included as
-          exported, so the next export only picks up what&rsquo;s new since this one.
-        </div>
-        {pendingCount === 0 ? (
-          <div className="empty">
-            <h3>Nothing pending</h3>
-            <div>Every contact on file has already been exported to Agora.</div>
-          </div>
-        ) : (
-          <>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-              <select value={exportDays} onChange={(e) => setExportDays(e.target.value)}>
-                <option value="">All pending ({pendingCount})</option>
-                <option value="15">Added in last 15 days</option>
-                <option value="30">Added in last 30 days</option>
-              </select>
-              <button className="btn primary" onClick={handleExport} disabled={exporting}>
-                {exporting ? "Exporting…" : "Export new for Agora"}
-              </button>
-            </div>
-            {exportMsg && <div className="helptext">{exportMsg}</div>}
-          </>
-        )}
-      </div>
 
       <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
         <h3 style={{ marginBottom: 6 }}>Export new companies for Agora</h3>
@@ -184,21 +270,6 @@ export function AgoraSyncClient({
             {companyExportMsg && <div className="helptext">{companyExportMsg}</div>}
           </>
         )}
-      </div>
-
-      <div className="card" style={{ padding: 20, maxWidth: 640, marginBottom: 20 }}>
-        <h3 style={{ marginBottom: 6 }}>Export contact changes for Agora</h3>
-        <div className="helptext" style={{ marginBottom: 14 }}>
-          For contacts already sent to Agora: organization, phone, city, notes, or tags edited here since the last
-          time this ran. Downloads their full current record in Agora&rsquo;s own import template (matched by
-          email), so it drops straight into their re-import flow.
-        </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-          <button className="btn primary" onClick={handleChangesExport} disabled={changesExporting}>
-            {changesExporting ? "Exporting…" : "Export changes for Agora"}
-          </button>
-        </div>
-        {changesExportMsg && <div className="helptext">{changesExportMsg}</div>}
       </div>
 
       <div className="card" style={{ padding: 20, maxWidth: 640 }}>

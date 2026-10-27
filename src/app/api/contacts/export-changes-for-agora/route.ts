@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { AGORA_TEMPLATE_HEADERS, buildAgoraContactRow } from "@/lib/agora-export-template";
+import { agoraSyncState, isExportableToAgora } from "@/lib/agora-sync";
 import { getAgoraListColumnMappings } from "@/lib/mailing-lists";
 import { getSettings } from "@/lib/settings";
 
@@ -50,12 +51,22 @@ export async function POST() {
     return NextResponse.json({ error: "No contacts have been sent to Agora yet." }, { status: 400 });
   }
 
-  const toExport = candidates.filter((c) => {
-    const lastSent = c.agoraChangesSyncedAt ?? c.agoraExportedAt;
-    return !lastSent || c.updatedAt > lastSent;
-  });
+  const changed = candidates.filter((c) => agoraSyncState(c) === "changed");
+  // Agora can't import a contact without a real email, so those are held back
+  // (and left unstamped, so they're picked up once the email is fixed) — same
+  // rule as the new-contacts and full-database exports.
+  const toExport = changed.filter(isExportableToAgora);
+  const skipped = changed.length - toExport.length;
   if (toExport.length === 0) {
-    return NextResponse.json({ error: "No contact changes since the last export." }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          changed.length === 0
+            ? "No contact changes since the last export."
+            : `${changed.length} contact${changed.length === 1 ? "" : "s"} changed, but none have a real email on file — see Data Hygiene.`,
+      },
+      { status: 400 }
+    );
   }
 
   const settings = await getSettings();
@@ -84,6 +95,7 @@ export async function POST() {
         fileName,
         fileData: buffer,
         recordCount: toExport.length,
+        skippedCount: skipped,
         createdById: actingUser.id,
         createdByName: actingUser.name,
       },
@@ -94,6 +106,7 @@ export async function POST() {
     headers: {
       "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "Content-Disposition": `attachment; filename="${fileName}"`,
+      "X-Skipped-No-Email": String(skipped),
     },
   });
 }
