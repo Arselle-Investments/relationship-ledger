@@ -10,6 +10,7 @@ import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
+const ORG_DATALIST_ID = "new-contact-org-names";
 
 export type ContactDraft = {
   name: string;
@@ -65,6 +66,7 @@ function CorrespondenceCard({
   contacts,
   lists,
   team,
+  orgNames,
   canEdit,
   draft,
   onDraftChange,
@@ -77,6 +79,7 @@ function CorrespondenceCard({
   contacts: Contact[];
   lists: MailingList[];
   team: User[];
+  orgNames: string[];
   canEdit: boolean;
   draft: ContactDraft;
   onDraftChange: (patch: Partial<ContactDraft>) => void;
@@ -303,7 +306,17 @@ function CorrespondenceCard({
             </div>
             <div className="field">
               <label>Organization</label>
-              <input value={draft.org} onChange={(e) => onDraftChange({ org: e.target.value })} />
+              <input
+                list={ORG_DATALIST_ID}
+                value={draft.org}
+                onChange={(e) => onDraftChange({ org: e.target.value })}
+                placeholder="Start typing to pick an existing organization"
+              />
+              {draft.org.trim() && !orgNames.some((n) => n.toLowerCase() === draft.org.trim().toLowerCase()) && (
+                <div className="helptext" style={{ marginTop: 4 }}>
+                  Not an existing organization. Pick one from the dropdown if it&rsquo;s the same firm, to avoid a duplicate.
+                </div>
+              )}
             </div>
           </div>
           <div className="field">
@@ -510,6 +523,7 @@ export function NewContactsClient({
   contacts,
   lists,
   team,
+  orgNames,
   canEdit,
 }: {
   initialSuggested: Correspondence[];
@@ -517,6 +531,7 @@ export function NewContactsClient({
   contacts: Contact[];
   lists: MailingList[];
   team: User[];
+  orgNames: string[];
   canEdit: boolean;
 }) {
   const [items, setItems] = useState(initialSuggested);
@@ -768,7 +783,12 @@ export function NewContactsClient({
               </button>
             </div>
           )}
-          {contactBulkMsg && <div className="helptext" style={{ marginBottom: 12 }}>{contactBulkMsg}</div>}
+          <datalist id={ORG_DATALIST_ID}>
+        {orgNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
+      {contactBulkMsg && <div className="helptext" style={{ marginBottom: 12 }}>{contactBulkMsg}</div>}
           {visibleItems.length === 0 ? (
             <div className="empty">
               <h3>No matches</h3>
@@ -782,6 +802,7 @@ export function NewContactsClient({
               contacts={contacts}
               lists={lists}
               team={team}
+              orgNames={orgNames}
               canEdit={canEdit}
               draft={draftFor(item)}
               onDraftChange={(patch) => updateDraft(item.id, patch)}
