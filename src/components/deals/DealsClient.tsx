@@ -36,7 +36,15 @@ export function DealsClient({ initialDeals, canEdit }: { initialDeals: DealWithC
 
   function dealsTable(rows: DealWithCount[]) {
     return (
-      <table>
+      <table style={{ tableLayout: "fixed", width: "100%" }}>
+        <colgroup>
+          <col style={{ width: "26%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "16%" }} />
+          <col style={{ width: "13%" }} />
+          <col style={{ width: "13%" }} />
+        </colgroup>
         <thead>
           <tr>
             <th>Deal</th>
