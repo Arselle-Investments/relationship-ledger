@@ -1,5 +1,6 @@
 import { DEV_TEAM } from "@/lib/dev-team";
 import { extractEmailFromText } from "@/lib/email-extract";
+import { isStaffName } from "@/lib/staff-emails";
 
 // Heuristic-first email signature scraping — an email's signature block
 // (last few lines of the body) often carries a phone number, job title, and
@@ -52,7 +53,35 @@ const STAFF_MARKERS = DEV_TEAM.flatMap((m) => [m.name.toLowerCase(), m.email.toL
 
 function lineMentionsStaff(line: string): boolean {
   const lower = line.toLowerCase();
-  return lower.includes("@arselleinvestments.com") || STAFF_MARKERS.some((marker) => lower.includes(marker));
+  return lower.includes("arselleinvestments.com") || STAFF_MARKERS.some((marker) => lower.includes(marker));
+}
+
+// A signature from an HTML email is often one paragraph per line, so the lines
+// after a teammate's name (title, phone) look like unrelated blocks and don't
+// mention staff themselves. When a line is just a teammate's name, drop the few
+// short lines that follow it too.
+const SIGNATURE_LINES_AFTER_STAFF_NAME = 5;
+
+function stripStaffSignatures(bodyText: string): string {
+  const lines = bodyText.split(/\r?\n/);
+  const kept: string[] = [];
+  let skipNonEmpty = 0;
+  for (const line of lines) {
+    const trimmed = stripQuotePrefix(line.trim());
+    if (isStaffName(trimmed)) {
+      skipNonEmpty = SIGNATURE_LINES_AFTER_STAFF_NAME;
+      continue;
+    }
+    if (trimmed && skipNonEmpty > 0) {
+      if (trimmed.length < 80) {
+        skipNonEmpty--;
+        continue;
+      }
+      skipNonEmpty = 0;
+    }
+    kept.push(line);
+  }
+  return kept.join("\n");
 }
 
 // Splits a body into paragraph-like chunks, also breaking at common
@@ -138,6 +167,7 @@ export function parseSignature(
   bodyText: string,
   contact?: { name?: string | null; email?: string | null }
 ): { phone: string | null; title: string | null; city: string | null; state: string | null; email: string | null } {
+  bodyText = stripStaffSignatures(bodyText);
   const blocks = splitIntoBlocks(bodyText);
   const nonStaffBlocks = blocks.filter((block) => !block.some(lineMentionsStaff));
 

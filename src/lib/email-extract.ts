@@ -6,7 +6,9 @@ const EMAIL_RE = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 // Agora's own BCC/logging relay (shows up in forwarded email headers), and
 // the "first.last@" template placeholder some source profiles use as a
 // stand-in for "we don't actually have this person's email."
-const NON_CONTACT_DOMAIN_RE = /agorareal\.com$|\.bcc\.clients\./i;
+// Also Teams' own conversation ids ("19:abc...@thread.tacv2"), which show up in
+// the HTML of every channel post (image/attachment URLs) and look like emails.
+const NON_CONTACT_DOMAIN_RE = /agorareal\.com$|\.bcc\.clients\.|^thread\.(tacv\d*|skype)$/i;
 const PLACEHOLDER_LOCAL_RE = /^(first\.?last|firstname\.?lastname|jane\.?doe|john\.?doe|name)$/i;
 
 /**

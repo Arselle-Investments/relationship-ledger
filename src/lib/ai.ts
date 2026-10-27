@@ -76,7 +76,7 @@ export async function extractContactFromMessage(subject: string, bodyText: strin
     messages: [
       {
         role: "user",
-        content: `This is a message forwarded into a shared team inbox. Identify the EXTERNAL sender (not anyone at our own company, Arselle Investments) — their name, email, and organization if mentioned. If this is a reply chain, use the most recent external sender. Never return "Arselle Investments" as the org — that's our own firm, not theirs. If a field genuinely can't be determined, use null, never the word "unknown".\n\nSubject: ${subject}\n\nBody:\n${bodyText.slice(0, 8000)}`,
+        content: `This is a message forwarded into a shared team inbox. Identify the EXTERNAL sender (not anyone at our own company, Arselle Investments) — their name, email, and organization if mentioned. If this is a reply chain, use the most recent external sender. If the message was instead written by our own team TO someone outside the company (a sent note, with no external sender), return the person it is addressed to — the name from the salutation (a first name alone is fine) — and an email only if one literally appears in the text; never guess an email. Never return "Arselle Investments" as the org — that's our own firm, not theirs. If a field genuinely can't be determined, use null, never the word "unknown".\n\nSubject: ${subject}\n\nBody:\n${bodyText.slice(0, 8000)}`,
       },
     ],
   });
