@@ -28,7 +28,12 @@ export async function applyStageSuggestion(params: {
     const noteError = validateStatusNoteRule({ previousStatus: contact.status, nextStatus: status, notes: note });
     if (noteError) return { error: noteError };
 
-    await prisma.contact.update({ where: { id: contact.id }, data: { status, notes: note } });
+    // Add to the notes rather than replacing them, so what's already recorded
+    // (connections, call notes) survives each stage change. The stage-history
+    // entry below still keeps this note on its own.
+    const existingNotes = contact.notes?.trim() ?? "";
+    const notes = !existingNotes ? note : existingNotes.includes(note) ? existingNotes : `${existingNotes}\n\n${note}`;
+    await prisma.contact.update({ where: { id: contact.id }, data: { status, notes } });
     await recordStageChange({
       contactId: contact.id,
       fromStatus: contact.status,
