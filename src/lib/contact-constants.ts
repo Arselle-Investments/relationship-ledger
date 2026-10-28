@@ -122,12 +122,13 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
   TIER_3: "Tier 3",
 };
 
-// The fundraising/syndication pipeline — Contact (LP-level), DealFeedback
-// (company-level), and Consultant/CapitalSource (Emerging Managers outreach),
-// the same funnel just anchored at whichever level applies. This is the
-// Fund Raise (Contact-level) wording specifically — Deal Capital and
-// Emerging Managers each override the one label that differs by context
-// (PASSED_OPEN) via FEEDBACK_STATUS_LABELS and EM_STAGE_LABELS respectively.
+// The fundraising/syndication pipeline — Contact (LP-level) and
+// Consultant/CapitalSource (Emerging Managers outreach), the same funnel just
+// anchored at whichever level applies. This is the Fund Raise (Contact-level)
+// wording specifically — Emerging Managers overrides the one label that
+// differs by context (PASSED_OPEN) via EM_STAGE_LABELS. Deal Capital
+// (DealFeedback) has its own separate stage list, DealFeedbackStage — see
+// deal-constants.ts.
 // Capitalization/wording here matches Agora's own "AREF I – Stage" dropdown
 // exactly (confirmed by Bianca 2026-09-24, NOT_STARTED and DECLINE's exact
 // text confirmed 2026-09-30 once Bianca added matching options in Agora) —

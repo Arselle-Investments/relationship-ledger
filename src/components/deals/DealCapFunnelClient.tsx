@@ -2,9 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Company, Contact, Deal, DealFeedback, DealStatus, FundraisingStage } from "@prisma/client";
-import { DEAL_STATUS_LABELS, FEEDBACK_STATUS_LABELS } from "@/lib/deal-constants";
-import { FUNDRAISING_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor } from "@/lib/funnel";
+import { Company, Contact, Deal, DealFeedback, DealFeedbackStage, DealStatus } from "@prisma/client";
+import {
+  DEAL_STATUS_LABELS,
+  FEEDBACK_STAGES,
+  FEEDBACK_STAGE_COLORS,
+  FEEDBACK_STATUS_LABELS,
+  feedbackStageTextColor,
+} from "@/lib/deal-constants";
 
 type FeedbackWithRelations = DealFeedback & { company: Company | null; contact: Contact | null };
 type DealWithFeedback = Deal & { feedback: FeedbackWithRelations[] };
@@ -51,10 +56,10 @@ export function DealCapFunnelClient({ deals }: { deals: DealWithFeedback[] }) {
 }
 
 function DealFunnelCard({ deal }: { deal: DealWithFeedback }) {
-  const [expanded, setExpanded] = useState<FundraisingStage | null>(null);
+  const [expanded, setExpanded] = useState<DealFeedbackStage | null>(null);
 
   const counts = useMemo(
-    () => FUNDRAISING_STAGES.map((status) => ({ status, count: deal.feedback.filter((f) => f.status === status).length })),
+    () => FEEDBACK_STAGES.map((status) => ({ status, count: deal.feedback.filter((f) => f.status === status).length })),
     [deal.feedback]
   );
   const max = Math.max(1, ...counts.map((c) => c.count));
@@ -97,8 +102,8 @@ function DealFunnelCard({ deal }: { deal: DealWithFeedback }) {
                     <div
                       style={{
                         width: `${Math.max(4, (c.count / max) * 100)}%`,
-                        background: FUNDRAISING_STAGE_COLORS[c.status],
-                        color: fundraisingStageTextColor(c.status),
+                        background: FEEDBACK_STAGE_COLORS[c.status],
+                        color: feedbackStageTextColor(c.status),
                         fontSize: 11.5,
                         fontWeight: 600,
                         padding: "3px 8px",

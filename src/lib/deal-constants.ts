@@ -1,5 +1,4 @@
-import { AssetClass, DealStatus, FundraisingStage, InvestmentStrategy, InvestmentStructure } from "@prisma/client";
-import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
+import { AssetClass, DealFeedbackStage, DealStatus, InvestmentStrategy, InvestmentStructure } from "@prisma/client";
 
 export const DEAL_STATUS_LABELS: Record<DealStatus, string> = {
   ACTIVE: "Active",
@@ -56,25 +55,54 @@ export const COMPANY_INVESTMENT_STRATEGY_LABELS: Record<InvestmentStrategy, stri
 };
 export const COMPANY_INVESTMENT_STRATEGY_OPTIONS = Object.values(InvestmentStrategy);
 
-// Deal feedback (company/LP-level) uses the same fundraising pipeline as
-// Contact — re-exported under this name so existing deal-feedback callers
-// read naturally, without implying it's a separate vocabulary. PASSED_OPEN is
-// the one label that genuinely differs by context: at the deal level, "open"
-// means open to a *future deal*, not a future fund (see FUNDRAISING_STAGE_LABELS).
-export const FEEDBACK_STATUS_LABELS: Record<FundraisingStage, string> = {
-  ...FUNDRAISING_STAGE_LABELS,
-  PASSED_OPEN: "Passed (open to future deals)",
+// Deal feedback (company/LP-level) has its own funnel, separate from the
+// fund-raising FundraisingStage — a deal is socialized to a capital partner,
+// not courted over years. Labels follow Bianca's numbering (Declined is 4b,
+// ahead of Term Sheet / Committed at 5), and this array is the display order.
+export const FEEDBACK_STAGES: DealFeedbackStage[] = [
+  DealFeedbackStage.BRAINSTORM,
+  DealFeedbackStage.OUTREACH_SENT,
+  DealFeedbackStage.ENGAGEMENT_SHOWN,
+  DealFeedbackStage.DUE_DILIGENCE,
+  DealFeedbackStage.DECLINED,
+  DealFeedbackStage.TERM_SHEET_COMMITTED,
+];
+
+export const FEEDBACK_STATUS_LABELS: Record<DealFeedbackStage, string> = {
+  BRAINSTORM: "1. Brainstorm as Potential Fit",
+  OUTREACH_SENT: "2. Outreach Sent",
+  ENGAGEMENT_SHOWN: "3. Engagement Shown",
+  DUE_DILIGENCE: "4a. Due Diligence",
+  DECLINED: "4b. Declined",
+  TERM_SHEET_COMMITTED: "5. Term Sheet / Committed",
 };
 
-export const FEEDBACK_STATUS_TAG_CLASS: Record<FundraisingStage, string> = {
-  NOT_STARTED: "",
+export const FEEDBACK_STATUS_TAG_CLASS: Record<DealFeedbackStage, string> = {
+  BRAINSTORM: "",
   OUTREACH_SENT: "",
-  INITIAL_INTEREST: "brass",
-  MEETING_OCCURRED: "brass",
-  ACTIVE_PROSPECT: "brass",
-  FINAL_CLOSE_POTENTIAL: "brass",
+  ENGAGEMENT_SHOWN: "brass",
   DUE_DILIGENCE: "brass",
-  COMMITTED: "forest",
-  PASSED_OPEN: "",
-  DECLINE: "rust",
+  DECLINED: "rust",
+  TERM_SHEET_COMMITTED: "forest",
 };
+
+// Funnel-bar colors: same forest-green ombre as the fund funnel (lightest at
+// the start, deepest at the finish line), rust for a decline.
+export const FEEDBACK_STAGE_COLORS: Record<DealFeedbackStage, string> = {
+  BRAINSTORM: "#F0F5F4",
+  OUTREACH_SENT: "#D4DEDC",
+  ENGAGEMENT_SHOWN: "#9CB0AD",
+  DUE_DILIGENCE: "#63837E",
+  DECLINED: "#A85A40",
+  TERM_SHEET_COMMITTED: "#2B554F",
+};
+
+const DARK_FEEDBACK_STAGES = new Set<DealFeedbackStage>([
+  DealFeedbackStage.DUE_DILIGENCE,
+  DealFeedbackStage.DECLINED,
+  DealFeedbackStage.TERM_SHEET_COMMITTED,
+]);
+
+export function feedbackStageTextColor(status: DealFeedbackStage): string {
+  return DARK_FEEDBACK_STAGES.has(status) ? "#FFFFFF" : "var(--ink)";
+}

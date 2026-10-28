@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Company, Contact, Deal, DealFeedback, DealOutreach, DealStatus, FundraisingStage } from "@prisma/client";
+import { Company, Contact, Deal, DealFeedback, DealFeedbackStage, DealOutreach, DealStatus } from "@prisma/client";
 import {
   DEAL_ASSET_CLASS_OPTIONS,
   DEAL_STATUS_LABELS,
+  FEEDBACK_STAGES,
   FEEDBACK_STATUS_LABELS,
   FEEDBACK_STATUS_TAG_CLASS,
 } from "@/lib/deal-constants";
@@ -34,7 +35,7 @@ export function DealDetailClient({
   const [deal, setDeal] = useState(initialDeal);
   const [companyId, setCompanyId] = useState("");
   const [contactId, setContactId] = useState("");
-  const [status, setStatus] = useState<FundraisingStage>(FundraisingStage.NOT_STARTED);
+  const [status, setStatus] = useState<DealFeedbackStage>(DealFeedbackStage.BRAINSTORM);
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -129,7 +130,7 @@ export function DealDetailClient({
     setDeal((prev) => ({ ...prev, feedback: [json.feedback, ...prev.feedback] }));
     setCompanyId("");
     setContactId("");
-    setStatus(FundraisingStage.NOT_STARTED);
+    setStatus(DealFeedbackStage.BRAINSTORM);
     setNotes("");
   }
 
@@ -259,8 +260,8 @@ export function DealDetailClient({
           </div>
           <div className="field">
             <label>Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value as FundraisingStage)} style={{ maxWidth: 220 }}>
-              {Object.values(FundraisingStage).map((s) => (
+            <select value={status} onChange={(e) => setStatus(e.target.value as DealFeedbackStage)} style={{ maxWidth: 220 }}>
+              {FEEDBACK_STAGES.map((s) => (
                 <option key={s} value={s}>
                   {FEEDBACK_STATUS_LABELS[s]}
                 </option>

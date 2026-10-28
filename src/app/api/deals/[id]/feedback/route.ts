@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
-import { FundraisingStage } from "@prisma/client";
+import { DealFeedbackStage } from "@prisma/client";
 
 const schema = z.object({
   companyId: z.string().trim().optional().nullable(),
   contactId: z.string().trim().optional().nullable(),
-  status: z.nativeEnum(FundraisingStage).default(FundraisingStage.NOT_STARTED),
+  status: z.nativeEnum(DealFeedbackStage).default(DealFeedbackStage.BRAINSTORM),
   notes: z.string().trim().min(1, "Notes are required."),
 });
 

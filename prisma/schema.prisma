@@ -386,6 +386,19 @@ model CompanyStatusChange {
   @@index([toStatus])
 }
 
+// Deal Capital's own funnel, separate from the fund-raising FundraisingStage:
+// a deal is socialized to a capital partner, not courted over years. Stored in
+// DealFeedback.status. (Declined sits at 4b in the display order, before
+// Term Sheet / Committed at 5.)
+enum DealFeedbackStage {
+  BRAINSTORM
+  OUTREACH_SENT
+  ENGAGEMENT_SHOWN
+  DUE_DILIGENCE
+  DECLINED
+  TERM_SHEET_COMMITTED
+}
+
 enum DealStatus {
   ACTIVE
   UNDER_CONTRACT
@@ -425,7 +438,7 @@ model DealFeedback {
   company   Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
   contactId String?
   contact   Contact?       @relation(fields: [contactId], references: [id], onDelete: SetNull)
-  status    FundraisingStage @default(NOT_STARTED)
+  status    DealFeedbackStage @default(BRAINSTORM)
   notes     String
   source    FeedbackSource @default(MANUAL)
   // Set once a message is auto-classified as deal feedback (not built yet —
