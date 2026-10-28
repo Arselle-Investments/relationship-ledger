@@ -25,6 +25,8 @@ const schema = z.discriminatedUnion("mode", [
     tier: z.nativeEnum(ContactTier).optional(),
     tags: z.array(z.string().trim()).optional(),
     priorityQuarter: z.string().trim().optional().nullable(),
+    warmPath: z.string().trim().optional().nullable(),
+    notes: z.string().trim().optional().nullable(),
     recordContexts: z.array(z.nativeEnum(RecordContext)).optional(),
   }),
 ]);
@@ -69,9 +71,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       : null;
 
     if (existingByEmail) {
-      const newNotes =
+      const notesToAdd = [
         parsed.data.title && !(existingByEmail.notes ?? "").includes(parsed.data.title)
-          ? [existingByEmail.notes, `Title: ${parsed.data.title}`].filter(Boolean).join("\n")
+          ? `Title: ${parsed.data.title}`
+          : "",
+        parsed.data.notes && !(existingByEmail.notes ?? "").includes(parsed.data.notes) ? parsed.data.notes : "",
+      ].filter(Boolean);
+      const newNotes =
+        notesToAdd.length > 0
+          ? [existingByEmail.notes, ...notesToAdd].filter(Boolean).join("\n")
           : existingByEmail.notes;
       await prisma.contact.update({
         where: { id: existingByEmail.id },
@@ -80,6 +88,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           phone: existingByEmail.phone ?? parsed.data.phone ?? null,
           city: existingByEmail.city ?? parsed.data.city ?? null,
           state: existingByEmail.state ?? parsed.data.state ?? null,
+          warmPath: existingByEmail.warmPath ?? parsed.data.warmPath ?? null,
           notes: newNotes,
           tags: Array.from(new Set([...existingByEmail.tags, ...(parsed.data.tags ?? [])])),
           recordContexts: Array.from(new Set([...existingByEmail.recordContexts, ...(parsed.data.recordContexts ?? [])])),
@@ -97,7 +106,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           city: parsed.data.city || null,
           state: parsed.data.state || null,
           ownerId: parsed.data.ownerId || actingUser.id,
-          notes: parsed.data.title ? `Title: ${parsed.data.title}` : "",
+          notes: [parsed.data.title ? `Title: ${parsed.data.title}` : "", parsed.data.notes ?? ""].filter(Boolean).join("\n"),
+          warmPath: parsed.data.warmPath || null,
           ...(parsed.data.type ? { type: parsed.data.type } : {}),
           ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
           ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),

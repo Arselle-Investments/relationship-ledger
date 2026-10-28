@@ -7,6 +7,7 @@ import { extractHighlight } from "@/lib/correspondence-highlight";
 import { extractEmailFromText, guessNameFromEmail } from "@/lib/email-extract";
 import { CONTACT_TYPE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
+import { US_STATE_OPTIONS, STATE_CANADA, STATE_INTERNATIONAL, normalizeStateValue } from "@/lib/state-options";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
@@ -25,6 +26,8 @@ export type ContactDraft = {
   ownerId: string;
   tags: string;
   priorityQuarter: string;
+  warmPath: string;
+  notes: string;
   recordContexts: RecordContext[];
 };
 
@@ -50,13 +53,15 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     email,
     phone: signature.phone ?? "",
     city: signature.city ?? "",
-    state: signature.state ?? "",
+    state: normalizeStateValue(signature.state ?? ""),
     title: signature.title ?? "",
     type: ContactType.OTHER,
     tier: ContactTier.TIER_2,
     ownerId: "",
     tags: "",
     priorityQuarter: "",
+    warmPath: "",
+    notes: "",
     recordContexts: [],
   };
 }
@@ -132,7 +137,7 @@ function CorrespondenceCard({
     if (found.phone) patch.phone = found.phone;
     if (found.title) patch.title = found.title;
     if (found.city) patch.city = found.city;
-    if (found.state) patch.state = found.state;
+    if (found.state) patch.state = normalizeStateValue(found.state);
     if (found.email && !draft.email) patch.email = found.email;
     if (Object.keys(patch).length > 0) onDraftChange(patch);
   }
@@ -174,6 +179,8 @@ function CorrespondenceCard({
         ownerId: draft.ownerId || null,
         tags,
         priorityQuarter: draft.priorityQuarter.trim() || null,
+        warmPath: draft.warmPath.trim() || null,
+        notes: draft.notes.trim() || null,
         recordContexts: draft.recordContexts,
       }),
     });
@@ -350,7 +357,22 @@ function CorrespondenceCard({
             </div>
             <div className="field">
               <label>State</label>
-              <input value={draft.state} onChange={(e) => onDraftChange({ state: e.target.value })} />
+              <select value={draft.state} onChange={(e) => onDraftChange({ state: e.target.value })}>
+                <option value="">— none —</option>
+                {draft.state &&
+                  draft.state !== STATE_CANADA &&
+                  draft.state !== STATE_INTERNATIONAL &&
+                  !US_STATE_OPTIONS.some((o) => o.value === draft.state) && (
+                    <option value={draft.state}>{draft.state} (as parsed)</option>
+                  )}
+                {US_STATE_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>
+                    {o.label} ({o.value})
+                  </option>
+                ))}
+                <option value={STATE_CANADA}>{STATE_CANADA}</option>
+                <option value={STATE_INTERNATIONAL}>{STATE_INTERNATIONAL}</option>
+              </select>
             </div>
           </div>
           <div className="field-row">
@@ -424,6 +446,23 @@ function CorrespondenceCard({
                 onChange={(e) => onDraftChange({ priorityQuarter: e.target.value })}
               />
             </div>
+          </div>
+          <div className="field">
+            <label>Warm path / intro</label>
+            <input
+              placeholder="Intermediary, broker, or mutual connection"
+              value={draft.warmPath}
+              onChange={(e) => onDraftChange({ warmPath: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Notes</label>
+            <textarea
+              rows={3}
+              placeholder="Context on who they are, how you met, what to follow up on…"
+              value={draft.notes}
+              onChange={(e) => onDraftChange({ notes: e.target.value })}
+            />
           </div>
           {addableLists.length > 0 && (
             <div className="field">
@@ -649,6 +688,8 @@ export function NewContactsClient({
           ownerId: draft.ownerId || null,
           tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
           priorityQuarter: draft.priorityQuarter.trim() || null,
+        warmPath: draft.warmPath.trim() || null,
+        notes: draft.notes.trim() || null,
           recordContexts: draft.recordContexts,
         }),
       });
