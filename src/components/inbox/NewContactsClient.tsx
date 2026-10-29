@@ -1,17 +1,30 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Contact, Correspondence, ContactType, ContactTier, MailingList, RecordContext, User } from "@prisma/client";
+import { Contact, Correspondence, ContactType, MailingList, RecordContext, User } from "@prisma/client";
 import { parseSignature } from "@/lib/signature-parse";
 import { extractHighlight } from "@/lib/correspondence-highlight";
 import { extractEmailFromText, guessNameFromEmail } from "@/lib/email-extract";
-import { CONTACT_TYPE_LABELS, CONTACT_TIER_LABELS } from "@/lib/contact-constants";
+import { CONTACT_TYPE_LABELS } from "@/lib/contact-constants";
 import { RECORD_CONTEXT_LABELS } from "@/lib/record-context";
 import { US_STATE_OPTIONS, STATE_CANADA, STATE_INTERNATIONAL, normalizeStateValue } from "@/lib/state-options";
 
 const TYPE_OPTIONS = Object.values(ContactType);
-const TIER_OPTIONS = Object.values(ContactTier);
 const ORG_DATALIST_ID = "new-contact-org-names";
+
+/** Name, email, city and state are required to create a contact — returns the first thing missing, or null. */
+function missingRequiredField(draft: { name: string; email: string; city: string; state: string }): string | null {
+  if (!draft.name.trim()) return "Name is required.";
+  if (!draft.email.trim()) return "Email is required. If you don't have it, use firstnamelastname@needemail.com.";
+  if (!draft.city.trim()) return "City is required.";
+  if (!draft.state.trim()) return "State is required.";
+  return null;
+}
+
+/** The placeholder address for a contact whose real email isn't known yet (see isPlaceholderEmail). */
+function placeholderEmail(name: string): string {
+  return `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}@needemail.com`;
+}
 
 export type ContactDraft = {
   name: string;
@@ -22,7 +35,6 @@ export type ContactDraft = {
   state: string;
   title: string;
   type: ContactType;
-  tier: ContactTier;
   ownerId: string;
   tags: string;
   priorityQuarter: string;
@@ -56,7 +68,6 @@ export function draftDefaults(item: Correspondence): ContactDraft {
     state: normalizeStateValue(signature.state ?? ""),
     title: signature.title ?? "",
     type: ContactType.OTHER,
-    tier: ContactTier.TIER_2,
     ownerId: "",
     tags: "",
     priorityQuarter: "",
@@ -144,8 +155,9 @@ function CorrespondenceCard({
 
   async function createNew() {
     setError(null);
-    if (!draft.name.trim()) {
-      setError("Name is required.");
+    const missing = missingRequiredField(draft);
+    if (missing) {
+      setError(missing);
       return;
     }
     setBusy(true);
@@ -169,13 +181,12 @@ function CorrespondenceCard({
         mode: "new",
         name: draft.name.trim(),
         org: draft.org.trim() || null,
-        email: draft.email.trim() || null,
+        email: draft.email.trim(),
         phone: draft.phone.trim() || null,
-        city: draft.city.trim() || null,
-        state: draft.state.trim() || null,
+        city: draft.city.trim(),
+        state: draft.state.trim(),
         title: draft.title.trim() || null,
         type: draft.type,
-        tier: draft.tier,
         ownerId: draft.ownerId || null,
         tags,
         priorityQuarter: draft.priorityQuarter.trim() || null,
@@ -308,7 +319,7 @@ function CorrespondenceCard({
         <div style={{ marginTop: 12 }}>
           <div className="field-row">
             <div className="field">
-              <label>Name</label>
+              <label>Name *</label>
               <input value={draft.name} onChange={(e) => onDraftChange({ name: e.target.value })} />
             </div>
             <div className="field">
@@ -327,8 +338,23 @@ function CorrespondenceCard({
             </div>
           </div>
           <div className="field">
-            <label>Email</label>
+            <label>Email *</label>
             <input value={draft.email} onChange={(e) => onDraftChange({ email: e.target.value })} />
+            <div className="helptext">
+              Don&rsquo;t have their email? Use the placeholder format{" "}
+              <strong>firstnamelastname@needemail.com</strong> (e.g. janedoe@needemail.com). It&rsquo;s flagged as
+              &ldquo;email needed&rdquo; and nothing is sent to it.
+              {!draft.email.trim() && draft.name.trim() && (
+                <button
+                  type="button"
+                  className="btn small ghost"
+                  style={{ marginLeft: 8 }}
+                  onClick={() => onDraftChange({ email: placeholderEmail(draft.name) })}
+                >
+                  Use {placeholderEmail(draft.name)}
+                </button>
+              )}
+            </div>
           </div>
           <div style={{ marginBottom: 10 }}>
             <button type="button" className="btn small" onClick={parseFromSignature}>
@@ -352,13 +378,13 @@ function CorrespondenceCard({
           </div>
           <div className="field-row">
             <div className="field">
-              <label>City</label>
+              <label>City *</label>
               <input value={draft.city} onChange={(e) => onDraftChange({ city: e.target.value })} />
             </div>
             <div className="field">
-              <label>State</label>
+              <label>State *</label>
               <select value={draft.state} onChange={(e) => onDraftChange({ state: e.target.value })}>
-                <option value="">— none —</option>
+                <option value="">— select —</option>
                 {draft.state &&
                   draft.state !== STATE_CANADA &&
                   draft.state !== STATE_INTERNATIONAL &&
@@ -387,26 +413,16 @@ function CorrespondenceCard({
               </select>
             </div>
             <div className="field">
-              <label>Tier</label>
-              <select value={draft.tier} onChange={(e) => onDraftChange({ tier: e.target.value as ContactTier })}>
-                {TIER_OPTIONS.map((t) => (
-                  <option key={t} value={t}>
-                    {CONTACT_TIER_LABELS[t]}
+              <label>Owner</label>
+              <select value={draft.ownerId} onChange={(e) => onDraftChange({ ownerId: e.target.value })}>
+                <option value="">— none —</option>
+                {team.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.name || u.email}
                   </option>
                 ))}
               </select>
             </div>
-          </div>
-          <div className="field">
-            <label>Owner</label>
-            <select value={draft.ownerId} onChange={(e) => onDraftChange({ ownerId: e.target.value })}>
-              <option value="">— none —</option>
-              {team.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name || u.email}
-                </option>
-              ))}
-            </select>
           </div>
           <div className="field">
             <label>Fund / Deal</label>
@@ -667,7 +683,7 @@ export function NewContactsClient({
       const item = items.find((i) => i.id === id);
       if (!item) continue;
       const draft = draftFor(item);
-      if (!draft.name.trim()) {
+      if (missingRequiredField(draft)) {
         skipped++;
         continue;
       }
@@ -678,13 +694,12 @@ export function NewContactsClient({
           mode: "new",
           name: draft.name.trim(),
           org: draft.org.trim() || null,
-          email: draft.email.trim() || null,
+          email: draft.email.trim(),
           phone: draft.phone.trim() || null,
-          city: draft.city.trim() || null,
-          state: draft.state.trim() || null,
+          city: draft.city.trim(),
+          state: draft.state.trim(),
           title: draft.title.trim() || null,
           type: draft.type,
-          tier: draft.tier,
           ownerId: draft.ownerId || null,
           tags: draft.tags.split(",").map((t) => t.trim()).filter(Boolean),
           priorityQuarter: draft.priorityQuarter.trim() || null,
@@ -702,7 +717,7 @@ export function NewContactsClient({
     }
     setContactBulkBusy(false);
     setContactBulkMsg(
-      `Created ${created} contact${created === 1 ? "" : "s"}${skipped > 0 ? ` (${skipped} skipped: missing name or failed)` : ""}.`
+      `Created ${created} contact${created === 1 ? "" : "s"}${skipped > 0 ? ` (${skipped} skipped: missing name, email, city or state, or failed)` : ""}.`
     );
   }
 

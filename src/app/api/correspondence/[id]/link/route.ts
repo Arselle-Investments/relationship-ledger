@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { AuthError, requireEditor } from "@/lib/permissions";
 import { maybeCreateStageSuggestion } from "@/lib/stage-signal";
+import { isPlaceholderEmail } from "@/lib/contact-schema";
 import { CorrespondenceStatus, ContactType, ContactTier, RecordContext } from "@prisma/client";
 
 const schema = z.discriminatedUnion("mode", [
@@ -11,10 +12,17 @@ const schema = z.discriminatedUnion("mode", [
     mode: z.literal("new"),
     name: z.string().trim().min(1, "Name is required."),
     org: z.string().trim().optional().nullable(),
-    email: z.string().trim().optional().nullable(),
+    // A brand-new contact needs an email, city and state before it can go to
+    // Agora. No real email yet → firstnamelastname@needemail.com (see
+    // isPlaceholderEmail).
+    email: z
+      .string()
+      .trim()
+      .min(1, "Email is required. If you don't have it, use firstnamelastname@needemail.com.")
+      .email("That doesn't look like a valid email."),
     phone: z.string().trim().optional().nullable(),
-    city: z.string().trim().optional().nullable(),
-    state: z.string().trim().optional().nullable(),
+    city: z.string().trim().min(1, "City is required."),
+    state: z.string().trim().min(1, "State is required."),
     title: z.string().trim().optional().nullable(),
     ownerId: z.string().trim().optional().nullable(),
     // Richer fields the quick-create form can optionally set up front, so a
@@ -108,6 +116,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ownerId: parsed.data.ownerId || actingUser.id,
           notes: [parsed.data.title ? `Title: ${parsed.data.title}` : "", parsed.data.notes ?? ""].filter(Boolean).join("\n"),
           warmPath: parsed.data.warmPath || null,
+          // Same rule as POST /api/contacts: nothing goes out to a placeholder address.
+          doNotContact: isPlaceholderEmail(parsed.data.email),
           ...(parsed.data.type ? { type: parsed.data.type } : {}),
           ...(parsed.data.tier ? { tier: parsed.data.tier } : {}),
           ...(parsed.data.tags ? { tags: parsed.data.tags } : {}),
