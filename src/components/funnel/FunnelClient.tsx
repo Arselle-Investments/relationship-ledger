@@ -461,7 +461,6 @@ export function FunnelClient({
                         }}
                       >
                         <span style={{ fontWeight: 600, fontSize: 13.5 }}>{co.name}</span>
-                        {co.kind === "company" && <span className="tag">Company</span>}
                         {isAdvisorCompany(co) && <span className="tag">Advisor</span>}
                         <div className="spacer" />
                         {nested.length > 0 && (
