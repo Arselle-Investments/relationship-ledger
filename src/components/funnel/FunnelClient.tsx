@@ -519,6 +519,7 @@ export function FunnelClient({
                           <thead>
                             <tr>
                               <th>Name</th>
+                              <th>Contact type</th>
                               <th>Investing entity</th>
                               <th>Stage</th>
                             </tr>
@@ -533,6 +534,7 @@ export function FunnelClient({
                                 >
                                   {c.name}
                                 </td>
+                                <td className="muted">{c.agoraType || "—"}</td>
                                 <td>{c.investingEntity?.trim() || co.name}</td>
                                 <td>
                                   <span
