@@ -26,6 +26,107 @@ function placeholderEmail(name: string): string {
   return `${name.toLowerCase().replace(/[^a-z0-9]/g, "")}@needemail.com`;
 }
 
+type OrgSignal = { context: RecordContext; companyFlagged: boolean; contactNames: string[] };
+
+/**
+ * The prospect types (Fund / Deal / Mgmt Co) the typed organization is already
+ * marked with that this contact doesn't have yet — empty when there's nothing
+ * to flag, or when the lookup fails (a hiccup here must never block creating
+ * the contact).
+ */
+async function fetchOrgSignals(org: string, already: RecordContext[]): Promise<OrgSignal[]> {
+  if (!org.trim()) return [];
+  try {
+    const res = await fetch(`/api/companies/org-signals?name=${encodeURIComponent(org.trim())}`);
+    if (!res.ok) return [];
+    const json = (await res.json()) as { signals: OrgSignal[] };
+    return json.signals.filter((s) => !already.includes(s.context));
+  } catch {
+    return [];
+  }
+}
+
+/** Pop-up shown before a new contact is created when their organization is already marked Fund / Deal / Mgmt Co. */
+function OrgSignalDialog({
+  title,
+  org,
+  signals,
+  confirmLabel,
+  onConfirm,
+  onSkip,
+  onCancel,
+}: {
+  title: string;
+  org: string;
+  signals: OrgSignal[];
+  confirmLabel: string;
+  onConfirm: (chosen: RecordContext[]) => void;
+  onSkip: () => void;
+  onCancel: () => void;
+}) {
+  // Ticked up front only where the organization itself carries the mark; a
+  // mark that's only on other people there is offered but left for you to decide.
+  const [chosen, setChosen] = useState<Set<RecordContext>>(
+    () => new Set(signals.filter((s) => s.companyFlagged).map((s) => s.context))
+  );
+  return (
+    <div className="overlay open" onClick={onCancel}>
+      <div className="modal" style={{ maxWidth: 520 }} onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>{title}</h2>
+          <button className="close-x" onClick={onCancel}>
+            &times;
+          </button>
+        </div>
+        <div className="modal-body">
+          <p style={{ marginTop: 0 }}>
+            <strong>{org}</strong> is already marked for the following. Should this contact be marked too?
+          </p>
+          {signals.map((s) => (
+            <label key={s.context} style={{ display: "flex", gap: 10, alignItems: "flex-start", margin: "10px 0", fontWeight: 400 }}>
+              <input
+                type="checkbox"
+                style={{ marginTop: 3 }}
+                checked={chosen.has(s.context)}
+                onChange={(e) =>
+                  setChosen((prev) => {
+                    const next = new Set(prev);
+                    if (e.target.checked) next.add(s.context);
+                    else next.delete(s.context);
+                    return next;
+                  })
+                }
+              />
+              <span>
+                Mark as a <strong>{RECORD_CONTEXT_LABELS[s.context]}</strong> prospect
+                <span className="muted" style={{ display: "block", fontSize: 12.5 }}>
+                  {[
+                    s.companyFlagged ? "The organization is marked this way" : null,
+                    s.contactNames.length > 0
+                      ? `${s.contactNames.slice(0, 3).join(", ")}${s.contactNames.length > 3 ? ` and ${s.contactNames.length - 3} more` : ""} already ${s.contactNames.length === 1 ? "is" : "are"}`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              </span>
+            </label>
+          ))}
+          <div className="helptext">Firms with separate divisions often aren&rsquo;t the same prospect across the firm; leave a box unticked if this person isn&rsquo;t.</div>
+        </div>
+        <div className="modal-foot">
+          <button className="btn" onClick={onSkip}>
+            Create without marking
+          </button>
+          <button className="btn primary" onClick={() => onConfirm(Array.from(chosen))}>
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export type ContactDraft = {
   name: string;
   org: string;
@@ -111,6 +212,7 @@ function CorrespondenceCard({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showFullMessage, setShowFullMessage] = useState(false);
+  const [orgPrompt, setOrgPrompt] = useState<OrgSignal[] | null>(null);
   const [selectedListIds, setSelectedListIds] = useState<Set<string>>(new Set());
   const highlight = useMemo(() => extractHighlight(item.bodyText), [item.bodyText]);
 
@@ -153,7 +255,9 @@ function CorrespondenceCard({
     if (Object.keys(patch).length > 0) onDraftChange(patch);
   }
 
-  async function createNew() {
+  // `contexts` is passed once the org-already-marked pop-up has been answered;
+  // the first click leaves it out, which triggers that check.
+  async function createNew(contexts?: RecordContext[]) {
     setError(null);
     const missing = missingRequiredField(draft);
     if (missing) {
@@ -161,6 +265,15 @@ function CorrespondenceCard({
       return;
     }
     setBusy(true);
+    if (contexts === undefined) {
+      const signals = await fetchOrgSignals(draft.org, draft.recordContexts);
+      if (signals.length > 0) {
+        setBusy(false);
+        setOrgPrompt(signals);
+        return;
+      }
+    }
+    const recordContexts = contexts ?? draft.recordContexts;
     const chosenLists = Array.from(selectedListIds)
       .map((id) => addableLists.find((l) => l.id === id))
       .filter((l): l is MailingList => !!l);
@@ -192,7 +305,7 @@ function CorrespondenceCard({
         priorityQuarter: draft.priorityQuarter.trim() || null,
         warmPath: draft.warmPath.trim() || null,
         notes: draft.notes.trim() || null,
-        recordContexts: draft.recordContexts,
+        recordContexts,
       }),
     });
     const json = await res.json();
@@ -503,7 +616,7 @@ function CorrespondenceCard({
           )}
           {error && <div className="error-text" style={{ marginBottom: 8 }}>{error}</div>}
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            <button className="btn small primary" onClick={createNew} disabled={busy}>
+            <button className="btn small primary" onClick={() => createNew()} disabled={busy}>
               Create contact
             </button>
             <button
@@ -519,6 +632,25 @@ function CorrespondenceCard({
               Ignore
             </button>
           </div>
+          {orgPrompt && (
+            <OrgSignalDialog
+              title="Check before creating"
+              org={draft.org.trim()}
+              signals={orgPrompt}
+              confirmLabel="Mark selected & create"
+              onConfirm={(chosen) => {
+                const merged = Array.from(new Set([...draft.recordContexts, ...chosen]));
+                setOrgPrompt(null);
+                onDraftChange({ recordContexts: merged });
+                createNew(merged);
+              }}
+              onSkip={() => {
+                setOrgPrompt(null);
+                createNew(draft.recordContexts);
+              }}
+              onCancel={() => setOrgPrompt(null)}
+            />
+          )}
 
           {linking && (
             <div style={{ marginTop: 12, padding: 12, background: "var(--paper)", borderRadius: 8 }}>
@@ -597,6 +729,7 @@ export function NewContactsClient({
   const [selectedContactIds, setSelectedContactIds] = useState<Set<string>>(new Set());
   const [contactBulkBusy, setContactBulkBusy] = useState(false);
   const [contactBulkMsg, setContactBulkMsg] = useState<string | null>(null);
+  const [bulkOrgPrompt, setBulkOrgPrompt] = useState<{ id: string; name: string; org: string; signals: OrgSignal[] }[] | null>(null);
   const [emailOnly, setEmailOnly] = useState(false);
   const [sortKey, setSortKey] = useState<"newest" | "name" | "completeness">("newest");
   const [rematching, setRematching] = useState(false);
@@ -673,10 +806,29 @@ export function NewContactsClient({
     setSelectedContactIds(checked ? new Set(visibleItems.map((i) => i.id)) : new Set());
   }
 
-  async function createSelectedContacts() {
+  // `markExtra` maps a message id to the prospect types to add for that contact
+  // once the org-already-marked pop-up has been answered (an empty map means
+  // "create without marking"); the first click leaves it out, which runs the check.
+  async function createSelectedContacts(markExtra?: Map<string, RecordContext[]>) {
     setContactBulkBusy(true);
     setContactBulkMsg(null);
     const ids = Array.from(selectedContactIds);
+    if (markExtra === undefined) {
+      const entries: { id: string; name: string; org: string; signals: OrgSignal[] }[] = [];
+      for (const id of ids) {
+        const item = items.find((i) => i.id === id);
+        if (!item) continue;
+        const draft = draftFor(item);
+        if (missingRequiredField(draft)) continue;
+        const signals = await fetchOrgSignals(draft.org, draft.recordContexts);
+        if (signals.length > 0) entries.push({ id, name: draft.name.trim(), org: draft.org.trim(), signals });
+      }
+      if (entries.length > 0) {
+        setContactBulkBusy(false);
+        setBulkOrgPrompt(entries);
+        return;
+      }
+    }
     let created = 0;
     let skipped = 0;
     for (const id of ids) {
@@ -687,6 +839,7 @@ export function NewContactsClient({
         skipped++;
         continue;
       }
+      const recordContexts = Array.from(new Set([...draft.recordContexts, ...(markExtra?.get(id) ?? [])]));
       const res = await fetch(`/api/correspondence/${id}/link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -705,7 +858,7 @@ export function NewContactsClient({
           priorityQuarter: draft.priorityQuarter.trim() || null,
         warmPath: draft.warmPath.trim() || null,
         notes: draft.notes.trim() || null,
-          recordContexts: draft.recordContexts,
+          recordContexts,
         }),
       });
       if (res.ok) {
@@ -825,7 +978,7 @@ export function NewContactsClient({
               </div>
               <button
                 className="btn small primary"
-                onClick={createSelectedContacts}
+                onClick={() => createSelectedContacts()}
                 disabled={selectedContactIds.size === 0 || contactBulkBusy}
               >
                 {contactBulkBusy ? "Working…" : "Create selected"}
@@ -845,6 +998,61 @@ export function NewContactsClient({
         ))}
       </datalist>
       {contactBulkMsg && <div className="helptext" style={{ marginBottom: 12 }}>{contactBulkMsg}</div>}
+      {bulkOrgPrompt && (
+        <div className="overlay open" onClick={() => setBulkOrgPrompt(null)}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-head">
+              <h2>Check before creating</h2>
+              <button className="close-x" onClick={() => setBulkOrgPrompt(null)}>
+                &times;
+              </button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginTop: 0 }}>
+                {bulkOrgPrompt.length} of these contacts work at an organization that&rsquo;s already marked as a
+                prospect. Mark them the same way?
+              </p>
+              <ul style={{ paddingLeft: 18, margin: "8px 0" }}>
+                {bulkOrgPrompt.map((e) => (
+                  <li key={e.id} style={{ margin: "4px 0" }}>
+                    <strong>{e.name}</strong> at {e.org}:{" "}
+                    {e.signals
+                      .map((s) => `${RECORD_CONTEXT_LABELS[s.context]}${s.companyFlagged ? "" : " (other contacts only)"}`)
+                      .join(", ")}
+                  </li>
+                ))}
+              </ul>
+              <div className="helptext">
+                &ldquo;Mark&rdquo; only applies where the organization itself is marked, not where just other people
+                there are. Firms with separate divisions often aren&rsquo;t the same prospect across the firm.
+              </div>
+            </div>
+            <div className="modal-foot">
+              <button
+                className="btn"
+                onClick={() => {
+                  setBulkOrgPrompt(null);
+                  createSelectedContacts(new Map());
+                }}
+              >
+                Create without marking
+              </button>
+              <button
+                className="btn primary"
+                onClick={() => {
+                  const extra = new Map(
+                    bulkOrgPrompt.map((e) => [e.id, e.signals.filter((s) => s.companyFlagged).map((s) => s.context)] as const)
+                  );
+                  setBulkOrgPrompt(null);
+                  createSelectedContacts(extra);
+                }}
+              >
+                Mark &amp; create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
           {visibleItems.length === 0 ? (
             <div className="empty">
               <h3>No matches</h3>

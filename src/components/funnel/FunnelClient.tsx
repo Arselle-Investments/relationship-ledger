@@ -5,8 +5,7 @@ import Link from "next/link";
 import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
-import { belongsInFundFunnel } from "@/lib/fund-signal";
-import { belongsInCompanyFundFunnel } from "@/lib/company-fund-signal";
+import { buildFundCompanies, isFundProspect } from "@/lib/fund-investors";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -33,10 +32,9 @@ function isAdvisorContact(c: ContactWithRelations): boolean {
 function isAdvisorCompany(co: FundCompany): boolean {
   return co.type === ContactType.ADVISOR;
 }
-// A company's own contacts include deal-side people too — only the ones that
-// also read as fund prospects belong nested under the company here.
+// buildFundCompanies already limits a company's contacts to its Fund prospects.
 function companyFundContacts(co: FundCompany): Contact[] {
-  return co.contacts.filter(belongsInFundFunnel);
+  return co.contacts;
 }
 
 export function FunnelClient({
@@ -62,14 +60,16 @@ export function FunnelClient({
     () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
     [contacts]
   );
-  const fundProspects = useMemo(() => contacts.filter(belongsInFundFunnel), [contacts]);
+  const fundProspects = useMemo(() => contacts.filter(isFundProspect), [contacts]);
   const hiddenCount = contacts.length - fundProspects.length;
   const scopedContacts = showAllContacts ? contacts : fundProspects;
   const filteredContacts = useMemo(
     () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => c.agoraType === typeFilter)),
     [scopedContacts, typeFilter]
   );
-  const fundCompanies = useMemo(() => companies.filter(belongsInCompanyFundFunnel), [companies]);
+  // Each company is one investor, at the stage rolled up from its people (see
+  // buildFundCompanies), so two contacts at one firm never count twice.
+  const fundCompanies = useMemo(() => buildFundCompanies(companies, contacts), [companies, contacts]);
   // A fund contact nested under a company (shown as its own row) is left out
   // of the flat contact list in the default/company/advisor views, so they
   // aren't counted twice — but "just contacts" shows everyone flat, company
@@ -646,9 +646,8 @@ export function FunnelClient({
       </div>
       {!showAllContacts && hiddenCount > 0 && (
         <div className="helptext" style={{ marginBottom: 12 }}>
-          Showing only contacts with real evidence of AREF I fund interest — {hiddenCount} others (mostly Not
-          Started with no fund signal, or marked Deal-side only) are held back. Check &ldquo;Show all contacts&rdquo;
-          to see everyone.
+          Showing only Fund prospects, with each company counted once — {hiddenCount} contacts not marked as a Fund
+          prospect are held back. Check &ldquo;Show all contacts&rdquo; to see everyone.
         </div>
       )}
 
