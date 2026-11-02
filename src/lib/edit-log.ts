@@ -15,6 +15,11 @@ export const TRACKED_ENTITIES = {
     patch: (id: string, data: Record<string, unknown>) => prisma.company.update({ where: { id }, data }),
     label: (row: { name: string }) => row.name,
   },
+  EntityCommitment: {
+    findById: (id: string) => prisma.entityCommitment.findUnique({ where: { id } }),
+    patch: (id: string, data: Record<string, unknown>) => prisma.entityCommitment.update({ where: { id }, data }),
+    label: (row: { name: string }) => row.name,
+  },
 } as const;
 
 export type TrackedEntityType = keyof typeof TRACKED_ENTITIES;
@@ -44,6 +49,7 @@ const FIELD_LABELS: Record<string, string> = {
   aum: "AUM",
   founded: "Founded",
   doNotContact: "Do not contact",
+  amount: "Estimated commitment",
 };
 
 export function fieldLabel(field: string): string {
@@ -56,6 +62,7 @@ export function fieldLabel(field: string): string {
 const FIELD_KINDS: Record<string, "number" | "date" | "stringArray"> = {
   lastContact: "date",
   cadenceOverrideDays: "number",
+  amount: "number",
   tags: "stringArray",
 };
 

@@ -394,6 +394,19 @@ model CompanyStatusChange {
   @@index([toStatus])
 }
 
+// What we estimate an investor will commit to the fund, shown in the AREF I
+// funnel. One row per investor — an investing entity, or a company when no
+// entity is set — keyed by its lowercased name, the same key the funnel groups
+// people by. Null amount means "cleared". Renaming an entity leaves its old
+// row behind; re-enter the amount under the new name.
+model EntityCommitment {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  name      String
+  amount    Float?
+  updatedAt DateTime @updatedAt
+}
+
 // Deal Capital's own funnel, separate from the fund-raising FundraisingStage:
 // a deal is socialized to a capital partner, not courted over years. Stored in
 // DealFeedback.status. (Declined sits at 4b in the display order, before

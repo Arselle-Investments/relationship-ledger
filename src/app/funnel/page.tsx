@@ -11,7 +11,7 @@ export default async function FunnelPage() {
   if (!session?.user) redirect("/login");
   const user = session.user as { name?: string | null; email?: string | null; role: Role };
 
-  const [contacts, companies, team, settings] = await Promise.all([
+  const [contacts, companies, team, settings, commitments] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true } }),
     // Fund-flagged companies, plus any company with a Fund contact (rolled up
     // into one investor — see buildFundInvestors).
@@ -22,6 +22,7 @@ export default async function FunnelPage() {
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     getSettings(),
+    prisma.entityCommitment.findMany({ where: { amount: { not: null } } }),
   ]);
 
   return (
@@ -30,6 +31,7 @@ export default async function FunnelPage() {
         contacts={contacts}
         companies={companies}
         team={team}
+        commitments={commitments.map((c) => ({ key: c.key, amount: c.amount as number }))}
         canEdit={user.role === Role.ADMIN || user.role === Role.EDITOR}
         stageLabelOverrides={settings.funnelStageLabels as Partial<Record<FundraisingStage, string>> | null}
       />

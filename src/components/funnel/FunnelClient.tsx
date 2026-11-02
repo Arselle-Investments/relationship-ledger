@@ -5,7 +5,9 @@ import Link from "next/link";
 import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
-import { buildFundInvestors, FundInvestor, isFundProspect } from "@/lib/fund-investors";
+import { buildFundInvestors, FundInvestor, individualKey, isFundProspect } from "@/lib/fund-investors";
+import { formatCommitment } from "@/lib/commitment";
+import { CommitmentCell } from "./CommitmentCell";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -41,16 +43,22 @@ export function FunnelClient({
   contacts: initialContacts,
   companies,
   team,
+  commitments,
   canEdit,
   stageLabelOverrides,
 }: {
   contacts: ContactWithRelations[];
   companies: Company[];
   team: User[];
+  commitments: { key: string; amount: number }[];
   canEdit: boolean;
   stageLabelOverrides?: Partial<Record<FundraisingStage, string>> | null;
 }) {
   const [contacts, setContacts] = useState(initialContacts);
+  // Estimated commitment per investor, by investor key (see investorKey).
+  const [amounts, setAmounts] = useState<Record<string, number>>(() =>
+    Object.fromEntries(commitments.map((c) => [c.key, c.amount]))
+  );
   const labels = useMemo(() => mergeStageLabels(stageLabelOverrides), [stageLabelOverrides]);
   const [typeFilter, setTypeFilter] = useState<string>("ALL");
   const [kindFilter, setKindFilter] = useState<KindFilter>("ALL");
@@ -183,6 +191,29 @@ export function FunnelClient({
     }
     return map;
   }, [finalContacts, expanded, sortByStage]);
+
+  async function saveAmount(name: string, key: string, next: number | null) {
+    const previous = amounts[key];
+    const apply = (value: number | undefined) =>
+      setAmounts((prev) => {
+        const copy = { ...prev };
+        if (value === undefined) delete copy[key];
+        else copy[key] = value;
+        return copy;
+      });
+    apply(next ?? undefined);
+    try {
+      const res = await fetch("/api/entity-commitments", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, amount: next }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      apply(previous);
+      setBulkTaskMsg(`Couldn't save the estimated commitment for ${name}. Try again.`);
+    }
+  }
 
   async function updateProbability(contactId: string, next: number | null) {
     setContacts((prev) => prev.map((c) => (c.id === contactId ? { ...c, closeProbability: next } : c)));
@@ -320,6 +351,10 @@ export function FunnelClient({
     const matches = matchesByStage.get(status) ?? [];
     const companyMatches = companyMatchesByStage.get(status) ?? [];
     const selected = selectedFor(status);
+    const stageTotal = [
+      ...companyMatches.map((co) => amounts[co.key] ?? 0),
+      ...matches.map((c) => amounts[individualKey(c)] ?? 0),
+    ].reduce((a, b) => a + b, 0);
     return (
       <div
         key={status}
@@ -440,6 +475,11 @@ export function FunnelClient({
               </div>
             )}
             {bulkMoveError && <div className="error-text" style={{ marginBottom: 10 }}>{bulkMoveError}</div>}
+            {stageTotal > 0 && (
+              <div className="helptext" style={{ marginBottom: 10 }}>
+                Estimated commitment in this stage: <strong>{formatCommitment(stageTotal)}</strong>
+              </div>
+            )}
             {companyMatches.length > 0 && (
               <div style={{ marginBottom: matches.length > 0 ? 16 : 0 }}>
                 {companyMatches.map((co) => {
@@ -463,6 +503,11 @@ export function FunnelClient({
                         <span style={{ fontWeight: 600, fontSize: 13.5 }}>{co.name}</span>
                         {isAdvisorCompany(co) && <span className="tag">Advisor</span>}
                         <div className="spacer" />
+                        <CommitmentCell
+                          value={amounts[co.key] ?? null}
+                          canEdit={canEdit}
+                          onSave={(next) => saveAmount(co.name, co.key, next)}
+                        />
                         {nested.length > 0 && (
                           <span className="muted" style={{ fontSize: 12 }}>
                             {isCoOpen ? "▲" : "▼"} {nested.length} contact{nested.length === 1 ? "" : "s"}
@@ -564,6 +609,7 @@ export function FunnelClient({
                       <th>Owner</th>
                       <th>Contact Type</th>
                       <th>Category</th>
+                      <th>Est. commitment</th>
                       <th>Probability</th>
                     </tr>
                   </thead>
@@ -593,6 +639,13 @@ export function FunnelClient({
                             ) : (
                               <span className="muted">—</span>
                             )}
+                          </td>
+                          <td>
+                            <CommitmentCell
+                              value={amounts[individualKey(c)] ?? null}
+                              canEdit={canEdit}
+                              onSave={(next) => saveAmount(c.investingEntity?.trim() || c.name, individualKey(c), next)}
+                            />
                           </td>
                           <td>
                             <ProbabilityBars

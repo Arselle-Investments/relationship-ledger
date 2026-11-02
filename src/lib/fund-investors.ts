@@ -30,9 +30,19 @@ export function rolledUpStage(statuses: FundraisingStage[]): FundraisingStage {
 
 const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
 
+/** What an investor is matched on: its name, ignoring case and extra spaces. */
+export const investorKey = norm;
+
+/** The key of a person counted on their own: their entity name if they have one, else their name. */
+export function individualKey(c: Pick<Contact, "name" | "investingEntity">): string {
+  return norm(c.investingEntity?.trim() || c.name);
+}
+
 export type FundInvestor<K extends Contact = Contact> = {
   /** The company's id, or `entity:<name>` for an investing entity with no company record. */
   id: string;
+  /** See investorKey — links the investor to its estimated commitment. */
+  key: string;
   name: string;
   status: FundraisingStage;
   /** The company's type, or Advisor when the people in a company-less entity are advisors. */
@@ -106,6 +116,7 @@ export function buildFundInvestors<C extends Company, K extends Contact>(
     const isAdvisor = g.contacts.some((c) => c.agoraType === "Advisor" || c.type === ContactType.ADVISOR);
     investors.push({
       id: g.company ? g.company.id : `entity:${g.key}`,
+      key: g.key,
       name: g.company ? g.company.name : g.name,
       status: rolledUpStage(statuses),
       type: g.company ? g.company.type : isAdvisor ? ContactType.ADVISOR : ContactType.OTHER,
