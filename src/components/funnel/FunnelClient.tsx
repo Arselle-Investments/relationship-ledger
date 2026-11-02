@@ -111,6 +111,7 @@ export function FunnelClient({
     }
     return totals;
   }, [combinedRows, amounts]);
+  const grandTotal = useMemo(() => Array.from(stageTotals.values()).reduce((a, b) => a + b, 0), [stageTotals]);
   const pipelineCounts = useMemo(() => buildFunnelCounts(combinedRows, PIPELINE_STAGES), [combinedRows]);
   const droppedCounts = useMemo(() => buildFunnelCounts(combinedRows, DROPPED_STAGES), [combinedRows]);
   const counts = useMemo(() => [...pipelineCounts, ...droppedCounts], [pipelineCounts, droppedCounts]);
@@ -803,6 +804,20 @@ export function FunnelClient({
       </div>
       <div className="card" style={{ padding: 22 }}>
         {droppedCounts.map(({ status, count }) => renderStageBar(status, count))}
+      </div>
+
+      <div
+        className="card"
+        style={{ padding: "14px 22px", marginTop: 16, display: "flex", alignItems: "center", gap: 14 }}
+      >
+        <div style={{ width: 170, fontSize: 12.5, fontWeight: 700, color: "var(--ink-soft)", flex: "none" }}>Total</div>
+        <div style={{ flex: 1 }} />
+        <div style={{ width: 36, textAlign: "right", fontFamily: "'Poppins',sans-serif", fontWeight: 700, flex: "none" }}>
+          {combinedRows.length}
+        </div>
+        <div style={{ width: 70, textAlign: "right", fontSize: 12.5, fontWeight: 700, flex: "none" }}>
+          {grandTotal > 0 ? formatCommitment(grandTotal) : "—"}
+        </div>
       </div>
 
       {editingContact && (
