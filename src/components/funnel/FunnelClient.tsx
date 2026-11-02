@@ -638,9 +638,9 @@ export function FunnelClient({
         <label style={{ fontSize: 12.5, color: "var(--ink-soft)", display: "flex", alignItems: "center", gap: 6 }}>
           Show
           <select value={kindFilter} onChange={(e) => setKindFilter(e.target.value as KindFilter)}>
-            <option value="ALL">Contacts &amp; companies</option>
+            <option value="ALL">Contacts &amp; investing entities</option>
             <option value="CONTACT">Just contacts</option>
-            <option value="COMPANY">Just companies</option>
+            <option value="COMPANY">Just investing entities</option>
             <option value="ADVISOR">Just advisors</option>
           </select>
         </label>
