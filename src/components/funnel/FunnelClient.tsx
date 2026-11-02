@@ -461,7 +461,7 @@ export function FunnelClient({
                         }}
                       >
                         <span style={{ fontWeight: 600, fontSize: 13.5 }}>{co.name}</span>
-                        <span className="tag">{co.kind === "company" ? "Company" : "Investing entity"}</span>
+                        {co.kind === "company" && <span className="tag">Company</span>}
                         {isAdvisorCompany(co) && <span className="tag">Advisor</span>}
                         <div className="spacer" />
                         {nested.length > 0 && (
@@ -475,6 +475,7 @@ export function FunnelClient({
                           <thead>
                             <tr>
                               <th>Name</th>
+                              <th>Investing entity</th>
                               <th>Stage</th>
                             </tr>
                           </thead>
@@ -488,6 +489,7 @@ export function FunnelClient({
                                 >
                                   {c.name}
                                 </td>
+                                <td>{c.investingEntity?.trim() || co.name}</td>
                                 <td>
                                   <span
                                     style={{
