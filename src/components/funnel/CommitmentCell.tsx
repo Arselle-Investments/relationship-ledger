@@ -8,10 +8,12 @@ export function CommitmentCell({
   value,
   canEdit,
   onSave,
+  label = "estimated commitment",
 }: {
   value: number | null;
   canEdit: boolean;
   onSave: (next: number | null) => void;
+  label?: string;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
@@ -60,7 +62,7 @@ export function CommitmentCell({
     <button
       type="button"
       className="btn small ghost"
-      title="Click to set the estimated commitment"
+      title={`Click to set the ${label}`}
       onClick={(e) => {
         e.stopPropagation();
         setDraft(value != null ? String(value) : "");

@@ -101,6 +101,16 @@ export function FunnelClient({
     return fundCompanies;
   }, [fundCompanies, kindFilter]);
   const combinedRows = useMemo(() => [...finalContacts, ...finalCompanies], [finalContacts, finalCompanies]);
+  // Commitment dollars per stage: an investor card counts once under its key,
+  // a person counted on their own under theirs.
+  const stageTotals = useMemo(() => {
+    const totals = new Map<FundraisingStage, number>();
+    for (const row of combinedRows) {
+      const amount = amounts["kind" in row ? row.key : individualKey(row)] ?? 0;
+      if (amount) totals.set(row.status, (totals.get(row.status) ?? 0) + amount);
+    }
+    return totals;
+  }, [combinedRows, amounts]);
   const pipelineCounts = useMemo(() => buildFunnelCounts(combinedRows, PIPELINE_STAGES), [combinedRows]);
   const droppedCounts = useMemo(() => buildFunnelCounts(combinedRows, DROPPED_STAGES), [combinedRows]);
   const counts = useMemo(() => [...pipelineCounts, ...droppedCounts], [pipelineCounts, droppedCounts]);
@@ -384,6 +394,12 @@ export function FunnelClient({
           <div style={{ width: 36, textAlign: "right", fontFamily: "'Poppins',sans-serif", fontWeight: 600, flex: "none" }}>
             {count}
           </div>
+          <div
+            title={status === FundraisingStage.COMMITTED ? "Final commitments" : "Estimated commitments"}
+            style={{ width: 70, textAlign: "right", fontSize: 12.5, color: "var(--ink-soft)", flex: "none" }}
+          >
+            {(stageTotals.get(status) ?? 0) > 0 ? formatCommitment(stageTotals.get(status) ?? 0) : "—"}
+          </div>
         </div>
 
         {isOpen && (
@@ -477,7 +493,8 @@ export function FunnelClient({
             {bulkMoveError && <div className="error-text" style={{ marginBottom: 10 }}>{bulkMoveError}</div>}
             {stageTotal > 0 && (
               <div className="helptext" style={{ marginBottom: 10 }}>
-                Estimated commitment in this stage: <strong>{formatCommitment(stageTotal)}</strong>
+                {status === FundraisingStage.COMMITTED ? "Final commitment" : "Estimated commitment"} in this stage:{" "}
+                <strong>{formatCommitment(stageTotal)}</strong>
               </div>
             )}
             {companyMatches.length > 0 && (
@@ -507,6 +524,7 @@ export function FunnelClient({
                           value={amounts[co.key] ?? null}
                           canEdit={canEdit}
                           onSave={(next) => saveAmount(co.name, co.key, next)}
+                          label={status === FundraisingStage.COMMITTED ? "final commitment" : "estimated commitment"}
                         />
                         {nested.length > 0 && (
                           <span className="muted" style={{ fontSize: 12 }}>
@@ -611,7 +629,7 @@ export function FunnelClient({
                       <th>Owner</th>
                       <th>Contact Type</th>
                       <th>Category</th>
-                      <th>Est. commitment</th>
+                      <th>{status === FundraisingStage.COMMITTED ? "Final commitment" : "Est. commitment"}</th>
                       <th>Probability</th>
                     </tr>
                   </thead>
@@ -647,6 +665,7 @@ export function FunnelClient({
                               value={amounts[individualKey(c)] ?? null}
                               canEdit={canEdit}
                               onSave={(next) => saveAmount(c.investingEntity?.trim() || c.name, individualKey(c), next)}
+                              label={status === FundraisingStage.COMMITTED ? "final commitment" : "estimated commitment"}
                             />
                           </td>
                           <td>
