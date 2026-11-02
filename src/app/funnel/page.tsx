@@ -14,12 +14,11 @@ export default async function FunnelPage() {
   const [contacts, companies, team, settings] = await Promise.all([
     prisma.contact.findMany({ include: { owner: true } }),
     // Fund-flagged companies, plus any company with a Fund contact (rolled up
-    // into one investor — see buildFundCompanies).
+    // into one investor — see buildFundInvestors).
     prisma.company.findMany({
       where: {
         OR: [{ recordContexts: { has: "FUND" } }, { contacts: { some: { recordContexts: { has: "FUND" } } } }],
       },
-      include: { contacts: true },
     }),
     prisma.user.findMany({ orderBy: { name: "asc" } }),
     getSettings(),

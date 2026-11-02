@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
-import { buildFundCompanies, isFundProspect } from "@/lib/fund-investors";
+import { buildFundInvestors, FundInvestor, isFundProspect } from "@/lib/fund-investors";
 import { ContactWithRelations } from "@/types/contact";
 import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
@@ -23,7 +23,7 @@ function arefSubcategory(tags: string[]): string | null {
 }
 
 type StageSortKey = "name" | "category" | "probability" | "org" | "type";
-type FundCompany = Company & { contacts: Contact[] };
+type FundCompany = FundInvestor<Contact>;
 type KindFilter = "ALL" | "CONTACT" | "COMPANY" | "ADVISOR";
 
 function isAdvisorContact(c: ContactWithRelations): boolean {
@@ -32,7 +32,7 @@ function isAdvisorContact(c: ContactWithRelations): boolean {
 function isAdvisorCompany(co: FundCompany): boolean {
   return co.type === ContactType.ADVISOR;
 }
-// buildFundCompanies already limits a company's contacts to its Fund prospects.
+// buildFundInvestors already limits an investor's contacts to its Fund prospects.
 function companyFundContacts(co: FundCompany): Contact[] {
   return co.contacts;
 }
@@ -45,7 +45,7 @@ export function FunnelClient({
   stageLabelOverrides,
 }: {
   contacts: ContactWithRelations[];
-  companies: FundCompany[];
+  companies: Company[];
   team: User[];
   canEdit: boolean;
   stageLabelOverrides?: Partial<Record<FundraisingStage, string>> | null;
@@ -67,9 +67,10 @@ export function FunnelClient({
     () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => c.agoraType === typeFilter)),
     [scopedContacts, typeFilter]
   );
-  // Each company is one investor, at the stage rolled up from its people (see
-  // buildFundCompanies), so two contacts at one firm never count twice.
-  const fundCompanies = useMemo(() => buildFundCompanies(companies, contacts), [companies, contacts]);
+  // Each investing entity (or company, when no entity is set) is one investor,
+  // at the stage rolled up from its people (see buildFundInvestors), so two
+  // contacts at one firm — or a couple investing jointly — never count twice.
+  const fundCompanies = useMemo(() => buildFundInvestors(companies, contacts), [companies, contacts]);
   // A fund contact nested under a company (shown as its own row) is left out
   // of the flat contact list in the default/company/advisor views, so they
   // aren't counted twice — but "just contacts" shows everyone flat, company
@@ -460,7 +461,7 @@ export function FunnelClient({
                         }}
                       >
                         <span style={{ fontWeight: 600, fontSize: 13.5 }}>{co.name}</span>
-                        <span className="tag">Company</span>
+                        <span className="tag">{co.kind === "company" ? "Company" : "Investing entity"}</span>
                         {isAdvisorCompany(co) && <span className="tag">Advisor</span>}
                         <div className="spacer" />
                         {nested.length > 0 && (
@@ -646,7 +647,7 @@ export function FunnelClient({
       </div>
       {!showAllContacts && hiddenCount > 0 && (
         <div className="helptext" style={{ marginBottom: 12 }}>
-          Showing only Fund prospects, with each company counted once — {hiddenCount} contacts not marked as a Fund
+          Showing the AREF I funnel: only Fund prospects, with each investing entity counted once — {hiddenCount} contacts not marked as a Fund
           prospect are held back. Check &ldquo;Show all contacts&rdquo; to see everyone.
         </div>
       )}

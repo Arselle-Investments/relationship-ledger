@@ -43,6 +43,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   let companyId = primary.companyId;
   let ownerId = primary.ownerId;
   let warmPath = primary.warmPath;
+  let investingEntity = primary.investingEntity;
   let lastContact = primary.lastContact;
   let cadenceOverrideDays = primary.cadenceOverrideDays;
   let priorityQuarter = primary.priorityQuarter;
@@ -78,6 +79,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
     if (!companyId && s.companyId) companyId = s.companyId;
     if (!ownerId && s.ownerId) ownerId = s.ownerId;
     if (!warmPath && s.warmPath) warmPath = s.warmPath;
+    if (!investingEntity && s.investingEntity) investingEntity = s.investingEntity;
     if (!lastContact || (s.lastContact && s.lastContact > lastContact)) lastContact = s.lastContact ?? lastContact;
     if (!cadenceOverrideDays && s.cadenceOverrideDays) cadenceOverrideDays = s.cadenceOverrideDays;
     if (!priorityQuarter && s.priorityQuarter) priorityQuarter = s.priorityQuarter;
@@ -106,7 +108,7 @@ function computeMerge(primary: Contact, secondaries: Contact[], resolutions?: Re
   if (resolutions?.notes) notes = resolutions.notes;
 
   return {
-    tags, notes, staffNames, email, phone, city, state, org, companyId, ownerId, warmPath,
+    tags, notes, staffNames, email, phone, city, state, org, companyId, ownerId, warmPath, investingEntity,
     lastContact, cadenceOverrideDays, priorityQuarter, agoraType, commitmentLow, commitmentHigh, emailTier,
     researchBio, researchBioSource, researchNews, researchUpdatedAt, agoraRaw,
   };

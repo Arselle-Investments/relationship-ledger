@@ -63,6 +63,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ...(data.status !== undefined ? { status: data.status } : {}),
       ...(data.ownerId !== undefined ? { ownerId: data.ownerId || null } : {}),
       ...(data.warmPath !== undefined ? { warmPath: data.warmPath || null } : {}),
+      ...(data.investingEntity !== undefined ? { investingEntity: data.investingEntity || null } : {}),
       ...(data.email !== undefined ? { email: data.email || null } : {}),
       ...(data.phone !== undefined ? { phone: data.phone || null } : {}),
       ...(data.city !== undefined ? { city: data.city || null } : {}),

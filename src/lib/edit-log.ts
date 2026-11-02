@@ -29,6 +29,7 @@ const FIELD_LABELS: Record<string, string> = {
   status: "Stage",
   ownerId: "Owner",
   warmPath: "Warm path",
+  investingEntity: "Investing entity",
   email: "Email",
   phone: "Phone",
   city: "City",

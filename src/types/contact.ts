@@ -16,6 +16,7 @@ export type ContactFormValues = {
   status: FundraisingStage;
   ownerId: string;
   warmPath: string;
+  investingEntity: string;
   email: string;
   phone: string;
   city: string;

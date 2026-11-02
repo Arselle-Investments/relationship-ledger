@@ -33,6 +33,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
       status: FundraisingStage.NOT_STARTED,
       ownerId: "",
       warmPath: "",
+      investingEntity: "",
       email: "",
       phone: "",
       city: "",
@@ -55,6 +56,7 @@ function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
     status: contact.status,
     ownerId: contact.ownerId ?? "",
     warmPath: contact.warmPath ?? "",
+    investingEntity: contact.investingEntity ?? "",
     email: contact.email ?? "",
     phone: contact.phone ?? "",
     city: contact.city ?? "",
@@ -156,6 +158,15 @@ export function ContactModal({
     onLiveUpdate(json.contact);
   }
 
+  // Existing entity names, offered as suggestions so one entity isn't typed two ways.
+  const [entityOptions, setEntityOptions] = useState<string[]>([]);
+  useEffect(() => {
+    fetch("/api/investing-entities")
+      .then((r) => r.json())
+      .then((json) => setEntityOptions(json.entities ?? []))
+      .catch(() => setEntityOptions([]));
+  }, []);
+
   useEffect(() => {
     if (!contact) return;
     fetch(`/api/tasks?contactId=${contact.id}`)
@@ -211,6 +222,7 @@ export function ContactModal({
       status: values.status,
       ownerId: values.ownerId || null,
       warmPath: values.warmPath.trim() || null,
+      investingEntity: values.investingEntity.trim() || null,
       email: values.email.trim() || null,
       phone: values.phone.trim() || null,
       city: values.city.trim() || null,
@@ -286,6 +298,7 @@ export function ContactModal({
             <>
               {hasJobTitle && <ViewField label="Job title" value={jobTitle} />}
               {values.org && <ViewField label="Organization" value={values.org} />}
+              {values.investingEntity && <ViewField label="Investing entity" value={values.investingEntity} />}
               <ViewField label="General Type" value={CONTACT_TYPE_LABELS[values.type]} />
               <ViewField label="Tier" value={CONTACT_TIER_LABELS[values.tier]} />
               {values.recordContexts.length > 0 && (
@@ -341,6 +354,26 @@ export function ContactModal({
                 <div className="field">
                   <label>Email</label>
                   <input value={values.email} onChange={(e) => set("email", e.target.value)} disabled={!canEdit} />
+                </div>
+              </div>
+              <div className="field">
+                <label>Investing entity</label>
+                <input
+                  value={values.investingEntity}
+                  onChange={(e) => set("investingEntity", e.target.value)}
+                  disabled={!canEdit}
+                  list="investing-entity-options"
+                  placeholder="Leave blank if they invest through their organization"
+                />
+                <datalist id="investing-entity-options">
+                  {entityOptions.map((n) => (
+                    <option key={n} value={n} />
+                  ))}
+                </datalist>
+                <div className="helptext">
+                  Who actually invests, for counting the AREF I funnel — e.g. a trust, or &ldquo;Gelly &amp; Andrea
+                  Valero&rdquo; for a couple investing jointly. Everyone with the same entity counts as one entry.
+                  Blank means they invest through their organization (or on their own, with no organization).
                 </div>
               </div>
               <div className="field-row">

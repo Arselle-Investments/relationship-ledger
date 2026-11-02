@@ -227,6 +227,14 @@ model Contact {
   // not their employer.
   recordContexts RecordContext[] @default([])
 
+  // Who actually invests, for counting the AREF I funnel: the name of the
+  // entity this person subscribes through — "LSERS", a trust, or "Gelly &
+  // Andrea Valero" for a couple investing jointly. Everyone sharing the same
+  // name counts as one entry. Blank means the person invests through their
+  // Company (or, with no company, on their own). Tool-only; never exported
+  // to Agora.
+  investingEntity String?
+
   // A 1-5 team judgment call on how likely this person is to actually close,
   // shown as stars in the Funnel view. Most useful for Active prospect, where
   // "same stage" can still mean very different odds, but not restricted to

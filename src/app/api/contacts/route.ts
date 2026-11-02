@@ -58,6 +58,7 @@ export async function POST(req: NextRequest) {
       status: data.status,
       ownerId: data.ownerId || actingUser.id,
       warmPath: data.warmPath || null,
+      investingEntity: data.investingEntity || null,
       email: data.email || null,
       phone: data.phone || null,
       city: data.city || null,
