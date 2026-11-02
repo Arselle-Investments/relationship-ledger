@@ -335,7 +335,7 @@ export function FunnelClient({
           <div style={{ width: 170, fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}>
             {labels[status]}
           </div>
-          <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28 }}>
+          <div style={{ flex: 1, background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28, display: "flex", justifyContent: "center" }}>
             <div
               style={{
                 width: `${widthPct}%`,
