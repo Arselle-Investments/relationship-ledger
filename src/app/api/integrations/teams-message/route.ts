@@ -54,8 +54,9 @@ async function readEmlHeaders(emlBase64: string) {
 }
 
 /**
- * Receives one message forwarded from the Fundraising Teams channel (via a
- * Power Automate flow, not a direct Microsoft Graph integration — this avoids
+ * Receives one message forwarded from the Fundraising Teams channel or the
+ * investorcommunications@ shared mailbox (via a Power Automate flow, not a
+ * direct Microsoft Graph integration — this avoids
  * needing a Graph API permission grant beyond what SSO already requires).
  * Authenticated by a shared secret header rather than a user session, since
  * the caller is an automation, not a signed-in person.
@@ -182,7 +183,7 @@ export async function POST(req: NextRequest) {
   const matchedId = contactId || consultantId || capitalSourceId;
   const correspondence = await prisma.correspondence.create({
     data: {
-      source: "teams_channel",
+      source: data.source ?? "teams_channel",
       externalId: data.messageId || null,
       subject: data.subject || null,
       bodyText,

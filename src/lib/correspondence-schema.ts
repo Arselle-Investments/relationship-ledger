@@ -13,6 +13,9 @@ export const inboundMessageSchema = z.object({
   cc: z.string().trim().optional().nullable(),
   receivedAt: z.string().trim().optional().nullable(),
   messageId: z.string().trim().optional().nullable(),
+  // Which Power Automate flow sent it. Omitted means the original Teams
+  // channel flow, so that flow keeps working without changes.
+  source: z.enum(["teams_channel", "investor_mailbox"]).optional().nullable(),
 });
 
 export type InboundMessageInput = z.infer<typeof inboundMessageSchema>;
