@@ -13,6 +13,10 @@ import { ContactModal } from "@/components/contacts/ContactModal";
 import { BulkTaskModal } from "@/components/tasks/BulkTaskModal";
 import { ProbabilityBars } from "@/components/ProbabilityBars";
 
+// Space under every funnel row. Tall enough that the 4a/4b titles, which
+// float above their bars, fit in it, so stage 4 keeps the same row height.
+const ROW_GAP = 22;
+
 // Several original tracker statuses (Second Close Prospect, Longer-Term
 // Active, Strategic Target, etc.) all collapse into the single Active
 // prospect stage — this pulls the original label back out of its preserved
@@ -355,7 +359,10 @@ export function FunnelClient({
     }
   }
 
-  function renderStageBar(status: FundraisingStage, count: number) {
+  // part: "all" draws the bar with its panel underneath; "header" and "panel"
+  // let the parallel 4a/4b pair put two bars side by side and their panels
+  // full-width below.
+  function renderStageBar(status: FundraisingStage, count: number, part: "all" | "header" | "panel" = "all") {
     const widthPct = status === FundraisingStage.NOT_STARTED ? 100 : Math.max(4, Math.round((count / maxActive) * 100));
     const color = FUNDRAISING_STAGE_COLORS[status];
     const isOpen = expanded.has(status);
@@ -366,14 +373,7 @@ export function FunnelClient({
       ...companyMatches.map((co) => amounts[co.key] ?? 0),
       ...matches.map((c) => amounts[individualKey(c)] ?? 0),
     ].reduce((a, b) => a + b, 0);
-    return (
-      <div
-        key={status}
-        ref={(el) => {
-          stageRefs.current.set(status, el);
-        }}
-        style={{ marginBottom: 14 }}
-      >
+    const header = (
         <div
           onClick={() => toggleStage(status)}
           style={{ display: "flex", alignItems: "center", gap: 14, cursor: "pointer" }}
@@ -402,8 +402,8 @@ export function FunnelClient({
             {(stageTotals.get(status) ?? 0) > 0 ? formatCommitment(stageTotals.get(status) ?? 0) : "—"}
           </div>
         </div>
-
-        {isOpen && (
+    );
+    const panel = isOpen && (
           <div
             style={{
               marginTop: 10,
@@ -684,9 +684,93 @@ export function FunnelClient({
               </>
             )}
           </div>
-        )}
+    );
+    const setRef = (el: HTMLDivElement | null) => {
+      stageRefs.current.set(status, el);
+    };
+    if (part === "header") {
+      // Compact form for the 4a/4b pair: title and figures sit above the bar so
+      // the bar keeps most of its width.
+      const total = stageTotals.get(status) ?? 0;
+      return (
+        <div ref={setRef} onClick={() => toggleStage(status)} style={{ cursor: "pointer", position: "relative" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 6,
+              fontSize: 11.5,
+              fontWeight: 600,
+              color: "var(--ink-soft)",
+              position: "absolute", bottom: "100%", left: 0, right: 0, marginBottom: 2,
+              whiteSpace: "nowrap",
+            }}
+          >
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{labels[status]}</span>
+            <span style={{ fontWeight: 500 }}>
+              ({count})
+              {total > 0 ? ` · ${formatCommitment(total)}` : ""}
+            </span>
+          </div>
+          <div style={{ background: "var(--paper)", borderRadius: 6, overflow: "hidden", height: 28, display: "flex", justifyContent: "center" }}>
+            <div style={{ width: `${widthPct}%`, height: "100%", background: color, borderRadius: 6, transition: "width .2s" }} />
+          </div>
+        </div>
+      );
+    }
+    if (part === "panel") return panel || null;
+    return (
+      <div key={status} ref={setRef} style={{ marginBottom: ROW_GAP }}>
+        {header}
+        {panel}
       </div>
     );
+  }
+
+  // 4a and 4b are parallel paths out of a meeting, not one after the other,
+  // so they sit side by side between 3 and 5.
+  function renderPipeline() {
+    const byStatus = new Map(pipelineCounts.map((c) => [c.status, c.count]));
+    const pair = [FundraisingStage.ACTIVE_PROSPECT, FundraisingStage.FINAL_CLOSE_POTENTIAL];
+    return pipelineCounts.map(({ status, count }) => {
+      if (status === FundraisingStage.FINAL_CLOSE_POTENTIAL) return null;
+      if (status !== FundraisingStage.ACTIVE_PROSPECT) return renderStageBar(status, count);
+      const pairCount = pair.reduce((n, s) => n + (byStatus.get(s) ?? 0), 0);
+      const pairTotal = pair.reduce((n, s) => n + (stageTotals.get(s) ?? 0), 0);
+      return (
+        <div key="parallel-4" style={{ marginBottom: ROW_GAP }}>
+          <div style={{ display: "flex", alignItems: "flex-end", gap: 14 }}>
+            <div
+              style={{ width: 170, height: 28, display: "flex", alignItems: "center", fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}
+            >
+              4. Ongoing Discussions
+            </div>
+            <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 12 }}>
+              {pair.map((s) => (
+                <div key={s} style={{ flex: 1, minWidth: 0 }}>
+                  {renderStageBar(s, byStatus.get(s) ?? 0, "header")}
+                </div>
+              ))}
+            </div>
+            <div
+              title="4a + 4b"
+              style={{ width: 36, height: 28, display: "flex", alignItems: "center", justifyContent: "flex-end", fontFamily: "'Poppins',sans-serif", fontWeight: 600, flex: "none" }}
+            >
+              {pairCount}
+            </div>
+            <div
+              title="Estimated commitments, 4a + 4b"
+              style={{ width: 70, height: 28, display: "flex", alignItems: "center", justifyContent: "flex-end", fontSize: 12.5, color: "var(--ink-soft)", flex: "none" }}
+            >
+              {pairTotal > 0 ? formatCommitment(pairTotal) : "—"}
+            </div>
+          </div>
+          {pair.map((s) => (
+            <div key={`${s}-panel`}>{renderStageBar(s, byStatus.get(s) ?? 0, "panel")}</div>
+          ))}
+        </div>
+      );
+    });
   }
 
   return (
@@ -796,7 +880,7 @@ export function FunnelClient({
       {bulkTaskMsg && <div className="helptext" style={{ marginBottom: 12 }}>{bulkTaskMsg}</div>}
 
       <div className="card" style={{ padding: 22, marginBottom: 16 }}>
-        {pipelineCounts.map(({ status, count }) => renderStageBar(status, count))}
+        {renderPipeline()}
       </div>
 
       <div className="eyebrow" style={{ fontSize: 11.5, marginBottom: 8 }}>
