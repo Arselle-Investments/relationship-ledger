@@ -1,5 +1,6 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { useEffect, useState } from "react";
 import { User, ContactType, ContactTier, FundraisingStage, RecordContext } from "@prisma/client";
 import {
@@ -21,7 +22,7 @@ import { ProbabilityBars } from "@/components/ProbabilityBars";
 
 const TYPE_OPTIONS = Object.values(ContactType);
 const TIER_OPTIONS = Object.values(ContactTier);
-const STATUS_OPTIONS = Object.values(FundraisingStage);
+const STATUS_OPTIONS = FUNDRAISING_STAGES;
 
 function toFormValues(contact: ContactWithRelations | null): ContactFormValues {
   if (!contact) {

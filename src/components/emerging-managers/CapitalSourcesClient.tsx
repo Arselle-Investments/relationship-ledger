@@ -1,5 +1,6 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -114,7 +115,7 @@ export function CapitalSourcesClient({
         <input type="text" placeholder="Search name..." value={search} onChange={(e) => setSearch(e.target.value)} />
         <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
           <option value="">All statuses</option>
-          {Object.values(FundraisingStage).map((s) => (
+          {FUNDRAISING_STAGES.map((s) => (
             <option key={s} value={s}>
               {EM_STAGE_LABELS[s]}
             </option>

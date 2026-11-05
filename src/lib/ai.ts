@@ -99,7 +99,8 @@ export type StageSignal = {
   rationale: string | null;
 };
 
-const STATUS_VALUES = Object.values(FundraisingStage);
+// INITIAL_INTEREST is retired (still in the enum, but never suggest it).
+const STATUS_VALUES: FundraisingStage[] = Object.values(FundraisingStage).filter((s) => s !== FundraisingStage.INITIAL_INTEREST);
 
 const STAGE_SIGNAL_TOOL = {
   name: "stage_signal",
@@ -151,7 +152,7 @@ export async function classifyStageSignal(params: {
 Our team (Arselle) is: ${DEV_TEAM.map((m) => m.name).join(", ")}. A message may be one of ours going out to the contact, or the contact writing back to us.
 
 Important stage definitions:
-- OUTREACH_SENT means our team has emailed or otherwise reached out to them about the fund (an intro, a pitch, a deck, a follow-up) and they have not yet responded. If the contact is still at NOT_STARTED and the thread shows an email sent by our team to them, suggest OUTREACH_SENT. If they have already replied with interest, that's INITIAL_INTEREST or later, not OUTREACH_SENT.
+- OUTREACH_SENT means our team has emailed or otherwise reached out to them about the fund (an intro, a pitch, a deck, a follow-up) and they have not yet responded. If the contact is still at NOT_STARTED and the thread shows an email sent by our team to them, suggest OUTREACH_SENT. If they have already replied, that's MEETING_OCCURRED or later once a meeting or call has happened; a reply that is only interest with no meeting yet stays OUTREACH_SENT.
 - DUE_DILIGENCE specifically means the LP has been sent an NDA to execute and/or been given access to a data room. Don't suggest this stage just because someone said they're "looking into it" or "reviewing" the deal — that's still ACTIVE_PROSPECT (or FINAL_CLOSE_POTENTIAL, see below) unless the message explicitly mentions an NDA or data room access.
 - FINAL_CLOSE_POTENTIAL is a step beyond ACTIVE_PROSPECT: use it when the message gives a real signal they intend to close soon (e.g. discussing check size, timing, or wire instructions) but nothing yet about an NDA or data room — that stronger signal is still DUE_DILIGENCE.
 - PASSED_OPEN means they declined this specific deal but remain open to future ones (a soft no).

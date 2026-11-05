@@ -1,5 +1,6 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -138,7 +139,7 @@ export function CapitalSourceDetailClient({
                 ))}
               </select>
               <select value={cs.outreachStatus} onChange={(e) => patch({ outreachStatus: e.target.value as FundraisingStage })}>
-                {Object.values(FundraisingStage).map((s) => (
+                {FUNDRAISING_STAGES.map((s) => (
                   <option key={s} value={s}>
                     {EM_STAGE_LABELS[s]}
                   </option>

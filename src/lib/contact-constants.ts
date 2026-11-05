@@ -129,9 +129,11 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 // differs by context (PASSED_OPEN) via EM_STAGE_LABELS. Deal Capital
 // (DealFeedback) has its own separate stage list, DealFeedbackStage — see
 // deal-constants.ts.
-// Capitalization/wording here matches Agora's own "AREF I – Stage" dropdown
+// Capitalization/wording here has to match Agora's own "AREF I – Stage" dropdown
 // exactly (confirmed by Bianca 2026-09-24, NOT_STARTED and DECLINE's exact
-// text confirmed 2026-09-30 once Bianca added matching options in Agora) —
+// text confirmed 2026-09-30 once Bianca added matching options in Agora; the
+// 2026-11-05 renumbering and "0. Introduction Pending" need the same options
+// added in Agora) —
 // buildAgoraContactRow in agora-export-template.ts writes these labels
 // straight through, no separate mapping table. DECLINE (added 2026-09-30,
 // replacing the old PASSED_NOT_INTERESTED/DO_NOT_CONTACT split) maps 1:1 onto
@@ -139,14 +141,16 @@ export const CONTACT_TIER_LABELS: Record<ContactTier, string> = {
 // compliance/preference "never contact again" flag that used to live on
 // DO_NOT_CONTACT, now independent of pipeline stage.
 export const FUNDRAISING_STAGE_LABELS: Record<FundraisingStage, string> = {
-  NOT_STARTED: "0. Not Started",
+  NOT_STARTED: "0. Introduction Pending",
   OUTREACH_SENT: "1. Outreach Sent",
-  INITIAL_INTEREST: "2. Initial Interest",
-  MEETING_OCCURRED: "3. Meeting Occurred",
-  ACTIVE_PROSPECT: "4a. Active Prospect",
-  FINAL_CLOSE_POTENTIAL: "4b. Final Close Potential",
-  DUE_DILIGENCE: "5. Due Diligence / Dataroom",
-  COMMITTED: "6. Committed",
+  // Retired 2026-11-05 — no longer a stage anyone can pick (see funnel.ts).
+  // Kept only so old stage-history rows still have a label to show.
+  INITIAL_INTEREST: "Initial Interest (retired)",
+  MEETING_OCCURRED: "2. Meeting Occurred",
+  ACTIVE_PROSPECT: "3a. Active Prospect",
+  FINAL_CLOSE_POTENTIAL: "3b. Final Close Potential",
+  DUE_DILIGENCE: "4. Due Diligence / Dataroom",
+  COMMITTED: "5. Committed",
   PASSED_OPEN: "Fund II Prospect",
   DECLINE: "Declined",
 };

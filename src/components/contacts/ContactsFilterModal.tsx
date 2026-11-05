@@ -1,5 +1,6 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { ContactType, FundraisingStage } from "@prisma/client";
 import { CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
@@ -76,7 +77,7 @@ export function ContactsFilterModal({
               <label>Status</label>
               <select value={filters.status} onChange={(e) => set("status", e.target.value)}>
                 <option value="">Any status</option>
-                {Object.values(FundraisingStage).map((s) => (
+                {FUNDRAISING_STAGES.map((s) => (
                   <option key={s} value={s}>
                     {FUNDRAISING_STAGE_LABELS[s]}
                   </option>

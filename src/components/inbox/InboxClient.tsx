@@ -1,10 +1,11 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { useRef, useState } from "react";
 import { CapitalSource, Consultant, Contact, FundraisingStage, Correspondence } from "@prisma/client";
 import { FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
 
-const STATUS_OPTIONS = Object.values(FundraisingStage);
+const STATUS_OPTIONS = FUNDRAISING_STAGES;
 
 function EmlImportSection({ canEdit }: { canEdit: boolean }) {
   const [importing, setImporting] = useState(false);

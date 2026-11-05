@@ -1,7 +1,9 @@
 import { FundraisingStage } from "@prisma/client";
 
 // The fundraising pipeline order shown in Fund Raise -> Funnel, split into two
-// visual groups. PIPELINE_STAGES is the live, forward-moving funnel — Committed
+// visual groups. INITIAL_INTEREST is deliberately in neither: it was retired
+// 2026-11-05 but stays in the database enum (dropping a Postgres enum value
+// isn't worth a migration), so nothing should offer it or count it. PIPELINE_STAGES is the live, forward-moving funnel — Committed
 // is deliberately last, since it's the actual finish line for this raise, not
 // just "the stage before the drop-off stages." DROPPED_STAGES are the
 // terminal drop-offs/parking stages (a soft pass worth re-approaching for
@@ -13,7 +15,6 @@ import { FundraisingStage } from "@prisma/client";
 export const PIPELINE_STAGES: FundraisingStage[] = [
   FundraisingStage.NOT_STARTED,
   FundraisingStage.OUTREACH_SENT,
-  FundraisingStage.INITIAL_INTEREST,
   FundraisingStage.MEETING_OCCURRED,
   FundraisingStage.ACTIVE_PROSPECT,
   FundraisingStage.FINAL_CLOSE_POTENTIAL,

@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
 import { mergeStageLabels } from "@/lib/contact-constants";
-import { buildFunnelCounts, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
+import { buildFunnelCounts, FUNDRAISING_STAGES, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { buildFundInvestors, FundInvestor, individualKey, isFundProspect } from "@/lib/fund-investors";
 import { formatCommitment } from "@/lib/commitment";
 import { CommitmentCell } from "./CommitmentCell";
@@ -444,7 +444,7 @@ export function FunnelClient({
                       style={{ fontSize: 12.5 }}
                     >
                       <option value="">Move {selected.size} to…</option>
-                      {Object.values(FundraisingStage)
+                      {FUNDRAISING_STAGES
                         .filter((s) => s !== status)
                         .map((s) => (
                           <option key={s} value={s}>
@@ -743,7 +743,7 @@ export function FunnelClient({
             <div
               style={{ width: 170, height: 28, display: "flex", alignItems: "center", fontSize: 12.5, fontWeight: 600, color: "var(--ink-soft)", flex: "none" }}
             >
-              4. Ongoing Discussions
+              3. Ongoing Discussions
             </div>
             <div style={{ flex: 1, minWidth: 0, display: "flex", gap: 12 }}>
               {pair.map((s) => (

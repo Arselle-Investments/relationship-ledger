@@ -1,5 +1,6 @@
 "use client";
 
+import { FUNDRAISING_STAGES } from "@/lib/funnel";
 import { useState } from "react";
 import { ContactTier, ContactType, FundraisingStage, MailingList, MailingListMode, User } from "@prisma/client";
 import { CONTACT_TIER_LABELS, CONTACT_TYPE_LABELS, FUNDRAISING_STAGE_LABELS } from "@/lib/contact-constants";
@@ -268,7 +269,7 @@ export function ListModal({
                 <label>Pipeline stage</label>
                 <select value={filterStatus ?? ""} onChange={(e) => setFilterStatus(e.target.value as FundraisingStage | "")}>
                   <option value="">Any</option>
-                  {Object.values(FundraisingStage).map((s) => (
+                  {FUNDRAISING_STAGES.map((s) => (
                     <option key={s} value={s}>
                       {FUNDRAISING_STAGE_LABELS[s]}
                     </option>
