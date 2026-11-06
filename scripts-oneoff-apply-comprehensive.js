@@ -37,9 +37,20 @@ function cellText(v) {
   return String(v).trim();
 }
 
+// Usage: node scripts-oneoff-apply-comprehensive.js <sheet.xlsx> [--apply] [--by "Name"]
+// Without --apply it only prints what would change. --by names who the stage
+// history entries are credited to.
+const DRY = !process.argv.includes('--apply');
+const byIdx = process.argv.indexOf('--by');
+const CHANGED_BY = byIdx > 0 ? process.argv[byIdx + 1] : 'Spreadsheet import';
+const HISTORY_NOTE = 'Bulk spreadsheet edit';
+// Excel hands text back trimmed and with its own line endings; compare on that basis.
+const norm = (s) => String(s ?? '').replace(/\r\n?/g, '\n').trim();
+
 async function main() {
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(process.argv[2]);
+  console.log(DRY ? 'DRY RUN: nothing will be written. Re-run with --apply to save.\n' : 'APPLYING changes.\n');
   const sheet = wb.getWorksheet('Contacts');
   const header = sheet.getRow(1).values.map(v => cellText(v));
   const idx = {}; header.forEach((h, i) => { if (h) idx[h] = i; });
@@ -48,6 +59,7 @@ async function main() {
   const mlCols = mailingLists.map(l => ({ header: `${l.name} (Mailing List)`, filterTag: l.filterTag }));
 
   const tagHeaders = Object.keys(idx).filter(h => h.startsWith('Tag: '));
+  const hasCompanyColsOnContacts = !!idx['Company Website'];
 
   const rows = [];
   const newRows = [];
@@ -56,7 +68,9 @@ async function main() {
     const get = (col) => idx[col] ? cellText(row.getCell(idx[col]).value) : '';
     const id = get('Contact ID (do not edit)');
     const rec = {
-      id, name: get('Name'), company: get('Company'), type: get('Type'), tier: get('Tier'), status: get('Status (Funnel)'),
+      id, name: get('Name'), company: get('Company'),
+      investingEntity: idx['Investing Entity'] ? get('Investing Entity') : undefined,
+      type: get('Type'), tier: get('Tier'), status: get('Status (Funnel)'),
       // undefined (not '') when the sheet predates this column entirely — a
       // missing column must never read as "blank, please clear this field."
       doNotContact: idx['Do Not Contact (Agora: Unsubscribed)'] ? get('Do Not Contact (Agora: Unsubscribed)') : undefined,
@@ -111,7 +125,9 @@ async function main() {
     if (r.company && r.company !== currentCompanyDisplay) {
       let match = companyByNameLower.get(r.company.toLowerCase());
       if (!match) {
-        match = await prisma.company.create({ data: { name: r.company } });
+        match = DRY
+          ? { id: `new:${r.company}`, name: r.company }
+          : await prisma.company.create({ data: { name: r.company } });
         companyByNameLower.set(match.name.toLowerCase(), match);
         companyById.set(match.id, match);
         console.log('  (created new company:', match.name, ')');
@@ -120,6 +136,7 @@ async function main() {
       targetCompanyId = match.id;
     }
 
+    if (r.investingEntity !== undefined && norm(c.investingEntity) !== r.investingEntity) data.investingEntity = r.investingEntity || null;
     if (r.type && CONTACT_TYPE_BY_LABEL[r.type] && CONTACT_TYPE_BY_LABEL[r.type] !== c.type) data.type = CONTACT_TYPE_BY_LABEL[r.type];
     if (r.tier && TIER_BY_LABEL[r.tier] && TIER_BY_LABEL[r.tier] !== c.tier) data.tier = TIER_BY_LABEL[r.tier];
     if (r.status && STAGE_BY_LABEL[r.status] && STAGE_BY_LABEL[r.status] !== c.status) data.status = STAGE_BY_LABEL[r.status];
@@ -174,7 +191,14 @@ async function main() {
     if (unioned.length !== (c.tags||[]).length) data.tags = unioned;
 
     if (Object.keys(data).length > 0) {
-      await prisma.contact.update({ where: { id: c.id }, data });
+      if (!DRY) {
+        await prisma.contact.update({ where: { id: c.id }, data });
+        if (data.status) {
+          await prisma.contactStatusChange.create({
+            data: { contactId: c.id, fromStatus: c.status, toStatus: data.status, note: HISTORY_NOTE, changedByName: CHANGED_BY },
+          });
+        }
+      }
       const detail = Object.keys(data)
         .filter(k => k !== 'tags' && k !== 'recordContexts')
         .map(k => `${k}: ${JSON.stringify(c[k] ?? null)} -> ${JSON.stringify(data[k])}`)
@@ -183,8 +207,11 @@ async function main() {
       updated++;
     }
 
-    // Company-level fields: write through to the linked Company record.
-    if (targetCompanyId) {
+    // Company-level fields: write through to the linked Company record. Only
+    // for older sheets that still carry them on the Contacts tab — newer ones
+    // keep them on the Organizations tab, and a missing column must never
+    // read as "blank, please clear this field."
+    if (targetCompanyId && hasCompanyColsOnContacts && !String(targetCompanyId).startsWith('new:')) {
       const co = companyById.get(targetCompanyId);
       const coData = {};
       if (r.assetClasses) {
@@ -210,14 +237,112 @@ async function main() {
       if ((co.website ?? '') !== r.companyWebsite) coData.website = r.companyWebsite || null;
 
       if (Object.keys(coData).length > 0) {
-        const updatedCo = await prisma.company.update({ where: { id: co.id }, data: coData });
-        companyById.set(co.id, updatedCo);
+        if (!DRY) {
+          const updatedCo = await prisma.company.update({ where: { id: co.id }, data: coData });
+          companyById.set(co.id, updatedCo);
+        }
         diffs.push('  [company] ' + co.name + ': ' + Object.keys(coData).join(', '));
       }
     }
   }
-  console.log('\nUpdated:', updated);
+  console.log(DRY ? '\nContacts that would change:' : '\nContacts updated:', updated);
   diffs.forEach(d => console.log(' ', d));
+
+  await applyOrganizations(wb, companyById);
+  if (DRY) console.log('\nDRY RUN: nothing was written. Re-run with --apply to save.');
   await prisma.$disconnect();
+}
+
+// The Organizations tab: one row per company. Rows without an ID are listed
+// but not created — add a new organization in the app, or by typing its name
+// in a contact's Company column.
+async function applyOrganizations(wb, companyById) {
+  const sheet = wb.getWorksheet('Organizations');
+  if (!sheet) { console.log('\n(No Organizations tab in this sheet.)'); return; }
+  const header = sheet.getRow(1).values.map(v => cellText(v));
+  const idx = {}; header.forEach((h, i) => { if (h) idx[h] = i; });
+  // Re-read so contact-tab edits above don't leave a stale copy behind.
+  const companies = await prisma.company.findMany();
+  for (const co of companies) companyById.set(co.id, co);
+  const nameTaken = new Map(companies.map(co => [co.name.toLowerCase(), co.id]));
+
+  const enumList = (text, map) => text.split(';').map(s => s.trim()).filter(Boolean).map(l => map[l]).filter(Boolean);
+  const sameSet = (a, b) => [...a].sort().join(',') === [...(b || [])].sort().join(',');
+  const num = (s) => (s === '' ? null : Number(s));
+
+  let updated = 0, skipped = 0;
+  const diffs = [], problems = [];
+  const rows = [];
+  sheet.eachRow((row, rn) => { if (rn > 1) rows.push(row); });
+  for (const row of rows) {
+    const has = (col) => !!idx[col];
+    const get = (col) => (idx[col] ? cellText(row.getCell(idx[col]).value) : '');
+    const id = get('Organization ID (do not edit)');
+    const name = get('Name');
+    if (!id) { if (name) problems.push(`No ID, not created: ${name}`); continue; }
+    const co = companyById.get(id);
+    if (!co) { problems.push(`ID not found (deleted?): ${id} ${name}`); continue; }
+    const data = {};
+
+    if (name && name !== norm(co.name).replace(/\s+/g, ' ')) {
+      const clash = nameTaken.get(name.toLowerCase());
+      if (clash && clash !== co.id) { problems.push(`Rename skipped, name already used by another organization: ${co.name} -> ${name}`); skipped++; }
+      else data.name = name;
+    }
+    const type = get('Type');
+    if (type && CONTACT_TYPE_BY_LABEL[type] && CONTACT_TYPE_BY_LABEL[type] !== co.type) data.type = CONTACT_TYPE_BY_LABEL[type];
+    else if (type && !CONTACT_TYPE_BY_LABEL[type]) problems.push(`Unknown type "${type}" for ${co.name}`);
+    if (has('Tier')) {
+      const tier = get('Tier');
+      if (tier && !TIER_BY_LABEL[tier]) problems.push(`Unknown tier "${tier}" for ${co.name}`);
+      else if ((TIER_BY_LABEL[tier] ?? null) !== (co.tier ?? null)) data.tier = TIER_BY_LABEL[tier] ?? null;
+    }
+    const status = get('Status (Funnel)');
+    if (status && STAGE_BY_LABEL[status] && STAGE_BY_LABEL[status] !== co.status) data.status = STAGE_BY_LABEL[status];
+    else if (status && !STAGE_BY_LABEL[status]) problems.push(`Unknown stage "${status}" for ${co.name}`);
+    const rc = get('Prospect Type');
+    if (rc) {
+      // Additive, like the Contacts tab: never drops a role the sheet doesn't list.
+      const unioned = Array.from(new Set([...(co.recordContexts || []), ...enumList(rc, RC_BY_LABEL)]));
+      if (unioned.length !== (co.recordContexts || []).length) data.recordContexts = unioned;
+    }
+    for (const [col, field] of [['City', 'city'], ['Priority Quarter', 'priorityQuarter'], ['Website', 'website'], ['LinkedIn', 'linkedinUrl'], ['AUM', 'aum'], ['Founded', 'founded']]) {
+      if (has(col) && norm(co[field]) !== get(col)) data[field] = get(col) || null;
+    }
+    if (has('Notes') && norm(co.notes) !== norm(get('Notes'))) data.notes = get('Notes');
+    for (const [col, field, map] of [['Target Asset Class', 'targetAssetClasses', ASSET_CLASS_BY_LABEL], ['Investment Structures', 'investmentStructures', STRUCTURE_BY_LABEL], ['Investment Strategies', 'investmentStrategies', STRATEGY_BY_LABEL]]) {
+      if (!has(col)) continue;
+      const vals = enumList(get(col), map);
+      if (!sameSet(vals, co[field])) data[field] = vals;
+    }
+    for (const [col, field] of [['Check Size Min ($mm)', 'investmentSizeMin'], ['Check Size Max ($mm)', 'investmentSizeMax']]) {
+      if (has(col) && num(get(col)) !== (co[field] ?? null)) data[field] = num(get(col));
+    }
+    if (has('Tags')) {
+      const tags = get('Tags').split(',').map(t => t.trim()).filter(Boolean);
+      const unioned = Array.from(new Set([...(co.tags || []), ...tags]));
+      if (unioned.length !== (co.tags || []).length) data.tags = unioned;
+    }
+
+    if (Object.keys(data).length === 0) continue;
+    if (!DRY) {
+      await prisma.company.update({ where: { id: co.id }, data });
+      if (data.status) {
+        await prisma.companyStatusChange.create({
+          data: { companyId: co.id, fromStatus: co.status, toStatus: data.status, note: HISTORY_NOTE, changedByName: CHANGED_BY },
+        });
+      }
+    }
+    if (data.name) nameTaken.set(data.name.toLowerCase(), co.id);
+    const detail = Object.keys(data)
+      .filter(k => !['tags', 'recordContexts', 'notes'].includes(k))
+      .map(k => `${k}: ${JSON.stringify(co[k] ?? null)} -> ${JSON.stringify(data[k])}`)
+      .join('; ');
+    diffs.push(`${co.name}: ${Object.keys(data).join(', ')}${detail ? '  [' + detail + ']' : ''}`);
+    updated++;
+  }
+  console.log(DRY ? '\nOrganizations that would change:' : '\nOrganizations updated:', updated);
+  diffs.forEach(d => console.log(' ', d));
+  if (problems.length) { console.log('\nNot applied:'); problems.forEach(p => console.log(' ', p)); }
 }
 main().catch(e => { console.error(e); process.exit(1); });

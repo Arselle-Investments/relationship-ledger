@@ -49,14 +49,13 @@ async function main() {
 
   const contacts = await p.contact.findMany({
     include: {
-      company: {
-        select: {
-          name: true, targetAssetClasses: true, investmentStructures: true, investmentStrategies: true,
-          investmentSizeMin: true, investmentSizeMax: true, aum: true, website: true,
-        },
-      },
+      company: { select: { name: true } },
       owner: { select: { name: true, email: true } },
     },
+    orderBy: { name: "asc" },
+  });
+  const companies = await p.company.findMany({
+    include: { _count: { select: { contacts: true } } },
     orderBy: { name: "asc" },
   });
 
@@ -83,6 +82,7 @@ async function main() {
     { header: "Contact ID (do not edit)", key: "id", width: 26 },
     { header: "Name", key: "name", width: 26 },
     { header: "Company", key: "company", width: 30 },
+    { header: "Investing Entity", key: "investingEntity", width: 28 },
     { header: "Type", key: "type", width: 20 },
     { header: "Tier", key: "tier", width: 10 },
     { header: "Status (Funnel)", key: "status", width: 22 },
@@ -104,13 +104,9 @@ async function main() {
     ...tagColumns.map((t, i) => ({ header: `Tag: ${t}`, key: `tag_${i}`, width: 14 })),
     { header: "Commitment Low ($mm)", key: "commitLow", width: 12 },
     { header: "Commitment High ($mm)", key: "commitHigh", width: 12 },
-    { header: "Target Asset Class (Company)", key: "assetClasses", width: 22 },
-    { header: "Investment Structures (Company)", key: "structures", width: 22 },
-    { header: "Investment Strategies (Company)", key: "strategies", width: 20 },
-    { header: "Check Size Min ($mm, Company)", key: "sizeMin", width: 14 },
-    { header: "Check Size Max ($mm, Company)", key: "sizeMax", width: 14 },
-    { header: "Company AUM", key: "companyAum", width: 14 },
-    { header: "Company Website", key: "companyWebsite", width: 28 },
+    // Company-level fields (asset classes, check size, AUM, website…) live on
+    // the Organizations tab, one row per company, so two contacts at the same
+    // firm can't disagree about them.
     { header: "Research Bio", key: "researchBio", width: 30 },
     { header: "Created (read-only)", key: "createdAt", width: 14 },
     { header: "Updated (read-only)", key: "updatedAt", width: 14 },
@@ -123,7 +119,7 @@ async function main() {
   for (const c of contacts) {
     const bogus = isBogusEmail(c.email);
     const rowData = {
-      id: c.id, name: c.name, company: c.company?.name ?? c.org ?? "",
+      id: c.id, name: c.name, company: c.company?.name ?? c.org ?? "", investingEntity: c.investingEntity ?? "",
       type: CONTACT_TYPE_LABELS[c.type] ?? c.type,
       tier: TIER_LABELS[c.tier] ?? c.tier, status: STAGE_LABELS[c.status] ?? c.status,
       doNotContact: c.doNotContact ? "Yes" : "",
@@ -138,11 +134,6 @@ async function main() {
       priorityQuarter: c.priorityQuarter ?? "",
       tags: (c.tags ?? []).join(", "),
       commitLow: c.commitmentLow ?? "", commitHigh: c.commitmentHigh ?? "",
-      assetClasses: joinLabels(c.company?.targetAssetClasses, ASSET_CLASS_LABELS),
-      structures: joinLabels(c.company?.investmentStructures, STRUCTURE_LABELS),
-      strategies: joinLabels(c.company?.investmentStrategies, STRATEGY_LABELS),
-      sizeMin: c.company?.investmentSizeMin ?? "", sizeMax: c.company?.investmentSizeMax ?? "",
-      companyAum: c.company?.aum ?? "", companyWebsite: c.company?.website ?? "",
       researchBio: c.researchBio ?? "",
       createdAt: dateStr(c.createdAt), updatedAt: dateStr(c.updatedAt),
     };
@@ -161,7 +152,57 @@ async function main() {
   }
   sheet.autoFilter = { from: "A1", to: { row: 1, column: columns.length } };
 
+  // One row per organization. Read back by the apply script's Organizations
+  // pass — same lockstep rule as the Contacts columns above.
+  const orgSheet = wb.addWorksheet("Organizations");
+  const orgColumns = [
+    { header: "Organization ID (do not edit)", key: "id", width: 26 },
+    { header: "Name", key: "name", width: 34 },
+    { header: "Type", key: "type", width: 20 },
+    { header: "Tier", key: "tier", width: 10 },
+    { header: "Status (Funnel)", key: "status", width: 22 },
+    { header: "Prospect Type", key: "recordContexts", width: 30 },
+    { header: "City", key: "city", width: 18 },
+    { header: "Priority Quarter", key: "priorityQuarter", width: 14 },
+    { header: "Website", key: "website", width: 28 },
+    { header: "LinkedIn", key: "linkedinUrl", width: 28 },
+    { header: "AUM", key: "aum", width: 14 },
+    { header: "Founded", key: "founded", width: 10 },
+    { header: "Target Asset Class", key: "assetClasses", width: 22 },
+    { header: "Investment Structures", key: "structures", width: 22 },
+    { header: "Investment Strategies", key: "strategies", width: 20 },
+    { header: "Check Size Min ($mm)", key: "sizeMin", width: 14 },
+    { header: "Check Size Max ($mm)", key: "sizeMax", width: 14 },
+    { header: "Tags", key: "tags", width: 32 },
+    { header: "Notes", key: "notes", width: 40 },
+    { header: "Contacts (read-only)", key: "contactCount", width: 10 },
+    { header: "Created (read-only)", key: "createdAt", width: 14 },
+    { header: "Updated (read-only)", key: "updatedAt", width: 14 },
+  ];
+  orgSheet.columns = orgColumns;
+  orgSheet.getRow(1).font = { bold: true };
+  orgSheet.getColumn("id").font = { color: { argb: "FFAAAAAA" }, size: 9 };
+  orgSheet.views = [{ state: "frozen", xSplit: 2, ySplit: 1 }];
+  for (const co of companies) {
+    orgSheet.addRow({
+      id: co.id, name: co.name.replace(/\s+/g, " ").trim(),
+      type: CONTACT_TYPE_LABELS[co.type] ?? co.type,
+      tier: TIER_LABELS[co.tier] ?? co.tier ?? "", status: STAGE_LABELS[co.status] ?? co.status,
+      recordContexts: joinLabels(co.recordContexts, RECORD_CONTEXT_LABELS),
+      city: co.city ?? "", priorityQuarter: co.priorityQuarter ?? "",
+      website: co.website ?? "", linkedinUrl: co.linkedinUrl ?? "", aum: co.aum ?? "", founded: co.founded ?? "",
+      assetClasses: joinLabels(co.targetAssetClasses, ASSET_CLASS_LABELS),
+      structures: joinLabels(co.investmentStructures, STRUCTURE_LABELS),
+      strategies: joinLabels(co.investmentStrategies, STRATEGY_LABELS),
+      sizeMin: co.investmentSizeMin ?? "", sizeMax: co.investmentSizeMax ?? "",
+      tags: (co.tags ?? []).join(", "), notes: co.notes ?? "",
+      contactCount: co._count.contacts,
+      createdAt: dateStr(co.createdAt), updatedAt: dateStr(co.updatedAt),
+    });
+  }
+  orgSheet.autoFilter = { from: "A1", to: { row: 1, column: orgColumns.length } };
+
   await wb.xlsx.writeFile(outPath);
-  console.log(`Wrote ${contacts.length} contacts (${columns.length} columns) to ${outPath}`);
+  console.log(`Wrote ${contacts.length} contacts (${columns.length} columns) and ${companies.length} organizations to ${outPath}`);
 }
 main().catch((e) => { console.error(e); process.exit(1); }).finally(() => p.$disconnect());
