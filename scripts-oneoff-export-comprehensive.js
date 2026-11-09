@@ -14,11 +14,12 @@ const CONTACT_TYPE_LABELS = {
   BROKER: "Broker", LENDER: "Lender",
 };
 const TIER_LABELS = { TIER_1: "Tier 1", TIER_2: "Tier 2", TIER_3: "Tier 3" };
+// Same wording as FUNDRAISING_STAGE_LABELS in src/lib/contact-constants.ts (renumbered 2026-11-05).
 const STAGE_LABELS = {
-  NOT_STARTED: "Not started", OUTREACH_SENT: "1. Outreach Sent", INITIAL_INTEREST: "2. Initial Interest",
-  MEETING_OCCURRED: "3. Meeting Occurred", ACTIVE_PROSPECT: "4a. Active Prospect",
-  FINAL_CLOSE_POTENTIAL: "4b. Final Close Potential", DUE_DILIGENCE: "5. Due Diligence / Dataroom",
-  COMMITTED: "6. Committed", PASSED_OPEN: "Fund II Prospect", DECLINE: "Decline",
+  NOT_STARTED: "0. Introduction Pending", OUTREACH_SENT: "1. Outreach Sent", INITIAL_INTEREST: "Initial Interest (retired)",
+  MEETING_OCCURRED: "2. Meeting Occurred", ACTIVE_PROSPECT: "3a. Active Prospect",
+  FINAL_CLOSE_POTENTIAL: "3b. Final Close Potential", DUE_DILIGENCE: "4. Due Diligence / Dataroom",
+  COMMITTED: "5. Committed", PASSED_OPEN: "Fund II Prospect", DECLINE: "Declined",
 };
 const RECORD_CONTEXT_LABELS = {
   FUND: "Fund", DEAL: "Deal", MGMT_CO: "Mgmt Co",

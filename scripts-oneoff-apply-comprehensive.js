@@ -14,16 +14,25 @@ const CONTACT_TYPE_BY_LABEL = {
   'Broker':'BROKER','Lender':'LENDER',
 };
 const TIER_BY_LABEL = { 'Tier 1':'TIER_1', 'Tier 2':'TIER_2', 'Tier 3':'TIER_3' };
-const STAGE_BY_LABEL = {
-  'Not started':'NOT_STARTED','1. Outreach Sent':'OUTREACH_SENT','2. Initial Interest':'INITIAL_INTEREST',
+// Matched ignoring case and surrounding spaces (see stageFromLabel). Current
+// labels (renumbered 2026-11-05) first, then every older wording, so a sheet
+// exported before a rename still imports instead of being silently skipped.
+const STAGE_BY_LABEL_RAW = {
+  '0. Introduction Pending':'NOT_STARTED','1. Outreach Sent':'OUTREACH_SENT','2. Meeting Occurred':'MEETING_OCCURRED',
+  '3a. Active Prospect':'ACTIVE_PROSPECT','3b. Final Close Potential':'FINAL_CLOSE_POTENTIAL',
+  '4. Due Diligence / Dataroom':'DUE_DILIGENCE','5. Committed':'COMMITTED','Fund II Prospect':'PASSED_OPEN','Declined':'DECLINE',
+  // Pre-2026-11-05 numbering. Initial Interest was retired then; anything still
+  // carrying it lands on Meeting Occurred, where the last such record went.
+  'Not started':'NOT_STARTED','0. Not Started':'NOT_STARTED','2. Initial Interest':'MEETING_OCCURRED',
   '3. Meeting Occurred':'MEETING_OCCURRED','4a. Active Prospect':'ACTIVE_PROSPECT',
   '4b. Final Close Potential':'FINAL_CLOSE_POTENTIAL','5. Due Diligence / Dataroom':'DUE_DILIGENCE',
-  '6. Committed':'COMMITTED','Fund II Prospect':'PASSED_OPEN','Decline':'DECLINE',
-  // Old labels for the two stages retired 2026-09-30 in favor of Decline — kept
-  // as aliases so a sheet saved before that migration still round-trips
-  // instead of trying to write a status value that no longer exists.
+  '6. Committed':'COMMITTED','Decline':'DECLINE',
+  // Retired 2026-09-30 in favor of Decline.
   'Passed (not interested)':'DECLINE','Do not contact':'DECLINE',
 };
+const STAGE_BY_LABEL = {};
+for (const [k, v] of Object.entries(STAGE_BY_LABEL_RAW)) STAGE_BY_LABEL[k.toLowerCase()] = v;
+const stageFromLabel = (label) => STAGE_BY_LABEL[String(label ?? '').trim().toLowerCase()];
 const RC_BY_LABEL = { 'Fund':'FUND','Deal':'DEAL','Mgmt Co':'MGMT_CO','Platform-Level PropCo':'PLATFORM_LEVEL_PROPCO','Platform-Level OpCo':'PLATFORM_LEVEL_OPCO' };
 const ASSET_CLASS_BY_LABEL = { 'Industrial':'INDUSTRIAL','Multifamily':'MULTIFAMILY','Retail':'RETAIL','Self Storage':'SELF_STORAGE','Office':'OFFICE','Hospitality':'HOSPITALITY','Land':'LAND' };
 const STRUCTURE_BY_LABEL = { 'LP Equity':'LP_EQUITY','Co-GP':'CO_GP','Structured Equity':'STRUCTURED_EQUITY','Debt Capital':'DEBT_CAPITAL','Other Strategic':'OTHER_STRATEGIC' };
@@ -139,7 +148,9 @@ async function main() {
     if (r.investingEntity !== undefined && norm(c.investingEntity) !== r.investingEntity) data.investingEntity = r.investingEntity || null;
     if (r.type && CONTACT_TYPE_BY_LABEL[r.type] && CONTACT_TYPE_BY_LABEL[r.type] !== c.type) data.type = CONTACT_TYPE_BY_LABEL[r.type];
     if (r.tier && TIER_BY_LABEL[r.tier] && TIER_BY_LABEL[r.tier] !== c.tier) data.tier = TIER_BY_LABEL[r.tier];
-    if (r.status && STAGE_BY_LABEL[r.status] && STAGE_BY_LABEL[r.status] !== c.status) data.status = STAGE_BY_LABEL[r.status];
+    const stage = stageFromLabel(r.status);
+    if (r.status && !stage) console.log(`  Unknown stage "${r.status}" for ${r.name}, skipped`);
+    else if (stage && stage !== c.status) data.status = stage;
     if (r.doNotContact !== undefined) {
       const rowDoNotContact = r.doNotContact.toLowerCase() === 'yes';
       if (rowDoNotContact !== c.doNotContact) data.doNotContact = rowDoNotContact;
@@ -298,8 +309,8 @@ async function applyOrganizations(wb, companyById) {
       else if ((TIER_BY_LABEL[tier] ?? null) !== (co.tier ?? null)) data.tier = TIER_BY_LABEL[tier] ?? null;
     }
     const status = get('Status (Funnel)');
-    if (status && STAGE_BY_LABEL[status] && STAGE_BY_LABEL[status] !== co.status) data.status = STAGE_BY_LABEL[status];
-    else if (status && !STAGE_BY_LABEL[status]) problems.push(`Unknown stage "${status}" for ${co.name}`);
+    if (status && stageFromLabel(status) && stageFromLabel(status) !== co.status) data.status = stageFromLabel(status);
+    else if (status && !stageFromLabel(status)) problems.push(`Unknown stage "${status}" for ${co.name}`);
     const rc = get('Prospect Type');
     if (rc) {
       // Additive, like the Contacts tab: never drops a role the sheet doesn't list.
