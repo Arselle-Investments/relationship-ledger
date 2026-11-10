@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Company, Contact, ContactType, FundraisingStage, User } from "@prisma/client";
-import { mergeStageLabels } from "@/lib/contact-constants";
+import { CONTACT_TYPE_LABELS, mergeStageLabels } from "@/lib/contact-constants";
 import { buildFunnelCounts, FUNDRAISING_STAGES, PIPELINE_STAGES, DROPPED_STAGES, FUNDRAISING_STAGE_COLORS, fundraisingStageTextColor, PROBABILITY_ELIGIBLE_STAGES } from "@/lib/funnel";
 import { buildFundInvestors, FundInvestor, individualKey, isFundProspect } from "@/lib/fund-investors";
 import { formatCommitment } from "@/lib/commitment";
@@ -31,6 +31,13 @@ function arefSubcategory(tags: string[]): string | null {
 type StageSortKey = "name" | "category" | "probability" | "org" | "type";
 type FundCompany = FundInvestor<Contact>;
 type KindFilter = "ALL" | "CONTACT" | "COMPANY" | "ADVISOR";
+
+// The curated Contact Type (the ContactType we classified by hand) — not the
+// raw agoraType string imported from Agora, which is mostly the "Investor"
+// catch-all and is left blank on contacts that never came from Agora.
+function typeLabel(c: Contact): string {
+  return CONTACT_TYPE_LABELS[c.type];
+}
 
 function isAdvisorContact(c: ContactWithRelations): boolean {
   return c.agoraType === "Advisor" || c.type === ContactType.ADVISOR;
@@ -69,14 +76,14 @@ export function FunnelClient({
   const [showAllContacts, setShowAllContacts] = useState(false);
   const [expandedCompanies, setExpandedCompanies] = useState<Set<string>>(new Set());
   const contactTypes = useMemo(
-    () => Array.from(new Set(contacts.map((c) => c.agoraType).filter((v): v is string => !!v))).sort(),
+    () => Array.from(new Set(contacts.map(typeLabel))).sort(),
     [contacts]
   );
   const fundProspects = useMemo(() => contacts.filter(isFundProspect), [contacts]);
   const hiddenCount = contacts.length - fundProspects.length;
   const scopedContacts = showAllContacts ? contacts : fundProspects;
   const filteredContacts = useMemo(
-    () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => c.agoraType === typeFilter)),
+    () => (typeFilter === "ALL" ? scopedContacts : scopedContacts.filter((c) => typeLabel(c) === typeFilter)),
     [scopedContacts, typeFilter]
   );
   // Each investing entity (or company, when no entity is set) is one investor,
@@ -196,8 +203,8 @@ export function FunnelClient({
           return ao === bo ? a.name.localeCompare(b.name) : ao.localeCompare(bo);
         }
         if (sortKey === "type") {
-          const at = a.agoraType ?? "";
-          const bt = b.agoraType ?? "";
+          const at = typeLabel(a);
+          const bt = typeLabel(b);
           return at === bt ? a.name.localeCompare(b.name) : at.localeCompare(bt);
         }
         return a.name.localeCompare(b.name);
@@ -553,7 +560,7 @@ export function FunnelClient({
                                 >
                                   {c.name}
                                 </td>
-                                <td className="muted">{c.agoraType || "—"}</td>
+                                <td className="muted">{typeLabel(c)}</td>
                                 <td>{c.investingEntity?.trim() || co.name}</td>
                                 <td>
                                   <span
@@ -653,7 +660,7 @@ export function FunnelClient({
                           </td>
                           <td>{c.org || <span className="muted">—</span>}</td>
                           <td className="muted">{c.owner?.name || "—"}</td>
-                          <td className="muted">{c.agoraType || "—"}</td>
+                          <td className="muted">{typeLabel(c)}</td>
                           <td>
                             {subcategory ? (
                               <span className="tag">{subcategory}</span>
