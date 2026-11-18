@@ -123,7 +123,7 @@ const SECTIONS: SectionDef[] = [
   },
   {
     key: "pipeline",
-    label: "Pipeline",
+    label: "PIPELINE",
     subsections: [
       {
         key: "fund-raise",
