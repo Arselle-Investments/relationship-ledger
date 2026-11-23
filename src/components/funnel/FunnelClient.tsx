@@ -811,6 +811,13 @@ export function FunnelClient({
             <option value="ADVISOR">Just advisors</option>
           </select>
         </label>
+        <a
+          className="btn"
+          href="/api/funnel/export"
+          title="The AREF I funnel as it shows by default (Fund prospects, each investor counted once), with commitments and stage totals. On-screen filters aren't applied."
+        >
+          Download Excel
+        </a>
       </div>
       {!showAllContacts && hiddenCount > 0 && (
         <div className="helptext" style={{ marginBottom: 12 }}>
